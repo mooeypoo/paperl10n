@@ -53,7 +53,7 @@ describe('NodeProjectFiles with the committed fixture', () => {
     const files = await open(fixture);
     expect(await files.readText(p('docs/index.md'))).toEqual({
       ok: true,
-      value: '﻿# Home\r\n\r\nWindows line endings and a BOM.\r\n',
+      value: '\uFEFF# Home\r\n\r\nWindows line endings and a BOM.\r\n',
     });
   });
 

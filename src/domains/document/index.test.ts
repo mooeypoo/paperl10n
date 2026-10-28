@@ -4,6 +4,11 @@ import * as document from '#domains/document';
 
 describe('#domains/document public API', () => {
   it('exports exactly these runtime values', () => {
-    expect(Object.keys(document).sort()).toEqual(['documentKey']);
+    expect(Object.keys(document).sort()).toEqual([
+      'blockKinds',
+      'documentKey',
+      'findFrontmatter',
+      'parsedDocumentProblems',
+    ]);
   });
 });

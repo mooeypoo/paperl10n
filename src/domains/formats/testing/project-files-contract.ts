@@ -14,7 +14,7 @@ function p(raw: string): ProjectPath {
 
 const tree: FileTree = {
   'README.md': '# Readme\n',
-  'docs/index.md': '﻿# Home\r\n',
+  'docs/index.md': '\uFEFF# Home\r\n',
   'docs/guide/intro.md': 'Intro\n',
   'docs/guide/notes.txt': 'not markdown\n',
   'docs/he/index.md': '# בית\n',
@@ -98,7 +98,7 @@ export function describeProjectFilesContract(
         const files = await make(tree);
         expect(await files.readText(p('docs/index.md'))).toEqual({
           ok: true,
-          value: '﻿# Home\r\n',
+          value: '\uFEFF# Home\r\n',
         });
       });
 

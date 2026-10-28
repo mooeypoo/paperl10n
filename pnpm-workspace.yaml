@@ -7,3 +7,8 @@ allowBuilds:
   # Its script only fetches a platform binary as a fallback. pnpm already installs the binary
   # through optional dependencies, so the script isn't needed.
   unrs-resolver: false
+
+overrides:
+  # One copy of lezer's tree classes for @lezer/markdown and @lezer/highlight (two copies break
+  # `instanceof`), pinned to a release older than two weeks when added. Dependabot bumps it.
+  '@lezer/common': 1.5.3
