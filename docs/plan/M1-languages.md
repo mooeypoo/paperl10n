@@ -1,8 +1,60 @@
 # M1 discussion: the language picker and language data
 
-Status: **discussion seed, not a plan.** Bring this up for a brainstorm before M1's locale picker is
-implemented. Nothing here is decided. The goal is to arrive at that discussion with the questions
-already laid out.
+Status: **round 1 decided (2026-10-28)**, see [Decided](#decided-round-1). The remaining open
+questions are at the end of that section. The original seed follows, for context.
+
+## Decided (round 1)
+
+### What the Wikimedia data gives us (checked 2026-10-28)
+
+- **MediaWiki `languageinfo`** (`action=query&meta=languageinfo` on meta.wikimedia.org): **1,489
+  languages** in one call, each with its MediaWiki code, a BCP 47 tag, direction, autonym,
+  English name (or the name in any language, with `uselang`), fallbacks, and variants. 53 are RTL.
+  30 MediaWiki codes differ from BCP 47 (`zh-min-nan` → `nan`, `simple` → `en-simple`,
+  `sr-el` → `sr-Latn`, `be-x-old` → `be-tarask`). The site matrix (374 Wikipedia languages) is a
+  subset of it.
+- **ULS language-data** (`@wikimedia/language-data`, GPL-2.0-or-later, the data behind
+  Wikipedia's language selector): 876 languages with their script and regions, the RTL scripts,
+  and **254 territories**, each with its languages by number of speakers
+  (`IL → he, en, ar, apc, ru, …`).
+
+### Decisions
+
+| Topic | Decision |
+|---|---|
+| Data | **Both sources**, fetched by a maintenance script (`scripts/update-language-data.ts`, run by hand, never in CI) into one sorted, committed JSON file in the `locale` domain, with the sources and the date. `languageinfo` is the catalog and the authority for codes and direction; ULS adds scripts, regions, and per-country languages. Tests validate the file, including that RTL languages agree with ULS's RTL scripts. It replaces M0's hard-coded RTL table. |
+| Codes | **BCP 47** (`pt-BR`, `sr-Latn`) in `paperl10n.config.json` and in Paper Lion's own state. MediaWiki codes (`pt-br`, `sr-el`) are accepted as aliases when reading and searching. Plugins map to their own names (as `format-starlight` maps `pt-BR` → `pt-br/`). |
+| Where a choice lives | **The config holds the project's languages** (shared through git); choosing a new target offers to add it there. **The app remembers, per user,** recently used languages and the last choice per project. |
+| Scope | **All real languages** from `languageinfo`, minus internal and test codes (`qqq`, `qqx`, `en-x-piglatin`). Deprecated codes (`be-x-old`, `mo`) become search aliases of their replacements. Formal and informal variants (`de-formal`) stay: they matter for localization. |
+| Suggestions | **From the OS, never from an IP lookup** (that would be a network call to a third party; the PRD is local-first with no telemetry). The OS locale's region (`he-IL` → `IL`) plus ULS's territories give the region's languages. |
+
+### The picker (proposal, from the brainstorm)
+
+No list of 1,489. Sections, top to bottom:
+
+1. **In this project:** languages the project already has (Starlight's locale folders, existing
+   translations). Usually the most relevant.
+2. **Recently used:** your last 4–6 picks.
+3. **Suggested:** English, your OS languages, then your region's most-spoken languages.
+4. **Search everything:** by autonym, English name, name in the interface language, or code
+   (`pt-br`, `pt-BR`, "Portuguese", "português" all find it).
+
+Each row: the autonym in its own `lang`/`dir`, the name in the interface language, the code in
+`<bdi>`, and an RTL marker. Names in the interface languages the app ships (now `en`, `he`) come
+from `languageinfo` with `uselang`, so minority languages are named too (`Intl.DisplayNames`
+doesn't know many of them).
+
+### Still open (round 2)
+
+- Where the picker lives and when it opens (the header's language pair as a button; on opening a
+  project without a target language).
+- Codes the catalog doesn't know (a project's own code, a constructed language): shown how, and can
+  the user set its direction and name (in the config)?
+- Browse by region (as ULS does) in addition to search, or search only.
+- Whether choosing a language ever creates anything in the project (a locale folder), or only
+  writes the config (M1) while files come with editing (M2).
+- Whether plugins get a code-mapping hook in the contract (`toLocaleId`/`fromLocaleId`), before
+  more plugins exist; fallback chains (`pt-BR` → `pt`) probably wait for catalogs (M4).
 
 ## Why it matters
 
