@@ -55,6 +55,7 @@ adding a plugin, not rewriting the app.
 | Locale | A language/region id (`en`, `he`, `pt-BR`) with a text direction. |
 | Source / Target | The locale being translated from / into. |
 | Longform document | A Markdown file (with frontmatter) representing a page. |
+| Document key | The locale-independent identity of a longform document, such as `guide/getting-started`. The format plugin derives it from the file's path. A source document and its translations share a key, which is how translation pairs are found. |
 | Block | A structural unit of a document (heading, paragraph, list, code, image, component). Blocks are the unit of **source-change tracking**: they say *where the source changed*, not where the translation must match. Pairing happens at the section level. |
 | Translation pair | A source document + its target counterpart (which may not exist yet). |
 | Message catalog | A set of key → string messages for one locale (e.g. `i18n/he.json`). |
