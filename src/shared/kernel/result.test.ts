@@ -12,7 +12,8 @@ describe('Result', () => {
   });
 
   it('narrows on the ok flag', () => {
-    const result: Result<number, { code: 'x.failed' }> = Math.random() > 2 ? err({ code: 'x.failed' }) : ok(1);
+    const result: Result<number, { code: 'x.failed' }> =
+      Math.random() > 2 ? err({ code: 'x.failed' }) : ok(1);
     if (result.ok) {
       expectTypeOf(result.value).toEqualTypeOf<number>();
     } else {

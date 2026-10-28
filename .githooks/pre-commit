@@ -1,0 +1,9 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Installed by `pnpm install` (the `prepare` script sets core.hooksPath to .githooks).
+# Fast checks only: lint (cached), formatting, and an incremental typecheck. CI runs the full suite.
+# It checks the working tree, so partially staged files are checked as they are on disk.
+set -e
+pnpm -s lint
+pnpm -s format:check
+pnpm -s typecheck

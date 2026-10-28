@@ -50,7 +50,11 @@ export function localeId(input: string): Result<LocaleId, InvalidLocaleId> {
   }
 
   const variants = new Set<string>();
-  for (let variant = subtags[index]; variant !== undefined && VARIANT.test(variant); variant = subtags[index]) {
+  for (
+    let variant = subtags[index];
+    variant !== undefined && VARIANT.test(variant);
+    variant = subtags[index]
+  ) {
     if (variants.has(variant)) return invalid;
     variants.add(variant);
     canonical.push(variant);

@@ -12,10 +12,7 @@ export type ProjectPath = Brand<string, 'ProjectPath'>;
 export const PROJECT_ROOT = '' as ProjectPath;
 
 export type InvalidProjectPathReason =
-  | 'absolute'
-  | 'parent-segment'
-  | 'backslash'
-  | 'control-character';
+  'absolute' | 'parent-segment' | 'backslash' | 'control-character';
 
 export interface InvalidProjectPath {
   readonly code: 'project-path.invalid';

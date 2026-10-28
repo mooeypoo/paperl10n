@@ -1,0 +1,14 @@
+{
+  // Code that runs in Node: build and repo scripts now; adapters, app, main, and preload later.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsbuild/node",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuild/node.tsbuildinfo"
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": ["**/*.test.ts"],
+  "references": [{ "path": "./tsconfig.core.json" }]
+}

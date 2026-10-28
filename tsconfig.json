@@ -1,5 +1,9 @@
 {
   // Solution file: `tsc --build` type-checks every project below.
   "files": [],
-  "references": [{ "path": "./tsconfig.core.json" }, { "path": "./tsconfig.test.json" }]
+  "references": [
+    { "path": "./tsconfig.core.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.test.json" }
+  ]
 }

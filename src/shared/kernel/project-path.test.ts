@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { PROJECT_ROOT, projectPath, type InvalidProjectPathReason, type ProjectPath } from '#kernel/project-path';
+import {
+  PROJECT_ROOT,
+  projectPath,
+  type InvalidProjectPathReason,
+  type ProjectPath,
+} from '#kernel/project-path';
 
 describe('projectPath', () => {
   it.each([
