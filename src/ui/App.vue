@@ -6,15 +6,21 @@ import AppHeader from './components/AppHeader.vue';
 import DocumentView from './components/DocumentView.vue';
 import PagesSidebar from './components/PagesSidebar.vue';
 import WelcomeState from './components/WelcomeState.vue';
+import { useDocumentPair } from './composables/use-document-pair';
 import { usePages } from './composables/use-pages';
 import { useProject } from './composables/use-project';
 import { errorMessage } from './i18n/error-message';
 import { useI18n } from './i18n/i18n';
 
 const { t } = useI18n();
-const project = useProject(useClient());
+const client = useClient();
+const project = useProject(client);
 const { summary, documents, error, busy } = project;
 const { query, matches, selectedKey, selected } = usePages(documents);
+const projectId = computed(() => summary.value?.projectId ?? null);
+const reading = useDocumentPair(client, projectId, selectedKey);
+const { pair, loading } = reading;
+const readError = reading.error;
 const errorText = computed(() => (error.value === null ? '' : errorMessage(error.value, t)));
 
 function open(): void {
@@ -50,7 +56,14 @@ function open(): void {
             </li>
           </ul>
         </div>
-        <DocumentView v-if="selected !== null" :summary="summary" :document="selected" />
+        <DocumentView
+          v-if="selected !== null"
+          :summary="summary"
+          :document="selected"
+          :pair="pair"
+          :loading="loading"
+          :error="readError"
+        />
         <p v-else class="app-empty">{{ t('paperl10n-no-documents') }}</p>
       </main>
     </div>

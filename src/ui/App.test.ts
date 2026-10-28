@@ -4,7 +4,7 @@ import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { mountApp } from './mount';
 import { memoryPreferences, type PreferenceStore } from './preferences';
-import { documents, error, fakeClient, summary } from './test-support';
+import { documents, error, fakeClient, pairFor, summary } from './test-support';
 
 let unmount: (() => void) | undefined;
 afterEach(() => {
@@ -57,6 +57,8 @@ const paneName = (pane: Element | undefined) =>
     ? undefined
     : document.getElementById(pane.getAttribute('aria-labelledby') ?? '')?.textContent;
 const pageButtons = (element: Element) => [...element.querySelectorAll('nav li button')];
+const pageNames = (element: Element) =>
+  pageButtons(element).map((b) => b.querySelector('bdi')?.textContent);
 
 describe('the app shell', () => {
   it('offers a single "Open folder…" until a project is open, then keeps one in the header', async () => {
@@ -91,10 +93,7 @@ describe('the app shell', () => {
 
   it('lists the pages and selects the first, showing its source and translation panes', async () => {
     const element = await openedApp();
-    expect(pageButtons(element).map((b) => b.textContent.trim())).toEqual([
-      'guide/getting-started',
-      'index',
-    ]);
+    expect(pageNames(element)).toEqual(['guide/getting-started', 'index']);
     expect(pageButtons(element)[0]?.getAttribute('aria-current')).toBe('page');
     const [source, target] = panes(element);
     expect(paneName(source)).toBe('English · source');
@@ -102,6 +101,104 @@ describe('the app shell', () => {
     expect(target?.getAttribute('dir')).toBe('rtl');
     expect(paneName(target)).toBe('עברית · translation');
     expect(target?.textContent).toContain('he/guide/getting-started.md');
+  });
+
+  it("shows each page's source and translation as written, block by block", async () => {
+    const { client } = fakeClient({
+      open: [{ ok: true, value: summary }],
+      list: [{ ok: true, value: documents }],
+      read: {
+        'guide/getting-started': {
+          ok: true,
+          value: {
+            key: 'guide/getting-started',
+            source: {
+              path: 'en/guide/getting-started.md',
+              text: '# Start\n\nRun `x`.\n',
+              blocks: [
+                { kind: 'heading', start: 0, end: 7, depth: 1 },
+                { kind: 'paragraph', start: 9, end: 17 },
+              ],
+              inline: [
+                { kind: 'markup', start: 0, end: 1 },
+                { kind: 'markup', start: 13, end: 14 },
+                { kind: 'code', start: 14, end: 15 },
+                { kind: 'markup', start: 15, end: 16 },
+              ],
+            },
+            target: {
+              path: 'he/guide/getting-started.md',
+              text: '```sh\nnpm i\n```\n',
+              blocks: [{ kind: 'code', start: 0, end: 15 }],
+              inline: [],
+            },
+          },
+        },
+      },
+    });
+    const element = start(client);
+    button(element, 'Open folder…').click();
+    await flushPromises();
+    const [source, target] = panes(element);
+    const blocks = [...(source?.querySelectorAll('.markdown-block') ?? [])];
+    expect(blocks.map((b) => b.textContent)).toEqual(['# Start', 'Run `x`.']);
+    expect(blocks[0]?.classList.contains('markdown-h1')).toBe(true);
+    expect(blocks[1]?.querySelector('.markdown-span-code')?.textContent).toBe('x');
+    // Inline code is an isolated left-to-right run; punctuation-only markup isn't.
+    expect(blocks[1]?.querySelector('.markdown-span-code')?.getAttribute('dir')).toBe('ltr');
+    expect(blocks[1]?.querySelector('.markdown-span-markup')?.hasAttribute('dir')).toBe(false);
+    // A code block reads left to right even in the right-to-left pane, line by line: its contents
+    // aren't one isolated run (that would force Hebrew lines in a code sample left to right too).
+    expect(target?.querySelector('.markdown-code')?.getAttribute('dir')).toBe('ltr');
+    expect(target?.querySelector('.markdown-code span[dir]')).toBeNull();
+  });
+
+  it('says so when a page has no translation yet', async () => {
+    const { client } = fakeClient({
+      open: [{ ok: true, value: summary }],
+      list: [{ ok: true, value: documents }],
+      read: {
+        'guide/getting-started': { ok: true, value: pairFor('guide/getting-started', 'Hi\n') },
+      },
+    });
+    const element = start(client);
+    button(element, 'Open folder…').click();
+    await flushPromises();
+    const [source, target] = panes(element);
+    expect(source?.textContent).toContain('Hi');
+    expect(target?.textContent).toContain("This page isn't translated yet.");
+  });
+
+  it('shows a reading error in place of the panes', async () => {
+    const failure = error('workspace.document-unreadable', {
+      file: 'he/guide/getting-started.md',
+      problem: 'files.not-utf8',
+    });
+    const { client } = fakeClient({
+      open: [{ ok: true, value: summary }],
+      list: [{ ok: true, value: documents }],
+      read: { 'guide/getting-started': { ok: false, error: failure } },
+    });
+    const element = start(client);
+    button(element, 'Open folder…').click();
+    await flushPromises();
+    expect(panes(element)).toHaveLength(0);
+    expect(element.querySelector('article [role="alert"]')?.textContent).toContain(
+      "The file he/guide/getting-started.md can't be read (files.not-utf8).",
+    );
+  });
+
+  it('counts the pages that have a translation, and gives each page its status', async () => {
+    const element = await openedApp();
+    expect(element.querySelector('nav')?.textContent).toContain('With a translation: 1 of 2');
+    expect(
+      pageButtons(element).map((b) => b.querySelector('.visually-hidden')?.textContent.trim()),
+    ).toEqual(['Not translated yet', 'Has a translation']);
+    expect(
+      pageButtons(element).map((b) =>
+        b.querySelector('.pages-status')?.getAttribute('data-status'),
+      ),
+    ).toEqual(['missing', 'started']);
   });
 
   it('shows another page when it is chosen', async () => {
@@ -122,9 +219,7 @@ describe('the app shell', () => {
     search.value = 'guide';
     search.dispatchEvent(new Event('input'));
     await flushPromises();
-    expect(pageButtons(element).map((b) => b.textContent.trim())).toEqual([
-      'guide/getting-started',
-    ]);
+    expect(pageNames(element)).toEqual(['guide/getting-started']);
     expect(element.querySelector('nav')?.textContent).toContain('1 of 2');
     search.value = 'zebra';
     search.dispatchEvent(new Event('input'));
@@ -167,7 +262,7 @@ describe('the app shell', () => {
 
   it("gives pane headings the interface's direction, not the pane's", async () => {
     const element = await openedApp();
-    const [source, target] = panes(element).map((pane) => pane.querySelector('h3'));
+    const [source, target] = panes(element).map((pane) => pane.querySelector('header'));
     expect([source?.getAttribute('lang'), source?.getAttribute('dir')]).toEqual(['en', 'ltr']);
     expect([target?.getAttribute('lang'), target?.getAttribute('dir')]).toEqual(['en', 'ltr']);
   });

@@ -1,10 +1,11 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { SourceDocumentDto } from '#ipc-contract';
+import { computed } from 'vue';
 import { useI18n } from '../i18n/i18n';
 import AppIcon from './AppIcon.vue';
 
-defineProps<{
+const props = defineProps<{
   documents: readonly SourceDocumentDto[];
   matches: readonly SourceDocumentDto[];
   selectedKey: string | null;
@@ -12,6 +13,7 @@ defineProps<{
 const query = defineModel<string>('query', { required: true });
 const emit = defineEmits<{ select: [key: string] }>();
 const { t } = useI18n();
+const withTranslation = computed(() => props.documents.filter((d) => d.targetExists).length);
 </script>
 
 <template>
@@ -26,6 +28,9 @@ const { t } = useI18n();
         }}
       </span>
     </div>
+    <p v-if="documents.length > 0" class="pages-progress">
+      {{ t('paperl10n-pages-with-translation', withTranslation, documents.length) }}
+    </p>
     <label class="pages-search">
       <span class="visually-hidden">{{ t('paperl10n-find-page') }}</span>
       <AppIcon name="search" :size="16" />
@@ -39,12 +44,30 @@ const { t } = useI18n();
           :aria-current="document.key === selectedKey ? 'page' : undefined"
           @click="emit('select', document.key)"
         >
+          <span
+            class="pages-status"
+            :data-status="document.targetExists ? 'started' : 'missing'"
+            aria-hidden="true"
+          ></span>
           <!-- A key is a path, not prose in the interface language: isolate it. -->
           <bdi>{{ document.key }}</bdi>
+          <span class="visually-hidden">
+            {{
+              document.targetExists ? t('paperl10n-status-started') : t('paperl10n-status-missing')
+            }}
+          </span>
         </button>
       </li>
     </ul>
     <p v-else class="pages-none">{{ t('paperl10n-no-matching-pages', query.trim()) }}</p>
+    <ul class="pages-legend" aria-hidden="true">
+      <li>
+        <span class="pages-status" data-status="started"></span>{{ t('paperl10n-status-started') }}
+      </li>
+      <li>
+        <span class="pages-status" data-status="missing"></span>{{ t('paperl10n-status-missing') }}
+      </li>
+    </ul>
   </nav>
 </template>
 
@@ -72,7 +95,8 @@ const { t } = useI18n();
 }
 
 .pages-count,
-.pages-none {
+.pages-none,
+.pages-progress {
   margin: 0;
   color: var(--pl-color-muted);
   font-size: var(--pl-text-sm);
@@ -114,6 +138,9 @@ const { t } = useI18n();
 }
 
 .pages-item {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
   inline-size: 100%;
   padding-block: var(--pl-space-2);
   padding-inline: var(--pl-space-3);
@@ -134,5 +161,34 @@ const { t } = useI18n();
 .pages-item[aria-current='page'] {
   border-inline-start-color: var(--pl-color-accent);
   background: var(--pl-color-chip);
+}
+.pages-status {
+  flex: none;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border: 2px solid var(--pl-color-muted);
+  border-radius: 50%;
+}
+
+.pages-status[data-status='started'] {
+  background: var(--pl-color-muted);
+}
+
+.pages-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  margin: 0;
+  margin-block-start: auto;
+  padding: 0;
+  list-style: none;
+  color: var(--pl-color-muted);
+  font-size: var(--pl-text-sm);
+}
+
+.pages-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
 }
 </style>

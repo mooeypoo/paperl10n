@@ -70,6 +70,25 @@ view. This part covers reading and showing documents.
   its own `lang`/`dir`.
 - A missing translation says so in its pane. The Pages sidebar marks pages without a translation
   and counts them.
+- *Done-notes:*
+  - `useDocumentPair` loads the selected page (newest request wins); `MarkdownView` renders the
+    blocks from `segments.ts`, always as text, never as HTML. Pane headers carry the language,
+    the path, and the interface's direction; a missing translation and loading say so in the pane;
+    a reading error replaces the panes.
+  - Sidebar: a filled dot for "has a translation", a hollow one for "not translated yet" (shape,
+    not color, carries the difference; the status is also text for screen readers), a legend,
+    and "With a translation: 4 of 8". It doesn't claim a file with content is finished.
+  - New tokens for dimmed syntax, code surfaces, and link destinations. The mockup's syntax grey
+    was 2.6:1; the tokens are ≥4.5:1 on both surfaces in both themes.
+  - **Bidi, found in the Chromium screenshots of the sample's Hebrew pages:** inline syntax
+    scrambled RTL sentences (`<Badge text="חדש…" />`, link destinations around their
+    parentheses), and Hebrew lines in code samples were forced left to right. Now inline code, link
+    destinations, and markup with letters (tags, components) are isolated left-to-right runs in
+    prose, and code and data blocks use `unicode-bidi: plaintext`, so each line takes its own
+    direction. A first attempt isolated code-block contents too and undid the per-line fix; a test
+    now pins that down. This is display only: editing (M2) needs the same care in the editor.
+  - Mutation checks: no LTR on code blocks, no trailing text run, and isolation inside code blocks
+    each fail tests.
 
 ### R4: `format-starlight`
 

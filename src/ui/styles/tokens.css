@@ -20,6 +20,10 @@
   --pl-color-focus: #2b5bd7;
   --pl-color-danger: #a12a2a;
   --pl-color-danger-surface: #fff0ee;
+  /* Markdown as written: dimmed syntax (≥4.5:1 on both surfaces), code surfaces, link targets. */
+  --pl-color-markup: #5f6779;
+  --pl-color-code-surface: #f3ecdd;
+  --pl-color-link: #8a4f00;
 
   /* Bundled fonts first (fonts.css), then each platform's own, so text never goes missing. */
   --pl-font-ui:
@@ -69,6 +73,9 @@
     --pl-color-focus: #8db0ff;
     --pl-color-danger: #ff9c8f;
     --pl-color-danger-surface: #2e1a1c;
+    --pl-color-markup: #8f97a8;
+    --pl-color-code-surface: #121927;
+    --pl-color-link: #f9c25b;
     --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
     --pl-shadow-control: 0 1px 2px rgb(0 0 0 / 40%);
     --pl-mark-backing: #f4eee2;
@@ -90,6 +97,9 @@
   --pl-color-focus: #8db0ff;
   --pl-color-danger: #ff9c8f;
   --pl-color-danger-surface: #2e1a1c;
+  --pl-color-markup: #8f97a8;
+  --pl-color-code-surface: #121927;
+  --pl-color-link: #f9c25b;
   --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
   --pl-shadow-control: 0 1px 2px rgb(0 0 0 / 40%);
   --pl-mark-backing: #f4eee2;

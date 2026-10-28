@@ -37,7 +37,11 @@
   "paperl10n-find-page-placeholder": "שם או נתיב",
   "paperl10n-pages-matching": "$1 מתוך $2",
   "paperl10n-no-matching-pages": "אף דף לא מתאים ל־\"$1\".",
-  "paperl10n-content-later": "עדיין אי אפשר לראות כאן את תוכן הדפים. קריאה, מקטעים, מצב התרגום ועריכה יגיעו בהמשך.",
   "paperl10n-error-workspace-unknown-document": "הדף \"$1\" כבר לא נמצא בפרויקט. פתחו את הפרויקט מחדש כדי לרענן את הרשימה.",
-  "paperl10n-error-workspace-document-unreadable": "אי אפשר לקרוא את הקובץ $1 ($2)."
+  "paperl10n-error-workspace-document-unreadable": "אי אפשר לקרוא את הקובץ $1 ($2).",
+  "paperl10n-reading": "בטעינה…",
+  "paperl10n-translation-missing": "הדף הזה עדיין לא תורגם.",
+  "paperl10n-pages-with-translation": "עם תרגום: $1 מתוך $2",
+  "paperl10n-status-started": "יש תרגום",
+  "paperl10n-status-missing": "עדיין לא תורגם"
 }

@@ -52,11 +52,16 @@ describe('the UI harness', () => {
 
   it('opens the sample project by default and lists all its pages', async () => {
     const element = await openWith();
-    const pages = [...element.querySelectorAll('nav li')].map((item) => item.textContent.trim());
+    const pages = [...element.querySelectorAll('nav .pages-list bdi')].map(
+      (item) => item.textContent,
+    );
     expect(pages).toHaveLength(8);
     expect(pages).toContain('blog/2026-10-lantern-2');
-    const [, target] = [...element.querySelectorAll('section[lang]')];
+    const [source, target] = [...element.querySelectorAll('section[lang]')];
     expect(target?.textContent).toContain('docs/he/about.md');
+    // The first page (about) is read and parsed for real: its English text, and no translation yet.
+    expect(source?.textContent).toContain('Lantern is free software');
+    expect(target?.textContent).toContain("This page isn't translated yet.");
   });
 
   it('shows the real error for an unknown fixture', async () => {

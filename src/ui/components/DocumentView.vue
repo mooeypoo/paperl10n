@@ -1,12 +1,28 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
-import type { ProjectSummaryDto, SourceDocumentDto } from '#ipc-contract';
+import type {
+  DocumentPairDto,
+  ErrorDto,
+  ProjectSummaryDto,
+  SourceDocumentDto,
+} from '#ipc-contract';
+import { computed } from 'vue';
+import { errorMessage } from '../i18n/error-message';
 import { useI18n } from '../i18n/i18n';
 import { autonym } from '../i18n/language-name';
 import DocumentPane from './DocumentPane.vue';
 
-defineProps<{ summary: ProjectSummaryDto; document: SourceDocumentDto }>();
+const props = defineProps<{
+  summary: ProjectSummaryDto;
+  document: SourceDocumentDto;
+  pair: DocumentPairDto | null;
+  loading: boolean;
+  error: ErrorDto | null;
+}>();
 const { t } = useI18n();
+// Only the pair for this page counts: while the next page loads, the previous one isn't shown.
+const current = computed(() => (props.pair?.key === props.document.key ? props.pair : null));
+const waiting = computed(() => props.loading || (current.value === null && props.error === null));
 </script>
 
 <template>
@@ -15,21 +31,26 @@ const { t } = useI18n();
       <h2 class="document-title">
         <bdi>{{ document.key }}</bdi>
       </h2>
-      <p class="document-paths" dir="ltr">{{ document.sourcePath }} → {{ document.targetPath }}</p>
     </header>
-    <div class="document-panes">
+    <div v-if="error !== null" class="document-error" role="alert">
+      {{ errorMessage(error, t) }}
+    </div>
+    <div v-else class="document-panes">
       <DocumentPane
         :heading="t('paperl10n-source-pane', autonym(summary.sourceLocale.id))"
         :locale="summary.sourceLocale"
         :path="document.sourcePath"
+        :document="current?.source ?? null"
+        :loading="waiting"
       />
       <DocumentPane
         :heading="t('paperl10n-target-pane', autonym(summary.targetLocale.id))"
         :locale="summary.targetLocale"
         :path="document.targetPath"
+        :document="current?.target ?? null"
+        :loading="waiting"
       />
     </div>
-    <p class="document-later">{{ t('paperl10n-content-later') }}</p>
   </article>
 </template>
 
@@ -40,13 +61,6 @@ const { t } = useI18n();
   gap: var(--pl-space-4);
 }
 
-.document-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--pl-space-2) var(--pl-space-4);
-}
-
 .document-title {
   margin: 0;
   font-family: var(--pl-font-text);
@@ -54,22 +68,17 @@ const { t } = useI18n();
   font-weight: 600;
 }
 
-.document-paths {
-  margin: 0;
-  color: var(--pl-color-muted);
-  font-family: var(--pl-font-mono);
-  font-size: var(--pl-text-sm);
-}
-
 .document-panes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
   gap: var(--pl-space-5);
+  align-items: start;
 }
 
-.document-later {
-  margin: 0;
-  color: var(--pl-color-muted);
-  font-size: var(--pl-text-sm);
+.document-error {
+  padding: var(--pl-space-3) var(--pl-space-4);
+  border: 1px solid var(--pl-color-danger);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-color-danger-surface);
 }
 </style>
