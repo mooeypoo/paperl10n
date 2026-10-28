@@ -1,0 +1,29 @@
+{
+  "@metadata": {
+    "authors": ["Moriel"]
+  },
+  "paperl10n-app-name": "The app's name. Usually not translated.",
+  "paperl10n-open-folder": "Button that shows the folder picker to open a project. The ellipsis means a dialog follows.",
+  "paperl10n-opening": "Replaces {{msg-paperl10n|paperl10n-open-folder}} while a project is opening.",
+  "paperl10n-empty-state": "Shown before any project is open.",
+  "paperl10n-interface-language": "Label of the selector for the language of the app itself (not of the project).",
+  "paperl10n-project-format": "Which format plugin handles the open project. $1: the plugin's name, e.g. \"VitePress\".",
+  "paperl10n-source-pane": "Heading of the source-documents pane. $1: the source locale id, e.g. \"en\".",
+  "paperl10n-target-pane": "Heading of the translation pane. $1: the target locale id, e.g. \"he\".",
+  "paperl10n-documents-count": "Number of source documents. $1: the number.",
+  "paperl10n-no-documents": "Shown when the open project has no source documents.",
+  "paperl10n-config-warnings": "Heading above a list of non-fatal notes about the project's config file (each note is shown in English for now).",
+  "paperl10n-error-workspace-folder-unavailable": "Error. $1: the reason code: not-found, not-a-folder, or unreadable.",
+  "paperl10n-error-workspace-config-missing": "Error when the chosen folder has no config file. \"paperl10n.config.json\" is a file name: don't translate it.",
+  "paperl10n-error-workspace-config-unreadable": "Error. $1: the config file's path; $2: the problem code.",
+  "paperl10n-error-workspace-config-invalid": "Heading above a list of problems in the config file (each problem is shown in English for now).",
+  "paperl10n-error-workspace-unknown-document-format": "Error. $1: the plugin id written in the config file.",
+  "paperl10n-error-workspace-no-document-format": "Error. \"documentFormat\" is a config key: don't translate it.",
+  "paperl10n-error-workspace-unknown-project": "Error when the app no longer knows the project the UI refers to.",
+  "paperl10n-error-formats-invalid-options": "Error. $1: the plugin id; $2: the plugin's explanation (in English).",
+  "paperl10n-error-formats-unsupported-project": "Error. $1: the plugin id; $2: the plugin's explanation (in English).",
+  "paperl10n-error-formats-file-access": "Error. $1: the plugin id; $2: the file's path; $3: the problem code.",
+  "paperl10n-error-formats-plugin-failed": "Error when a plugin crashed (a bug in the plugin). $1: the plugin id; $2: technical details.",
+  "paperl10n-error-internal-unexpected": "Error for a bug in the app itself.",
+  "paperl10n-error-internal-invalid-request": "Error for a malformed request between the app's own parts (a bug)."
+}

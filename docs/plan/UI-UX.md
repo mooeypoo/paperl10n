@@ -15,15 +15,15 @@ and **only if M0 delivers a properly decoupled UI** (the gate below).
 The redesign should touch `src/ui/` only. M0 is meant to guarantee that. Before brainstorming,
 check:
 
-- [ ] `src/ui/` imports only `#ipc-contract` (plain DTOs), the kernel, Vue, and the i18n library.
+- [x] `src/ui/` imports only `#ipc-contract` (plain DTOs), the kernel, Vue, and the i18n library.
       Lint enforces it, and architecture samples prove a UI file importing a domain fails.
-- [ ] All UI state comes from composables over an **injected client**. Components get no data
+- [x] All UI state comes from composables over an **injected client**. Components get no data
       from anywhere else (ADR 0008, step 14).
-- [ ] UI tests run against a **fake client**, with no Electron and no main process.
-- [ ] Styling is **tokens only** (CSS custom properties), with logical properties, enforced by
+- [x] UI tests run against a **fake client**, with no Electron and no main process.
+- [x] Styling is **tokens only** (CSS custom properties), with logical properties, enforced by
       stylelint (step 13). Swapping the look means swapping tokens and components, not untangling
       hard-coded values.
-- [ ] Every string comes from the message files (`en.json` / `qqq.json`), so a new design can
+- [x] Every string comes from the message files (`en.json` / `qqq.json`), so a new design can
       relabel anything without touching logic.
 - [ ] A **browser UI harness** (`pnpm dev:harness`, M0 step 14). It runs `src/ui/` in a normal
       browser on the *real* app wiring (use cases, registry, plugins) over in-memory fixture

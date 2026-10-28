@@ -1,0 +1,13 @@
+{
+  // UI tests: DOM types plus Vitest's (which bring Node globals), kept apart from UI code.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsbuild/web-test",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuild/web-test.tsbuildinfo"
+  },
+  "include": ["src/ui/**/*.test.ts"],
+  "references": [{ "path": "./tsconfig.web.json" }, { "path": "./tsconfig.core.json" }]
+}

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { resolve } from 'node:path';
+import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'electron-vite';
 import type { Plugin } from 'vite';
 import { contentSecurityPolicy } from './scripts/csp.ts';
@@ -39,7 +40,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(import.meta.dirname, 'src/ui'),
-    plugins: [cspPlugin()],
+    plugins: [vue(), cspPlugin()],
     build: {
       rolldownOptions: { input: { index: resolve(import.meta.dirname, 'src/ui/index.html') } },
     },

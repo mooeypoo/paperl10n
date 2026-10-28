@@ -1,10 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/**/*.test.ts'],
-    environment: 'node',
+    projects: [
+      {
+        test: {
+          name: 'node',
+          include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/**/*.test.ts'],
+          exclude: ['src/ui/**'],
+          environment: 'node',
+        },
+      },
+      {
+        plugins: [vue()],
+        test: {
+          name: 'ui',
+          include: ['src/ui/**/*.test.ts'],
+          environment: 'happy-dom',
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
       // The floor applies to pure code only (docs/plan/M0.md §6.3). UI and Electron glue are

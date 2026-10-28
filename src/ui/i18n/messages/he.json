@@ -1,0 +1,29 @@
+{
+  "@metadata": {
+    "authors": ["Moriel"]
+  },
+  "paperl10n-app-name": "Paper Lion",
+  "paperl10n-open-folder": "פתיחת תיקייה…",
+  "paperl10n-opening": "בפתיחה…",
+  "paperl10n-empty-state": "פתחו תיקיית פרויקט כדי לראות מה יש לתרגם.",
+  "paperl10n-interface-language": "שפת הממשק",
+  "paperl10n-project-format": "פורמט: $1",
+  "paperl10n-source-pane": "מקור ($1)",
+  "paperl10n-target-pane": "תרגום ($1)",
+  "paperl10n-documents-count": "{{PLURAL:$1|מסמך אחד|$1 מסמכים}}",
+  "paperl10n-no-documents": "לא נמצאו מסמכי מקור.",
+  "paperl10n-config-warnings": "הערות על קובץ ההגדרות:",
+  "paperl10n-error-workspace-folder-unavailable": "אי אפשר לפתוח את התיקייה הזו ($1).",
+  "paperl10n-error-workspace-config-missing": "בתיקייה הזו עדיין אין paperl10n.config.json.",
+  "paperl10n-error-workspace-config-unreadable": "אי אפשר לקרוא את קובץ ההגדרות $1 ($2).",
+  "paperl10n-error-workspace-config-invalid": "יש בעיות בקובץ ההגדרות:",
+  "paperl10n-error-workspace-unknown-document-format": "קובץ ההגדרות מציין את הפורמט \"$1\", שאינו מותקן.",
+  "paperl10n-error-workspace-no-document-format": "אף פורמט מותקן לא מזהה את הפרויקט. ציינו פורמט בקובץ ההגדרות באמצעות \"documentFormat\".",
+  "paperl10n-error-workspace-unknown-project": "הפרויקט הזה כבר לא פתוח. פתחו אותו מחדש.",
+  "paperl10n-error-formats-invalid-options": "ההגדרות של $1 אינן תקינות: $2",
+  "paperl10n-error-formats-unsupported-project": "$1 לא יכול לעבוד עם הפרויקט הזה: $2",
+  "paperl10n-error-formats-file-access": "$1 לא הצליח לקרוא את $2 ($3).",
+  "paperl10n-error-formats-plugin-failed": "התוסף $1 נכשל באופן לא צפוי: $2",
+  "paperl10n-error-internal-unexpected": "משהו השתבש בתוך Paper Lion. נשמח לדיווח.",
+  "paperl10n-error-internal-invalid-request": "Paper Lion קיבל בקשה שאינו יודע לטפל בה. נשמח לדיווח."
+}

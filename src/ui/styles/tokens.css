@@ -1,0 +1,86 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/*
+ * Design tokens: the only place raw colors live (stylelint enforces it). Palette from direction A
+ * ("Manuscript", docs/plan/UI-UX.md), seeded by the Paper Lion mark. Light by default, dark via
+ * prefers-color-scheme, and an explicit override with <html data-theme="light|dark">.
+ */
+:root {
+  color-scheme: light;
+  --pl-color-bg: #f4eee2;
+  --pl-color-bar: #faf5ea;
+  --pl-color-surface: #fffdf8;
+  --pl-color-chip: #ede4d3;
+  --pl-color-line: #e2d7c2;
+  --pl-color-ink: #14213d;
+  --pl-color-muted: #545e73;
+  --pl-color-primary: #14213d;
+  --pl-color-on-primary: #fffdf8;
+  --pl-color-accent: #f9b233;
+  --pl-color-accent-text: #8a4f00;
+  --pl-color-focus: #2b5bd7;
+  --pl-color-danger: #a12a2a;
+  --pl-color-danger-surface: #fff0ee;
+
+  --pl-font-ui:
+    system-ui, -apple-system, 'Segoe UI', 'Noto Sans', 'Noto Sans Hebrew', 'Noto Sans Arabic',
+    sans-serif;
+  --pl-font-text: ui-serif, 'Iowan Old Style', Georgia, 'Noto Serif', 'Noto Serif Hebrew', serif;
+  --pl-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Noto Sans Mono', monospace;
+
+  --pl-text-sm: 0.8125rem;
+  --pl-text-md: 0.9375rem;
+  --pl-text-lg: 1.25rem;
+  --pl-text-xl: 1.625rem;
+
+  --pl-space-1: 0.25rem;
+  --pl-space-2: 0.5rem;
+  --pl-space-3: 0.75rem;
+  --pl-space-4: 1rem;
+  --pl-space-5: 1.5rem;
+  --pl-space-6: 2rem;
+
+  --pl-radius-sm: 0.375rem;
+  --pl-radius-md: 0.625rem;
+  --pl-radius-lg: 0.875rem;
+
+  --pl-shadow-sheet: 0 1px 2px rgb(20 33 61 / 6%), 0 8px 24px rgb(20 33 61 / 6%);
+  --pl-control-height: 2.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --pl-color-bg: #0f1420;
+    --pl-color-bar: #131a28;
+    --pl-color-surface: #182033;
+    --pl-color-chip: #222b40;
+    --pl-color-line: #2a3349;
+    --pl-color-ink: #efe8da;
+    --pl-color-muted: #a9afbc;
+    --pl-color-primary: #f9b233;
+    --pl-color-on-primary: #14213d;
+    --pl-color-accent-text: #f9c25b;
+    --pl-color-focus: #8db0ff;
+    --pl-color-danger: #ff9c8f;
+    --pl-color-danger-surface: #2e1a1c;
+    --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --pl-color-bg: #0f1420;
+  --pl-color-bar: #131a28;
+  --pl-color-surface: #182033;
+  --pl-color-chip: #222b40;
+  --pl-color-line: #2a3349;
+  --pl-color-ink: #efe8da;
+  --pl-color-muted: #a9afbc;
+  --pl-color-primary: #f9b233;
+  --pl-color-on-primary: #14213d;
+  --pl-color-accent-text: #f9c25b;
+  --pl-color-focus: #8db0ff;
+  --pl-color-danger: #ff9c8f;
+  --pl-color-danger-surface: #2e1a1c;
+  --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+}

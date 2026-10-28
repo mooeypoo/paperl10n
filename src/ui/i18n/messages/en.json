@@ -1,0 +1,29 @@
+{
+  "@metadata": {
+    "authors": ["Moriel"]
+  },
+  "paperl10n-app-name": "Paper Lion",
+  "paperl10n-open-folder": "Open folder…",
+  "paperl10n-opening": "Opening…",
+  "paperl10n-empty-state": "Open a project folder to see what there is to translate.",
+  "paperl10n-interface-language": "Interface language",
+  "paperl10n-project-format": "Format: $1",
+  "paperl10n-source-pane": "Source ($1)",
+  "paperl10n-target-pane": "Translation ($1)",
+  "paperl10n-documents-count": "{{PLURAL:$1|$1 document|$1 documents}}",
+  "paperl10n-no-documents": "No source documents found.",
+  "paperl10n-config-warnings": "Notes about the config file:",
+  "paperl10n-error-workspace-folder-unavailable": "That folder can't be opened ($1).",
+  "paperl10n-error-workspace-config-missing": "This folder has no paperl10n.config.json yet.",
+  "paperl10n-error-workspace-config-unreadable": "The config file $1 can't be read ($2).",
+  "paperl10n-error-workspace-config-invalid": "The config file has problems:",
+  "paperl10n-error-workspace-unknown-document-format": "The config names the format \"$1\", which isn't installed.",
+  "paperl10n-error-workspace-no-document-format": "No installed format recognizes this project. Name one in the config file with \"documentFormat\".",
+  "paperl10n-error-workspace-unknown-project": "That project isn't open anymore. Open it again.",
+  "paperl10n-error-formats-invalid-options": "The options for $1 are invalid: $2",
+  "paperl10n-error-formats-unsupported-project": "$1 can't work with this project: $2",
+  "paperl10n-error-formats-file-access": "$1 couldn't read $2 ($3).",
+  "paperl10n-error-formats-plugin-failed": "The $1 plugin failed unexpectedly: $2",
+  "paperl10n-error-internal-unexpected": "Something went wrong inside Paper Lion. Please report it.",
+  "paperl10n-error-internal-invalid-request": "Paper Lion received a request it can't handle. Please report it."
+}

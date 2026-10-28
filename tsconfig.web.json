@@ -1,5 +1,6 @@
 {
-  // The renderer: DOM types, no Node. Vue joins in M0 step 13.
+  // The renderer: DOM types, no Node (so a Node global in UI code is a type error). Vue SFCs
+  // are checked by vue-tsc.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
@@ -8,7 +9,7 @@
     "outDir": "node_modules/.cache/tsbuild/web",
     "tsBuildInfoFile": "node_modules/.cache/tsbuild/web.tsbuildinfo"
   },
-  "include": ["src/ui/**/*.ts"],
+  "include": ["src/ui/**/*.ts", "src/ui/**/*.vue", "src/ui/**/*.json"],
   "exclude": ["**/*.test.ts"],
   "references": [{ "path": "./tsconfig.core.json" }]
 }

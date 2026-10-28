@@ -1,0 +1,62 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Page basics. Logical properties only (AGENTS.md): this layout must mirror in RTL. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-block-size: 100%;
+  background: var(--pl-color-bg);
+  color: var(--pl-color-ink);
+  font-family: var(--pl-font-ui);
+  font-size: 100%;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--pl-color-focus);
+  outline-offset: 2px;
+}
+
+.pl-button {
+  min-block-size: var(--pl-control-height);
+  padding-inline: var(--pl-space-4);
+  border: 1px solid var(--pl-color-line);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-color-surface);
+  color: var(--pl-color-ink);
+  cursor: pointer;
+}
+
+.pl-button[data-variant='primary'] {
+  border-color: var(--pl-color-primary);
+  background: var(--pl-color-primary);
+  color: var(--pl-color-on-primary);
+  font-weight: 600;
+}
+
+.pl-button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

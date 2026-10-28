@@ -2,6 +2,7 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier/flat';
 import { defineConfig, globalIgnores } from 'eslint/config';
+import pluginVue from 'eslint-plugin-vue';
 import tseslint from 'typescript-eslint';
 import { architectureConfig } from './scripts/eslint/architecture.ts';
 
@@ -30,6 +31,24 @@ export default defineConfig(
       // Error codes are string-literal unions (ADR 0007); every switch over them must be exhaustive.
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
     },
+  },
+
+  // Vue single-file components. Type-aware rules don't run reliably on .vue files through the
+  // project service, so .vue files get the non-type-aware rules; vue-tsc checks their types.
+  // Logic belongs in .ts composables, where every rule applies.
+  ...pluginVue.configs['flat/recommended'],
+  {
+    files: ['**/*.vue'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        parser: tseslint.parser,
+        extraFileExtensions: ['.vue'],
+        projectService: false,
+      },
+    },
+    // TypeScript checks names (vue-tsc); core no-undef doesn't know DOM or TS types.
+    rules: { 'no-undef': 'off' },
   },
 
   // AGENTS.md architecture rules (boundaries, entry points, relative imports).
