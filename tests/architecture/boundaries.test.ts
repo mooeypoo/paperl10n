@@ -216,6 +216,8 @@ describe('architecture rules allow the intended dependencies (positive controls)
   });
 });
 
+// Type-aware linting builds a whole TypeScript program from cold, which takes more than the default
+// 5 s on CI runners as the project grows. The rules it checks are worth the wait.
 describe('type-aware rules still run', () => {
   it('reports a floating promise (on-disk sample, linted with its TypeScript project)', async () => {
     const typed = new ESLint({ cwd: repoRoot, ignore: false });
@@ -223,7 +225,7 @@ describe('type-aware rules still run', () => {
     expect(result?.messages.map((message) => message.ruleId)).toContain(
       '@typescript-eslint/no-floating-promises',
     );
-  });
+  }, 30_000);
 });
 
 describe('plugin isolation (ADR 0005)', () => {
