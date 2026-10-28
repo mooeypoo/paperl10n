@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+# Fixtures may contain node_modules on purpose (to test that plugins skip them).
+!tests/fixtures/**/node_modules/
+!src/plugins/*/fixtures/**/node_modules/
+
+# Build output
+out/
+dist/
+
+# Tool caches and reports
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+
+# Logs
+*.log
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/

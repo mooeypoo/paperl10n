@@ -1,0 +1,16 @@
+# Normalize text files to LF in the repository.
+* text=auto eol=lf
+
+# Fixtures stand in for users' projects. Git must never rewrite their bytes
+# (line endings, BOMs), or round-trip tests would test the wrong thing.
+tests/fixtures/** -text
+src/plugins/*/fixtures/** -text
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.woff2 binary
+
+pnpm-lock.yaml linguist-generated=true

@@ -97,6 +97,13 @@ Built-in plugins live in `src/plugins/<name>/` and are written as if they were a
 - Every format plugin has fixture-based tests (sample projects in `src/plugins/<name>/fixtures/`)
   and passes the shared plugin contract test kit. Other adapters keep fixtures in `tests/fixtures/`.
 - Round-trip rule: parse → serialize must not change a document that wasn't edited.
+- Every port has a contract test suite (in its domain's `testing/`) that runs against the in-memory
+  fake *and* every real adapter, so fakes can't drift from reality.
+- The plugin API's export list is frozen by a test. Changing what plugins see is a deliberate diff.
+- Every IPC method is tested end to end without Electron (preload → validation → handler → use case).
+- Every use case tests its success path and each error it can return. Every domain rule gets
+  table-driven tests, including malformed input.
+- Tests are deterministic and fast: no network, no real dialogs, no sleeps.
 
 ## Working style for agents
 - Make small, focused changes. Leave the build, lint, and tests green.
