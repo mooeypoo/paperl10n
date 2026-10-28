@@ -50,9 +50,16 @@ scripts) during the locale-picker design discussion: see
 
 `domain/language-data.json` is the catalog of languages Paper Lion knows: 1,471 languages, each
 with its BCP 47 tag (what Paper Lion saves), MediaWiki code, direction, autonym (when known),
-names in the interface languages (`en`, `he`), script, regions, and fallbacks; plus aliases (old
-and MediaWiki codes → tags) and, for 254 regions, their languages by number of speakers. L2 wires
-it in; until then the M0 tables above still decide direction.
+English name, script, regions, and fallbacks; plus aliases (old and MediaWiki codes → tags) and,
+for 254 regions, their languages by number of speakers. L2 wires it in; until then the M0 tables
+above still decide direction.
+
+**Names in other interface languages live in their own files**, one per interface language the
+app ships: `domain/language-names/he.json` (tag → name, only where it differs from English, one
+per line). Each interface language adds about 35 KB; keeping them apart keeps the catalog's diffs
+readable and loads only the names the current interface needs. The generator reads the interface
+languages from the UI's message files, so a new UI language gets its names file on the next
+update, and a test fails until it does.
 
 - **Generated, never hand-edited:** `pnpm update:language-data` (needs the network; run by hand
   and review the diff). A test fails if the file differs from what the generator writes.

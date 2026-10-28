@@ -2,6 +2,7 @@
 pnpm-lock.yaml
 LICENSE
 src/domains/locale/domain/language-data.json
+src/domains/locale/domain/language-names/
 
 # Documentation is written by hand; Prettier would re-pad every table on each edit.
 *.md

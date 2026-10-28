@@ -30,8 +30,8 @@ export interface LanguageRecord {
   readonly dir: 'ltr' | 'rtl';
   /** The language's name in itself, when either source knows it. */
   readonly autonym: string | null;
-  /** Names in the app's interface languages; `en` always, others only when they differ. */
-  readonly names: Readonly<Record<string, string>>;
+  /** The English name. Names in other interface languages live in their own files. */
+  readonly name: string;
   /** ISO 15924 script (`Hebr`), from ULS. */
   readonly script?: string;
   /** ULS region groups (`ME`, `EU`, …). */
@@ -68,8 +68,13 @@ export interface BuildInput {
   readonly uls: UlsData;
 }
 
+/** Names in one interface language: tag → name, only where it differs from the English name. */
+export type LanguageNamesFile = Readonly<Record<string, string>>;
+
 export interface BuildResult {
   readonly data: LanguageDataFile;
+  /** One names file per interface language other than English (`he` → its file). */
+  readonly names: Readonly<Record<string, LanguageNamesFile>>;
   /** Codes whose direction came from their script, against languageinfo (for the update log). */
   readonly directionFromScript: readonly string[];
 }
@@ -147,11 +152,6 @@ export function buildLanguageData(input: BuildInput): BuildResult {
       // languageinfo only knows the direction of languages MediaWiki has interface messages for;
       // for the rest it says "ltr". A right-to-left script settles it.
       if (scriptIsRtl && entry.dir !== 'rtl') directionFromScript.push(entry.code);
-      const names: Record<string, string> = { en: entry.name };
-      for (const [uiLanguage, localized] of Object.entries(input.localizedNames)) {
-        const name = localized[entry.code];
-        if (name !== undefined && name !== entry.name) names[uiLanguage] = name;
-      }
       const fallbacks = entry.fallbacks
         .map((code) => tagOf.get(code))
         .filter((t): t is string => t !== undefined && t !== tag);
@@ -160,7 +160,7 @@ export function buildLanguageData(input: BuildInput): BuildResult {
         mw: entry.code,
         dir: entry.dir === 'rtl' || scriptIsRtl ? 'rtl' : 'ltr',
         autonym: entry.autonym !== '' ? entry.autonym : fromUls?.[2] || null,
-        names,
+        name: entry.name,
         ...(fromUls === undefined ? {} : { script: fromUls[0], regions: [...fromUls[1]] }),
         ...(fallbacks.length === 0 ? {} : { fallbacks: [...new Set(fallbacks)] }),
       };
@@ -175,7 +175,19 @@ export function buildLanguageData(input: BuildInput): BuildResult {
     if (tags.length > 0) territories[region] = [...new Set(tags)];
   }
 
+  // Names in other interface languages, by tag, sorted; only those that differ from English.
+  const names: Record<string, Record<string, string>> = {};
+  for (const [uiLanguage, localized] of Object.entries(input.localizedNames)) {
+    const file: Record<string, string> = {};
+    for (const { tag, entry } of [...chosen].sort((a, b) => (a.tag < b.tag ? -1 : 1))) {
+      const name = localized[entry.code];
+      if (name !== undefined && name !== entry.name) file[tag] = name;
+    }
+    names[uiLanguage] = file;
+  }
+
   return {
+    names,
     data: {
       generated: input.generated,
       sources: input.sources,
@@ -186,6 +198,14 @@ export function buildLanguageData(input: BuildInput): BuildResult {
     },
     directionFromScript: directionFromScript.sort(),
   };
+}
+
+/** Stable JSON for a names file: one name per line. */
+export function serializeLanguageNames(names: LanguageNamesFile): string {
+  const lines = Object.entries(names).map(
+    ([tag, name]) => `  ${JSON.stringify(tag)}: ${JSON.stringify(name)}`,
+  );
+  return lines.length === 0 ? '{}\n' : `{\n${lines.join(',\n')}\n}\n`;
 }
 
 /** Stable JSON: one language, alias, or territory per line, so updates diff cleanly. */

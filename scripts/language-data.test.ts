@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLanguageData,
   serializeLanguageData,
+  serializeLanguageNames,
   type BuildInput,
   type LanguageInfoEntry,
   type UlsData,
@@ -118,13 +119,19 @@ describe('buildLanguageData', () => {
     ]).toEqual(['עברית', 'Wôbanakiôdwawôgan', null]);
   });
 
-  it('keeps names in other interface languages only when they differ from English', () => {
+  it("keeps the English name in the catalog, and other languages' names in their own files", () => {
     const result = build(
-      { he: info('he', { name: 'Hebrew' }), xyz: info('xyz', { name: 'Xyz' }) },
-      { localizedNames: { he: { he: 'עברית', xyz: 'Xyz' } } },
+      {
+        he: info('he', { name: 'Hebrew' }),
+        xyz: info('xyz', { name: 'Xyz' }),
+        'pt-br': info('pt-br', { bcp47: 'pt-BR', name: 'Brazilian Portuguese' }),
+      },
+      { localizedNames: { he: { he: 'עברית', xyz: 'Xyz', 'pt-br': 'פורטוגזית ברזילאית' } } },
     );
-    expect(byTag(result, 'he')?.names).toEqual({ en: 'Hebrew', he: 'עברית' });
-    expect(byTag(result, 'xyz')?.names).toEqual({ en: 'Xyz' });
+    expect(byTag(result, 'he')?.name).toBe('Hebrew');
+    // Only names that differ from English, by tag (not MediaWiki code), sorted.
+    expect(result.names).toEqual({ he: { he: 'עברית', 'pt-BR': 'פורטוגזית ברזילאית' } });
+    expect(Object.keys(result.names.he ?? {})).toEqual(['he', 'pt-BR']);
   });
 
   it('maps fallbacks to tags, dropping unknown ones and the language itself', () => {
@@ -168,5 +175,18 @@ describe('serializeLanguageData', () => {
     const lines = serializeLanguageData(data).split('\n');
     expect(lines.filter((line) => line.startsWith('    {"tag":'))).toHaveLength(2);
     expect(lines).toContain('    "sr-el": "sr-Latn"');
+  });
+});
+
+describe('serializeLanguageNames', () => {
+  it('writes one name per line, and round-trips', () => {
+    const names = { he: 'עברית', 'pt-BR': 'פורטוגזית' };
+    const text = serializeLanguageNames(names);
+    expect(text).toBe('{\n  "he": "עברית",\n  "pt-BR": "פורטוגזית"\n}\n');
+    expect(JSON.parse(text)).toEqual(names);
+  });
+
+  it('writes an empty file as {}', () => {
+    expect(serializeLanguageNames({})).toBe('{}\n');
   });
 });

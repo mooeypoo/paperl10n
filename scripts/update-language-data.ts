@@ -1,17 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Refreshes Paper Lion's language catalog from Wikimedia. Run by hand, never in CI (it needs the
 // network): `pnpm update:language-data`, then review the diff. docs/plan/M1-languages.md.
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import {
   buildLanguageData,
   serializeLanguageData,
+  serializeLanguageNames,
   type LanguageInfoEntry,
   type UlsData,
 } from './language-data.ts';
 
 const OUTPUT = new URL('../src/domains/locale/domain/language-data.json', import.meta.url);
-/** Interface languages the app ships, besides English (src/ui/i18n). */
-const INTERFACE_LANGUAGES = ['he'];
+const NAMES_FOLDER = new URL('../src/domains/locale/domain/language-names/', import.meta.url);
+const UI_MESSAGES = new URL('../src/ui/i18n/messages/', import.meta.url);
+/** Interface languages the app ships, besides English: one per UI message file (src/ui/i18n). */
+const INTERFACE_LANGUAGES = readdirSync(UI_MESSAGES)
+  .filter((file) => file.endsWith('.json'))
+  .map((file) => file.slice(0, -'.json'.length))
+  .filter((language) => language !== 'en' && language !== 'qqq')
+  .sort();
 /** Pinned, so an update is a deliberate change (published 2026-09-14). */
 const ULS_VERSION = '2.0.4';
 const ULS_URL = `https://unpkg.com/@wikimedia/language-data@${ULS_VERSION}/data/language-data.json`;
@@ -58,7 +65,7 @@ for (const uiLanguage of INTERFACE_LANGUAGES) {
 }
 const uls = (await getJson(ULS_URL)) as UlsData;
 
-const { data, directionFromScript } = buildLanguageData({
+const { data, names, directionFromScript } = buildLanguageData({
   generated: new Date().toISOString().slice(0, 10),
   sources: [
     {
@@ -77,8 +84,14 @@ const { data, directionFromScript } = buildLanguageData({
   uls,
 });
 writeFileSync(OUTPUT, serializeLanguageData(data));
+// One names file per interface language; files for languages the UI no longer has go away.
+rmSync(NAMES_FOLDER, { recursive: true, force: true });
+mkdirSync(NAMES_FOLDER);
+for (const [uiLanguage, file] of Object.entries(names)) {
+  writeFileSync(new URL(`${uiLanguage}.json`, NAMES_FOLDER), serializeLanguageNames(file));
+}
 console.log(
-  `Wrote ${String(data.languages.length)} languages, ${String(Object.keys(data.aliases).length)} aliases, ${String(Object.keys(data.territories).length)} territories.`,
+  `Wrote ${String(data.languages.length)} languages, ${String(Object.keys(data.aliases).length)} aliases, ${String(Object.keys(data.territories).length)} territories; names in: ${Object.keys(names).join(', ')}.`,
 );
 if (directionFromScript.length > 0) {
   console.log(`Right to left by script (languageinfo says ltr): ${directionFromScript.join(', ')}`);

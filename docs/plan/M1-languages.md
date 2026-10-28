@@ -81,6 +81,12 @@ Each is its own branch and PR, as in M0.
       each, an autonym when known".
   - Mutation checks: ignoring the script's direction, canonicalizing tags, and a hand edit to the
     file (Hebrew as "ltr") each fail tests.
+  - **Follow-up (decided with the maintainer):** names in interface languages other than English
+    moved to one file each (`language-names/he.json`), instead of a field per language on every
+    line. Measured: each interface language added ~32 KB and ~110 bytes per line (15 languages
+    would mean ~630 KB and ~440-byte lines, with every line changing whenever one is added). The
+    generator derives the interface languages from the UI's message files; a test checks there's
+    exactly one names file per non-English UI language.
 - **L2, the `locale` domain:** a `LanguageCatalog` (lookup by BCP 47 tag or alias, direction,
   names); `localeFrom` uses it instead of M0's RTL table; custom languages from the config
   (`languages: { "<code>": { "name", "dir" } }`); pure search ranking and suggestion rules
