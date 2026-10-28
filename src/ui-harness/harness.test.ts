@@ -50,17 +50,18 @@ describe('the UI harness', () => {
     expect(document.documentElement.hasAttribute(`data-${HARNESS_MARKER}`)).toBe(true);
   });
 
-  it('opens the sample project by default and lists all its source documents', async () => {
+  it('opens the sample project by default and lists all its pages', async () => {
     const element = await openWith();
-    const [source, target] = [...element.querySelectorAll('section')];
-    expect(source?.querySelectorAll('li')).toHaveLength(8);
-    expect(source?.textContent).toContain('docs/en/blog/2026-10-lantern-2.md');
-    expect(target?.textContent).toContain('docs/he/guide/configuration.md');
+    const pages = [...element.querySelectorAll('nav li')].map((item) => item.textContent.trim());
+    expect(pages).toHaveLength(8);
+    expect(pages).toContain('blog/2026-10-lantern-2');
+    const [, target] = [...element.querySelectorAll('section[lang]')];
+    expect(target?.textContent).toContain('docs/he/about.md');
   });
 
   it('shows the real error for an unknown fixture', async () => {
     const element = await openWith('format-stub/nope');
     expect(element.querySelector('[role="alert"]')).not.toBeNull();
-    expect(element.querySelectorAll('section')).toHaveLength(0);
+    expect(element.querySelectorAll('section[lang]')).toHaveLength(0);
   });
 });

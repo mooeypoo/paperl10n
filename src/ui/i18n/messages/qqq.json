@@ -7,9 +7,9 @@
   "paperl10n-opening": "Replaces {{msg-paperl10n|paperl10n-open-folder}} while a project is opening.",
   "paperl10n-empty-state": "Shown before any project is open.",
   "paperl10n-interface-language": "Label of the selector for the language of the app itself (not of the project).",
-  "paperl10n-project-format": "Which format plugin handles the open project. $1: the plugin's name, e.g. \"VitePress\".",
-  "paperl10n-source-pane": "Heading of the source-documents pane. $1: the source locale id, e.g. \"en\".",
-  "paperl10n-target-pane": "Heading of the translation pane. $1: the target locale id, e.g. \"he\".",
+  "paperl10n-project-format": "Tooltip on the format name in the header's project chip. $1: the format plugin's name, e.g. \"VitePress\".",
+  "paperl10n-source-pane": "Heading of the source pane. $1: the source language's own name, e.g. \"English\".",
+  "paperl10n-target-pane": "Heading of the translation pane. $1: the target language's own name, e.g. \"עברית\".",
   "paperl10n-documents-count": "Number of source documents. $1: the number.",
   "paperl10n-no-documents": "Shown when the open project has no source documents.",
   "paperl10n-config-warnings": "Heading above a list of non-fatal notes about the project's config file (each note is shown in English for now).",
@@ -29,5 +29,13 @@
   "paperl10n-theme": "Accessible name of the group of theme choices (color scheme of the app).",
   "paperl10n-theme-system": "Theme choice: follow the operating system's light or dark setting. Shown as a tooltip and read by screen readers.",
   "paperl10n-theme-light": "Theme choice: always use the light color scheme.",
-  "paperl10n-theme-dark": "Theme choice: always use the dark color scheme."
+  "paperl10n-theme-dark": "Theme choice: always use the dark color scheme.",
+  "paperl10n-welcome-title": "Title of the welcome screen, shown before any project is open.",
+  "paperl10n-language-pair": "Read by screen readers for the language pair in the header (shown visually as \"English → עברית\"). $1: the source language's own name; $2: the target language's own name.",
+  "paperl10n-pages": "Heading and accessible name of the sidebar that lists the project's pages (documents).",
+  "paperl10n-find-page": "Accessible label of the search box that filters the list of pages.",
+  "paperl10n-find-page-placeholder": "Placeholder text in the page search box: what you can search by.",
+  "paperl10n-pages-matching": "Shown while searching pages. $1: the number of pages that match; $2: the number of pages in total.",
+  "paperl10n-no-matching-pages": "Shown when no page matches the search. $1: what the user typed.",
+  "paperl10n-content-later": "Note under the document panes: Paper Lion can't show page contents yet; those features come in later versions."
 }

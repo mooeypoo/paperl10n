@@ -8,8 +8,8 @@
   "paperl10n-empty-state": "פתחו תיקיית פרויקט כדי לראות מה יש לתרגם.",
   "paperl10n-interface-language": "שפת הממשק",
   "paperl10n-project-format": "פורמט: $1",
-  "paperl10n-source-pane": "מקור ($1)",
-  "paperl10n-target-pane": "תרגום ($1)",
+  "paperl10n-source-pane": "$1 · מקור",
+  "paperl10n-target-pane": "$1 · תרגום",
   "paperl10n-documents-count": "{{PLURAL:$1|מסמך אחד|$1 מסמכים}}",
   "paperl10n-no-documents": "לא נמצאו מסמכי מקור.",
   "paperl10n-config-warnings": "הערות על קובץ ההגדרות:",
@@ -29,5 +29,13 @@
   "paperl10n-theme": "ערכת צבעים",
   "paperl10n-theme-system": "לפי המערכת",
   "paperl10n-theme-light": "בהירה",
-  "paperl10n-theme-dark": "כהה"
+  "paperl10n-theme-dark": "כהה",
+  "paperl10n-welcome-title": "מתרגמים את התיעוד, זה לצד זה",
+  "paperl10n-language-pair": "שפת המקור: $1, שפת התרגום: $2",
+  "paperl10n-pages": "דפים",
+  "paperl10n-find-page": "חיפוש דף",
+  "paperl10n-find-page-placeholder": "שם או נתיב",
+  "paperl10n-pages-matching": "$1 מתוך $2",
+  "paperl10n-no-matching-pages": "אף דף לא מתאים ל־\"$1\".",
+  "paperl10n-content-later": "עדיין אי אפשר לראות כאן את תוכן הדפים. קריאה, מקטעים, מצב התרגום ועריכה יגיעו בהמשך."
 }

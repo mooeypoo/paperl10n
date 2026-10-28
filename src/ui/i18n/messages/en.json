@@ -8,8 +8,8 @@
   "paperl10n-empty-state": "Open a project folder to see what there is to translate.",
   "paperl10n-interface-language": "Interface language",
   "paperl10n-project-format": "Format: $1",
-  "paperl10n-source-pane": "Source ($1)",
-  "paperl10n-target-pane": "Translation ($1)",
+  "paperl10n-source-pane": "$1 · source",
+  "paperl10n-target-pane": "$1 · translation",
   "paperl10n-documents-count": "{{PLURAL:$1|$1 document|$1 documents}}",
   "paperl10n-no-documents": "No source documents found.",
   "paperl10n-config-warnings": "Notes about the config file:",
@@ -29,5 +29,13 @@
   "paperl10n-theme": "Theme",
   "paperl10n-theme-system": "Match the system",
   "paperl10n-theme-light": "Light",
-  "paperl10n-theme-dark": "Dark"
+  "paperl10n-theme-dark": "Dark",
+  "paperl10n-welcome-title": "Translate your docs, side by side",
+  "paperl10n-language-pair": "Translating from $1 into $2",
+  "paperl10n-pages": "Pages",
+  "paperl10n-find-page": "Find a page",
+  "paperl10n-find-page-placeholder": "Name or path",
+  "paperl10n-pages-matching": "$1 of $2",
+  "paperl10n-no-matching-pages": "No page matches \"$1\".",
+  "paperl10n-content-later": "Page content doesn't show here yet. Reading, sections, translation status, and editing come next."
 }

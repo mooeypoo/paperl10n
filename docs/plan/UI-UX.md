@@ -1,8 +1,8 @@
 # After M0: UI and UX design discussion
 
-Status: **in progress.** M0 delivered the decoupled UI (the gate below passed). The first pass
-(U1, U2) builds the foundation and direction A's shell with the data that exists today; the
-editor and section view follow when M1/M2 provide content, sections, and status.
+Status: **first pass done (U1, U2).** M0 delivered the decoupled UI (the gate below passed). The
+foundation and direction A's shell are built with the data that exists today; the editor and
+section view follow when M1/M2 provide content, sections, and status.
 
 ## First pass
 
@@ -12,7 +12,7 @@ and this scope: foundation + app shell, with no mock data and no controls that d
 | Step | What | Status |
 |---|---|---|
 | U1 | Foundation: the mockups' fonts, a system/light/dark theme switch, icons that know whether they mirror in RTL, the mark in the header, saved interface preferences ([ADR 0016](../adr/0016-fonts-and-themes.md)) | done |
-| U2 | Direction A's shell: header (mark, project chip, language pair, theme, interface language), a Pages sidebar with search, the selected document's header and its source/translation panes | next |
+| U2 | Direction A's shell: header (mark, project chip, language pair, theme, interface language), a Pages sidebar with search, the selected document's header and its source/translation panes | done |
 | later | The section view, full page, status and progress, hints, editing (CodeMirror spike first), and the catalog view (C) | with M1–M4 |
 
 U1 done-notes:
@@ -28,6 +28,23 @@ U1 done-notes:
   `--user-data-dir`, each test gets a temporary profile, and a test asserts it (mutation-checked).
 - Open for the maintainer: a real dark-surface variant of the mark (the disc is a stopgap), and
   whether the content serif pairing reads well at length once real documents render.
+
+U2 done-notes:
+- Components: `AppHeader`, `PagesSidebar`, `DocumentView` + `DocumentPane`, `WelcomeState`.
+  Logic stays in composables: `usePages` (search by every word of key or path, selection, reset
+  when another project opens) and `autonym` (each language by its own name, via
+  `Intl.DisplayNames`; the interface-language menu uses it too).
+- Only working controls. "Open folder…" sits in the welcome card until a project is open, then
+  in the header. The panes show each file's path and one plain note that content comes later;
+  there's no mock content, status, or progress.
+- **Bidi:** a pane's heading is interface text, so it takes the interface's `lang`/`dir`, not the
+  pane's, and the pane is labelled by it (`aria-labelledby`). Before the fix, the English
+  interface showed "translation · עברית" over the Hebrew pane. A test covers it
+  (mutation-checked).
+- The language pair reads source → target in both directions: the arrow mirrors in RTL, and a
+  visually hidden sentence ("Translating from English into עברית") is what screen readers hear.
+- Verified in Chromium (harness, light and dark, English and Hebrew) and by the e2e suite on the
+  built app.
 
 ## Decisions so far
 
