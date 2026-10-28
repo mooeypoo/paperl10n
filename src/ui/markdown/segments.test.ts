@@ -93,6 +93,7 @@ describe('isLeftToRightBlock', () => {
     ['code', true],
     ['frontmatter', true],
     ['mdx-esm', true],
+    ['html', true],
     ['paragraph', false],
     ['heading', false],
     ['list', false],

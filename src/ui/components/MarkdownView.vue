@@ -96,6 +96,11 @@ const views = computed(() => blockViews(props.document));
   color: var(--pl-color-muted);
 }
 
+/* HTML and components (often JSX in MDX) mix tags with prose: read them line by line too. */
+.markdown-html {
+  unicode-bidi: plaintext;
+}
+
 /* An isolated run can't be reordered with the sentence around it (and vice versa). */
 .markdown-block span[dir] {
   unicode-bidi: isolate;

@@ -52,9 +52,18 @@ export function blockViews(document: DocumentTextDto): BlockView[] {
   });
 }
 
-/** Blocks whose text is code or data, so it reads left to right whatever the pane's language. */
+/**
+ * Blocks whose text is code, data, or markup (HTML and components), so it reads left to right
+ * whatever the pane's language, line by line: a line that starts with prose in a right-to-left
+ * language still reads right to left (the view sets `unicode-bidi: plaintext`).
+ */
 export function isLeftToRightBlock(block: BlockDto): boolean {
-  return block.kind === 'code' || block.kind === 'frontmatter' || block.kind === 'mdx-esm';
+  return (
+    block.kind === 'code' ||
+    block.kind === 'frontmatter' ||
+    block.kind === 'mdx-esm' ||
+    block.kind === 'html'
+  );
 }
 
 /**

@@ -96,6 +96,26 @@ view. This part covers reading and showing documents.
   in locale folders, `.md` and `.mdx`. Starlight's own config is JavaScript, which a plugin can't
   run, so the locale-to-folder mapping lives in `paperl10n.config.json` options, with sensible
   defaults. Fixtures for root and folder layouts, the plugin contract kit.
+- *Done-notes:*
+  - `src/plugins/format-starlight/` (README, manifest, fixtures), registered in
+    `app/plugins.ts`. Options: `contentDir` and `localeFolders` (`""` is the root). Defaults
+    follow Starlight's conventions: the source locale's own folder if it exists, else the root;
+    targets in lowercase locale folders (`pt-BR` → `pt-br`); at the root, two-letter locale-like
+    folders belong to other locales, three-letter ones (`api`) are pages.
+  - Translations keep the source's extension (`.mdx` → `.mdx`); `.mdx` files are parsed with MDX
+    tolerance (R2).
+  - Detection: `certain` with an Astro config that mentions `@astrojs/starlight` and
+    `src/content/docs/`, `likely` without the import. With no format pinned, Starlight now wins
+    over `format-stub`'s fallback (tested end to end in `createAppApi`).
+  - Four fixtures through the plugin contract kit, plus table tests for layouts, options, and
+    malformed options (40 tests). The harness opens them too (`?fixture=format-starlight/root-locale`).
+  - Found in the harness screenshot of the Starlight fixture: a Hebrew HTML/JSX block
+    (`<Card title="…">…</Card>`) was scrambled. Lezer keeps HTML blocks as raw text, so the inline
+    isolation didn't apply; HTML blocks now read left to right line by line, like code. **Known
+    limit:** two right-to-left runs separated only by neutral characters (`"…">…`) still merge, as
+    in code editors. Fixing that needs JSX tokens, with the M2 editor.
+  - Dev note: Vitest's cache kept an old expansion of the harness's fixture glob, so new fixture
+    folders didn't show up in harness tests until `node_modules/.vitest-cache` was cleared.
 
 ### R5: docs
 

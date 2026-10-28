@@ -28,6 +28,9 @@ function readTree(root: string): FileTree {
 }
 
 const basic = readTree(new URL('../plugins/format-stub/fixtures/basic', import.meta.url).pathname);
+const starlight = readTree(
+  new URL('../plugins/format-starlight/fixtures/root-locale', import.meta.url).pathname,
+);
 
 function appWith(
   folders: Record<string, FileTree>,
@@ -112,6 +115,42 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
         target: null,
       },
     });
+  });
+
+  it('opens a Starlight site, lists its pages with status, and reads MDX as MDX', async () => {
+    const withoutPin = Object.fromEntries(
+      Object.entries(starlight).filter(([path]) => path !== 'paperl10n.config.json'),
+    );
+    const api = appWith(
+      {
+        '/sites/lantern': {
+          ...withoutPin,
+          'paperl10n.config.json': JSON.stringify({ targetLocale: 'he' }),
+        },
+      },
+      '/sites/lantern',
+    );
+    // No format pinned: detection picks Starlight ("certain") over format-stub's fallback.
+    const opened = cloned(await api.openProject());
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    expect(opened.value.documentFormat).toEqual({
+      id: 'format-starlight',
+      displayName: 'Astro Starlight',
+    });
+
+    const listed = cloned(await api.listSourceDocuments({ projectId: opened.value.projectId }));
+    expect(listed.ok && listed.value.map((d) => [d.key, d.targetExists])).toEqual([
+      ['guides/getting-started', true],
+      ['index', true],
+      ['reference/api', false],
+    ]);
+
+    const pair = cloned(
+      await api.readDocumentPair({ projectId: opened.value.projectId, key: 'index' }),
+    );
+    if (!pair.ok) throw new Error(JSON.stringify(pair));
+    expect(pair.value.source.blocks.map((b) => b.kind)).toEqual(['frontmatter', 'mdx-esm', 'html']);
+    expect(pair.value.target?.path).toBe('src/content/docs/he/index.mdx');
   });
 
   it('returns null when the user cancels', async () => {
