@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
+  <title id="t">Paper Lion</title>
+  <defs>
+    <style>
+      .ink { stroke: #14213D; stroke-width: 14; stroke-linejoin: round; stroke-linecap: round; }
+      .thin { stroke: #14213D; stroke-width: 10; stroke-linejoin: round; stroke-linecap: round; fill: none; }
+    </style>
+  </defs>
+
+  <!-- Paper mane with folded corner -->
+  <path fill="#FDF6E7" d="M172 74 L330 50 L404 122 L418 236 L458 330 L398 378 L344 458 L254 428 L170 446 L118 364 L66 322 L72 206 L120 160 Z"/>
+  <path fill="#F7E6C4" d="M330 50 L336 116 L404 122 Z"/>
+  <path class="ink" fill="none" d="M172 74 L330 50 L404 122 L418 236 L458 330 L398 378 L344 458 L254 428 L170 446 L118 364 L66 322 L72 206 L120 160 Z"/>
+  <path class="thin" d="M330 50 L336 116 L404 122"/>
+
+  <!-- Ears -->
+  <circle class="ink" cx="158" cy="196" r="44" fill="#F9B233"/>
+  <circle cx="158" cy="196" r="22" fill="#D9891C"/>
+  <circle class="ink" cx="322" cy="200" r="38" fill="#F9B233"/>
+  <circle cx="322" cy="200" r="19" fill="#D9891C"/>
+
+  <!-- Head -->
+  <ellipse class="ink" cx="240" cy="290" rx="112" ry="100" fill="#F9B233"/>
+
+  <!-- Muzzle -->
+  <ellipse cx="240" cy="334" rx="62" ry="46" fill="#FDEBD2"/>
+
+  <!-- Brows -->
+  <path class="thin" stroke-width="8" d="M184 248 Q196 238 210 244"/>
+  <path class="thin" stroke-width="8" d="M270 244 Q284 238 296 248"/>
+
+  <!-- Eyes -->
+  <circle cx="198" cy="280" r="15" fill="#14213D"/>
+  <circle cx="282" cy="280" r="15" fill="#14213D"/>
+  <circle cx="202" cy="275" r="5" fill="#FFFFFF"/>
+  <circle cx="286" cy="275" r="5" fill="#FFFFFF"/>
+
+  <!-- Nose -->
+  <path fill="#14213D" stroke="#14213D" stroke-width="6" stroke-linejoin="round"
+        d="M224 312 Q240 308 256 312 Q250 326 240 330 Q230 326 224 312 Z"/>
+
+  <!-- Smile -->
+  <path class="thin" stroke-width="8" d="M240 330 L240 340 M214 340 Q227 356 240 340 Q253 356 266 340"/>
+</svg>

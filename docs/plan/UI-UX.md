@@ -31,6 +31,20 @@ check:
       fastest loop for design experiments. **Paper Lion stays a desktop app**: the harness is
       never shipped and is no web target.
 
+## Inputs we already have
+
+- **The mark:** [`assets/paperl10n-mark.svg`](../../assets/paperl10n-mark.svg), a lion with a
+  paper mane and a folded corner; palette in [`assets/README.md`](../../assets/README.md).
+  Questions for the design work:
+  - **Dark theme:** the navy ink outline (`#14213D`) disappears on dark backgrounds. A dark-surface
+    variant (lighter ink, or a subtle backing shape) is probably needed.
+  - **Small sizes:** brows, eye highlights, and thin strokes won't survive 16–32 px (window icon,
+    taskbar, favicon). A simplified small-size variant is likely needed.
+  - **App icon:** each platform needs its own format (`.icns`, `.ico`, PNG sizes), so it's done
+    together with packaging.
+  - **Palette:** the warm amber and cream with deep navy could seed the token palette, checked
+    for contrast in both themes.
+
 ## Topics to brainstorm
 
 ### Visual design
