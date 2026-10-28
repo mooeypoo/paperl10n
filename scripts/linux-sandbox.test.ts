@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { linuxSandboxWarning, type SandboxFacts } from './linux-sandbox.ts';
+import { apparmorProfile, linuxSandboxWarning, type SandboxFacts } from './linux-sandbox.ts';
 
 const restricted: SandboxFacts = {
   platform: 'linux',
@@ -39,5 +40,23 @@ describe('linuxSandboxWarning', () => {
     expect(
       linuxSandboxWarning({ ...restricted, sandboxHelper: { uid: 0, mode: 0o100755 } }),
     ).toBeDefined();
+  });
+});
+
+describe('apparmorProfile', () => {
+  it("allows user namespaces for this clone's Electron binary, under pnpm's real path", () => {
+    const profile = apparmorProfile('/work/paperl10n');
+    expect(profile).toContain(
+      'profile paperl10n-electron /work/paperl10n/node_modules/.pnpm/electron@*/node_modules/electron/dist/electron flags=(unconfined) {',
+    );
+    expect(profile).toContain('  userns,\n');
+  });
+
+  it('is the profile the linux-sandbox doc tells people to install', () => {
+    const doc = readFileSync(
+      new URL('../docs/development/linux-sandbox.md', import.meta.url),
+      'utf8',
+    );
+    expect(doc).toContain(apparmorProfile('/home/USER/PATH/TO/paperl10n'));
   });
 });

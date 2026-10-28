@@ -36,6 +36,7 @@ pnpm dev            # run the app with hot reload
 pnpm dev:harness    # the UI in a browser over fixture projects (a testing aid, ADR 0015)
 pnpm check          # what CI checks: types, lint, formatting, tests
 pnpm test:watch     # tests, re-run on change
+pnpm test:e2e       # build, then run the Electron end-to-end tests
 pnpm build          # production build into out/
 ```
 

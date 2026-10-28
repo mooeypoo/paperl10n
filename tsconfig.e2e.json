@@ -1,0 +1,13 @@
+{
+  // End-to-end tests: they run in Node, and pass functions that run in the renderer page.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsbuild/e2e",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuild/e2e.tsbuildinfo"
+  },
+  "include": ["tests/e2e/**/*.ts", "playwright.config.ts"],
+  "references": [{ "path": "./tsconfig.core.json" }, { "path": "./tsconfig.node.json" }]
+}

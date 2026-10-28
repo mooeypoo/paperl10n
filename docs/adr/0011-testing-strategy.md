@@ -49,3 +49,17 @@ an invariant nobody remembered. Tests must catch that, stay fast, and need no mo
 - Adding a port means adding its contract suite. Adding a plugin means calling the kit, and
   adding a kit check means adding a broken-plugin case for it.
 - The suite is larger than the code it guards in places. That's deliberate for the seams.
+
+## Amendment (2026-10-28, M0 step 15)
+
+The Electron end-to-end tests (`pnpm test:e2e`, `tests/e2e/`) run the **built** app under
+Playwright's `_electron`, through `scripts/run-electron.ts`. Only the native folder dialog is
+stubbed, in the main process (`app.evaluate`), so everything else is real: the sandboxed renderer,
+the preload, IPC validation, main, the disk adapter, and `format-stub`. They assert that both panes
+render with their own `lang`/`dir`, that the renderer has no Node globals and the preload exposes
+exactly `apiMethods`, that the renderer runs under the sandbox's seccomp filter (Linux), and that
+no CSP violation or console error happens from the first script on. A positive control proves a
+CSP violation would be caught.
+
+CI runs them in an `e2e` job on the same two Ubuntu images as Check, under `xvfb-run`, after
+installing the AppArmor profile from `docs/development/linux-sandbox.md`. The sandbox stays on.

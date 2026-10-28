@@ -4,6 +4,26 @@
 
 export const APPARMOR_PROFILE = '/etc/apparmor.d/paperl10n-electron';
 
+/**
+ * The AppArmor profile that lets this clone's Electron create the user namespaces its sandbox
+ * needs, and nothing more (`flags=(unconfined)` keeps Electron otherwise unconfined, as it was).
+ * AppArmor matches the binary's real path: with pnpm, under `node_modules/.pnpm/electron@<version>/`.
+ * Printed by `scripts/print-apparmor-profile.ts`; the same text is in the linux-sandbox doc.
+ */
+export function apparmorProfile(repoRoot: string): string {
+  const electron = `${repoRoot}/node_modules/.pnpm/electron@*/node_modules/electron/dist/electron`;
+  return [
+    'abi <abi/4.0>,',
+    'include <tunables/global>',
+    '',
+    `profile paperl10n-electron ${electron} flags=(unconfined) {`,
+    '  userns,',
+    '  include if exists <local/paperl10n-electron>',
+    '}',
+    '',
+  ].join('\n');
+}
+
 export interface SandboxFacts {
   readonly platform: string;
   /** `/proc/sys/kernel/apparmor_restrict_unprivileged_userns` is `1`. */

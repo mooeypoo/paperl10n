@@ -42,6 +42,39 @@ jobs:
       - name: Build
         run: pnpm build
 
+  e2e:
+    # The built Electron app under Playwright (tests/e2e/). Chromium's sandbox stays on: the runner
+    # gets the same AppArmor profile as a developer machine (docs/development/linux-sandbox.md),
+    # never --no-sandbox.
+    name: E2E (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Let Electron's sandbox start (AppArmor profile)
+        run: |
+          echo "kernel.apparmor_restrict_unprivileged_userns=$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null || echo n/a)"
+          node scripts/print-apparmor-profile.ts | sudo tee /etc/apparmor.d/paperl10n-electron
+          sudo apparmor_parser -r /etc/apparmor.d/paperl10n-electron
+      - name: End-to-end tests
+        run: xvfb-run --auto-servernum pnpm test:e2e
+      - name: Keep traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results-${{ matrix.os }}
+          path: test-results/e2e/
+          retention-days: 7
+
   ts7-preview:
     # Forward-compatibility check for TypeScript 7. Non-blocking by design: see
     # docs/adr/0014-typescript-version-policy.md. A failure here is still a bug to fix promptly.

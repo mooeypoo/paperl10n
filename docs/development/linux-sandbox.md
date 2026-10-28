@@ -35,10 +35,16 @@ PROFILE
 sudo apparmor_parser -r /etc/apparmor.d/paperl10n-electron
 ```
 
-Replace `/home/USER/PATH/TO/paperl10n` with your clone's path. AppArmor matches the binary's
-**real** path, which with pnpm is under `node_modules/.pnpm/electron@<version>/`. The
-`electron@*` glob keeps working after Electron upgrades. `pnpm dev` stops warning once the profile
-file exists.
+Replace `/home/USER/PATH/TO/paperl10n` with your clone's path, or let the repo fill it in:
+
+```sh
+node scripts/print-apparmor-profile.ts | sudo tee /etc/apparmor.d/paperl10n-electron
+sudo apparmor_parser -r /etc/apparmor.d/paperl10n-electron
+```
+
+AppArmor matches the binary's **real** path, which with pnpm is under
+`node_modules/.pnpm/electron@<version>/`. The `electron@*` glob keeps working after Electron
+upgrades. `pnpm dev` stops warning once the profile file exists.
 
 ## Alternative: a setuid sandbox helper (resets on reinstall)
 
@@ -58,6 +64,7 @@ Reinstalling `node_modules/` (or upgrading Electron) undoes this.
 
 ## CI
 
-GitHub's Ubuntu runners need the same treatment for the Electron end-to-end test (M0 step 15).
-There it happens in the ephemeral runner, with the setuid helper or a profile, never
-`--no-sandbox`.
+GitHub's Ubuntu runners get the same profile, from the same script, before the end-to-end tests
+(the `e2e` job in `.github/workflows/ci.yml`). Never `--no-sandbox`. A test checks that the
+renderer really runs under the sandbox's seccomp filter (`tests/e2e/walking-skeleton.spec.ts`),
+and another that this doc shows exactly the profile the script prints.
