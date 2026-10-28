@@ -55,7 +55,7 @@ graph TD
 | `locale` | languages, text direction (LTR/RTL), locale metadata |
 | `document` | longform Markdown documents, frontmatter, block segmentation |
 | `catalog` | message catalogs, messages, `qqq` documentation, placeholder/plural validation |
-| `translation` | source↔target pairing, status, alignment (from M1) |
+| `translation` | source↔target pairing, status, source-change tracking (from M1) |
 | `formats` | the format plugin contracts and their registry |
 | `workspace` | opening a project, its config, discovering translatable resources |
 

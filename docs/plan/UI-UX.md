@@ -61,10 +61,14 @@ check:
 ### The writing experience (longform)
 
 - CodeMirror 6 looks like a strong fit for the editor requirements (plan §8.2): per-line text
-  direction, bidi isolation of Markdown syntax, IME support, decorations (for block alignment and
-  misalignment hints), a viewport-based renderer, a CSP nonce, and framework independence. To be
+  direction, bidi isolation of Markdown syntax, IME support, decorations (for source-change
+  highlights and preservation hints), a viewport-based renderer, a CSP nonce, and framework independence. To be
   confirmed by a spike, not assumed.
-- Source pane vs. target pane: read-only styling, synced scrolling, and how alignment is shown.
+- Source pane vs. target pane: read-only styling, loose heading-anchored scroll sync, and how
+  source changes and preservation hints are shown. **Longform is paired by section, not by line**
+  (PRD §7.2): the default section view pairs sections at headings, with per-section status and
+  progress; a full-page view is the secondary mode. Never mark a paragraph or line of a
+  translation as "missing". Exact per-item status belongs to catalogs (direction C).
 - Raw ↔ preview toggle; how frontmatter fields are edited; placeholders for custom components.
 
 ### Banana-i18n helpers (catalogs, M4)

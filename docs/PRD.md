@@ -10,7 +10,7 @@
 
 ## 1. Summary
 Paper Lion is a local desktop app for translating a project's content side by side. Source on one side,
-target language on the other, kept in sync, with first-class RTL support.
+target language on the other, with the source always in view, and first-class RTL support.
 
 It handles two kinds of translation work:
 1. **Longform**: Markdown pages of static docs and sites (VitePress, Astro Starlight, Nuxt Content, …).
@@ -55,12 +55,15 @@ adding a plugin, not rewriting the app.
 | Locale | A language/region id (`en`, `he`, `pt-BR`) with a text direction. |
 | Source / Target | The locale being translated from / into. |
 | Longform document | A Markdown file (with frontmatter) representing a page. |
-| Block | A structural unit of a document (heading, paragraph, list, code, image, component). Blocks are the unit of alignment. |
+| Block | A structural unit of a document (heading, paragraph, list, code, image, component). Blocks are the unit of **source-change tracking**: they say *where the source changed*, not where the translation must match. Pairing happens at the section level. |
 | Translation pair | A source document + its target counterpart (which may not exist yet). |
 | Message catalog | A set of key → string messages for one locale (e.g. `i18n/he.json`). |
 | Message | One key with its source text, target text, and documentation. |
 | Format plugin | An adapter that knows how a specific system finds, reads, and writes translations. |
-| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). |
+| Section | The part of a longform document from one heading to the next heading of the same or a higher level. Sections are the unit Paper Lion **pairs** between source and translation; within a section the translation is free-form. |
+| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document** and to **each section**; for catalogs, to **each message**. |
+| Source change | A change in the source document since its translation was last marked up to date. Shown on the source side, as a reference. |
+| Preservation hint | A neutral note that something usually kept as is (code blocks, link targets, images, components, frontmatter keys) appears a different number of times in the translation. A hint, never an error. |
 
 ## 7. Core experiences
 
@@ -76,8 +79,32 @@ adding a plugin, not rewriting the app.
   `dir`/`lang`.
 - **Seed from source:** create a missing target by copying the source. Code blocks, images, links,
   and components are kept, and the prose is ready to overwrite.
-- **Block-aligned sync:** scrolling, cursor, and selection in one pane follow the matching block
-  in the other. Misaligned blocks (added or removed in one side) are highlighted.
+- **Section view (default):** the document is split into **sections at its headings**, and source
+  and translation sections are paired in order. Each pair is shown side by side, headings on their
+  own row, so the translator always sees which part of the source they're working on. Progress
+  counts sections ("3 of 5 sections up to date"), and each section has its own status (translated,
+  draft, outdated, or not translated yet). The split level is the document's top section level
+  (usually `##`), and can be changed per document.
+- **When sections don't pair up** (the translation has a different number of headings at that
+  level, or they're at different levels), Paper Lion says so plainly, shows which part it could
+  pair, and offers the full-page view. It never guesses a pairing.
+- **Full-page view (secondary):** both whole documents side by side, for reading the flow or for
+  translations that are deliberately structured differently.
+- **Within a section, the source is a reference, not a template.** A translation may split, merge,
+  reorder, or restructure paragraphs and lists. Paper Lion never claims that a paragraph, block,
+  or line is "missing" or "extra", and never pushes toward the same structure, word count, or line
+  count.
+- **Source changes:** when the source changed after the translation was last marked up to date,
+  the changed parts are highlighted **in the source pane**, so the translator knows what to revisit.
+- **Preservation hints:** neutral notes about things usually kept as is (code blocks, link
+  targets, images, components, frontmatter keys) whose counts differ between source and
+  translation.
+- **Length, as information only:** a document-level comparison of the rendered text's length
+  (for example "about 20% of the source"), useful for spotting an obviously unfinished
+  translation. Never per block, never a warning threshold: lengths differ naturally between
+  languages.
+- **Loose scroll sync (full-page view, optional):** scrolling follows paired section headings,
+  and otherwise relative position. It's a navigation aid, not a correctness check.
 - Frontmatter is edited as fields, with per-field "translatable or keep as-is" rules set by the plugin.
 - Toggle between raw Markdown and a rendered preview per pane. Custom components get a placeholder
   render.
@@ -134,14 +161,20 @@ Principles:
   discussion first: `docs/plan/M1-languages.md`), list pairs with status, and show a static
   split view.
 - **M2: Edit and save longform.** Seed from source, edit the target, and save with round-trip safety.
-- **M3: Sync.** Block alignment, synced scroll and selection, and misalignment hints.
+- **M3: Sections, changes, and hints.** Section view with per-section status and progress, the
+  full-page view, source-change highlighting (needs the outdated-detection decision below),
+  preservation hints, the length comparison, and loose scroll sync.
 - **M4: banana-i18n.** Catalog list, split message editor, `qqq` docs, and validation.
 - **M5: Second plugins.** Starlight + gettext `.po`, to prove the plugin contracts hold.
 
 ## 11. Open questions
 - **Outdated detection:** how do we know the source changed after translating? Options include git
   history, a stored source hash in a sidecar file, or a frontmatter field. Which is least intrusive?
-- **Alignment strategy:** match blocks by structure only, or let the user pin pairs manually?
+- **Finer-grained pairing (revisit later):** pairing below the section level (paragraphs or
+  blocks) for projects that want strict structural parity. Deliberately not a starting point:
+  sections are paired, and the text within them is free.
+- **Section split level:** default to the document's top section level, but how should a document
+  with uneven heading levels, or with long sections that have no subheadings, be handled?
 - **Custom components in Markdown** (Vue in VitePress, MDX-like in Astro): how much preview is
   worth building?
 - **Git awareness:** show diffs and branch info, or stay out of git entirely?
