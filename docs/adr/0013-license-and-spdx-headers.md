@@ -43,3 +43,11 @@ later, so per-file and per-package license information should already be correct
   interactive programs to display "Appropriate Legal Notices". That isn't in M0.
 - Contribution policy (for example DCO sign-off) is deliberately not decided yet. We revisit it if
   and when outside contributions arrive.
+
+## Amendment (2026-10-28): the mark has separate terms
+
+The Paper Lion mark (`assets/paperl10n-mark.svg`) is licensed **CC BY-ND 4.0**, not GPL, with a
+trademark note: forks must use their own name and logo. Its SVG carries `SPDX-License-Identifier:
+CC-BY-ND-4.0` and an `SPDX-FileCopyrightText` line (REUSE style), because it's a single creative
+work whose terms differ from the code. The terms and rationale are in `assets/README.md`: share
+freely, unmodified; relaxing later stays possible, while tightening wouldn't be.

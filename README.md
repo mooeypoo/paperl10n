@@ -57,4 +57,7 @@ Paper Lion is distributed in the hope that it will be useful, but WITHOUT ANY WA
 the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 [GNU General Public License](LICENSE) for more details.
 
+The Paper Lion name and mark are **not** covered by the GPL: the mark is licensed CC BY-ND 4.0,
+and forks need their own name and logo. See [assets/README.md](assets/README.md).
+
 Created by [Moriel](https://moriel.tech).
