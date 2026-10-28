@@ -2,12 +2,13 @@
 import type { OpenedProject, ProjectSessions } from '../application/ports/project-sessions.ts';
 import type { ProjectId } from '../domain/project-id.ts';
 
-/** Open projects held in memory for the app's lifetime. Ids are random, so they can't be guessed. */
+/** Open projects held in memory for the app's lifetime. Ids should be random, so they can't be guessed. */
 export class InMemoryProjectSessions implements ProjectSessions {
   readonly #projects = new Map<string, OpenedProject>();
   readonly #newId: () => string;
 
-  constructor(newId: () => string = () => crypto.randomUUID()) {
+  /** `newId` makes random ids; it's injected because each runtime (Node, browser) has its own. */
+  constructor(newId: () => string) {
     this.#newId = newId;
   }
 

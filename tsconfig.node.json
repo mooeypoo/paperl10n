@@ -8,7 +8,14 @@
     "outDir": "node_modules/.cache/tsbuild/node",
     "tsBuildInfoFile": "node_modules/.cache/tsbuild/node.tsbuildinfo"
   },
-  "include": ["scripts/**/*.ts", "src/domains/*/adapters/**/*.ts"],
+  "include": [
+    "scripts/**/*.ts",
+    "src/domains/*/adapters/**/*.ts",
+    "src/app/node/**/*.ts",
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "electron.vite.config.ts"
+  ],
   "exclude": ["**/*.test.ts"],
   "references": [{ "path": "./tsconfig.core.json" }]
 }

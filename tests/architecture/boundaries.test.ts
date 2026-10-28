@@ -130,6 +130,18 @@ describe('architecture rules report violations', () => {
       [DEPENDENCIES],
     ],
     [
+      'ui importing Node (the renderer is sandboxed)',
+      'src/ui/sample.ts',
+      "import { readFile } from 'node:fs/promises';\nexport const x = readFile;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'ui importing electron (only the preload may)',
+      'src/ui/sample.ts',
+      "import { ipcRenderer } from 'electron';\nexport const x = ipcRenderer;\n",
+      [DEPENDENCIES],
+    ],
+    [
       'ui importing the app wiring (it may only talk to the IPC contract)',
       'src/ui/sample.ts',
       "import { createAppApi } from '../app/create-app-api.ts';\nexport const x = createAppApi;\n",
@@ -234,6 +246,16 @@ describe('architecture rules allow the intended dependencies (positive controls)
       'test support composing the test support of a domain it depends on',
       'src/domains/workspace/testing/sample.ts',
       "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
+    ],
+    [
+      'main imports the Electron composition root through #app',
+      'src/main/sample.ts',
+      "import { createElectronAppApi } from '#app/node/composition-root';\nexport const x = createElectronAppApi;\n",
+    ],
+    [
+      'preload imports electron',
+      'src/preload/sample.ts',
+      "import { contextBridge } from 'electron';\nexport const x = contextBridge;\n",
     ],
     [
       'ui imports the IPC contract',

@@ -39,6 +39,8 @@ jobs:
         run: pnpm format:check
       - name: Test (with coverage floor)
         run: pnpm test:coverage
+      - name: Build
+        run: pnpm build
 
   ts7-preview:
     # Forward-compatibility check for TypeScript 7. Non-blocking by design: see

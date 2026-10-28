@@ -15,6 +15,7 @@
     "url": "git+https://github.com/mooeypoo/paperl10n.git"
   },
   "type": "module",
+  "main": "./out/main/index.js",
   "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=24"
@@ -28,9 +29,13 @@
     "#adapters/formats/*": "./src/domains/formats/adapters/*.ts",
     "#plugins/*": "./src/plugins/*/index.ts",
     "#adapters/workspace/*": "./src/domains/workspace/adapters/*.ts",
-    "#ipc-contract": "./src/shared/ipc-contract/index.ts"
+    "#ipc-contract": "./src/shared/ipc-contract/index.ts",
+    "#app/*": "./src/app/*.ts"
   },
   "scripts": {
+    "dev": "node scripts/run-electron.ts electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "node scripts/run-electron.ts electron-vite preview",
     "typecheck": "tsc --build",
     "lint": "node scripts/check-spdx.ts && eslint . --cache --cache-location node_modules/.cache/eslint/",
     "lint:fix": "node scripts/check-spdx.ts --fix && eslint . --cache --cache-location node_modules/.cache/eslint/ --fix",
@@ -46,6 +51,8 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.0.5",
+    "electron": "^45.0.0",
+    "electron-vite": "^6.0.0",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.5",
@@ -53,6 +60,7 @@
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5"
   }
 }

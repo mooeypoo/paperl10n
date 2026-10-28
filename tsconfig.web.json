@@ -1,0 +1,14 @@
+{
+  // The renderer: DOM types, no Node. Vue joins in M0 step 13.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsbuild/web",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuild/web.tsbuildinfo"
+  },
+  "include": ["src/ui/**/*.ts"],
+  "exclude": ["**/*.test.ts"],
+  "references": [{ "path": "./tsconfig.core.json" }]
+}

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createFormatRegistry, type PluginModule } from '#domains/formats';
 import { detects, fakeDocumentPlugin } from '#domain-testing/formats';
@@ -12,7 +13,7 @@ import { createOpenProject } from './open-project.ts';
 async function openWith(plugin: PluginModule) {
   const registry = createFormatRegistry([plugin], { apiVersion: 1 });
   if (!registry.ok) throw new Error('test setup');
-  const sessions = new InMemoryProjectSessions();
+  const sessions = new InMemoryProjectSessions(randomUUID);
   const opened = await createOpenProject({
     folderPicker: new FakeFolderPicker('/p'),
     opener: new FakeProjectFilesOpener({

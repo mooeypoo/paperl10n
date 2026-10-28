@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The whole app below the transport: real registry, real use cases, the real format-stub plugin,
 // and the real error mapping, over an in-memory copy of format-stub's "basic" fixture.
+import { randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -35,7 +36,7 @@ function appWith(
   const api = createAppApi({
     folderPicker: new FakeFolderPicker(answer),
     opener: new FakeProjectFilesOpener(folders),
-    sessions: new InMemoryProjectSessions(),
+    sessions: new InMemoryProjectSessions(randomUUID),
     plugins,
     onUnexpected: (method, thrown) => {
       throw new Error(`unexpected in ${method}: ${String(thrown)}`);
@@ -105,7 +106,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
     const result = createAppApi({
       folderPicker: new FakeFolderPicker(null),
       opener: new FakeProjectFilesOpener({}),
-      sessions: new InMemoryProjectSessions(),
+      sessions: new InMemoryProjectSessions(randomUUID),
       plugins: [...builtInPlugins, ...builtInPlugins],
       onUnexpected: () => undefined,
     });

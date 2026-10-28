@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createFormatRegistry, type FormatRegistry, type ProjectFiles } from '#domains/formats';
 import { detects, fakeDocumentPlugin, fakeManifest, type FileTree } from '#domain-testing/formats';
@@ -45,7 +46,7 @@ function setup(
   } = {},
 ) {
   const folder = options.folder === undefined ? '/home/me/my-docs' : options.folder;
-  const sessions = new InMemoryProjectSessions();
+  const sessions = new InMemoryProjectSessions(randomUUID);
   const openProject = createOpenProject({
     folderPicker: new FakeFolderPicker(folder),
     opener:

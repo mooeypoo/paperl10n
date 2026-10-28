@@ -75,6 +75,24 @@ import { createFormatRegistry } from '#domains/formats';
 Relative imports (`./`, `../`) stay inside one domain, plugin, or layer. `app/` is the only place
 that imports concrete adapters (`#adapters/<domain>/<file>`) and plugins.
 
+## Processes and the IPC contract
+
+```
+┌──────────── main (Node) ───────────────┐        ┌──── renderer (sandboxed) ─────┐
+│ main/index.ts    lifecycle             │        │ ui/   no Node, no Electron     │
+│ main/window.ts   hardening             │        │   window.paperl10n.openProject()│
+│ main/ipc.ts      sender + arg checks ◄─┼─ IPC ──┼── preload/  createApi(invoke)  │
+│ app/node/        Electron root         │        └───────────────────────────────┘
+│   └─ app/  createAppApi: registry,     │
+│      use cases, DTO mapping, guard     │
+└────────────────────────────────────────┘
+```
+
+The renderer and main share one typed contract, `#ipc-contract`: plain DTOs, error codes, and
+`PaperLionApi`. The renderer never sends file paths; it gets an opaque project id
+([ADR 0006](adr/0006-process-model-and-ipc.md)). `src/app/` is pure and shared by every
+composition root. Electron's (`src/app/node/`) passes in the real disk and the native dialog.
+
 ## How the rules are enforced
 
 [ADR 0003](adr/0003-boundary-enforcement.md) has the details:
@@ -106,5 +124,4 @@ src/domains/document/domain/block.ts
 | A small primitive needed by many domains | `shared/kernel/` (keep it tiny) |
 | A new domain | an ADR first, then a folder + an entry in `scripts/domain-graph.ts` |
 
-*(coming in M0: the Electron process model and IPC contract, the plugin system, and the data
-flow of the walking skeleton.)*
+*(coming in M0: the plugin system and the data flow of the walking skeleton.)*

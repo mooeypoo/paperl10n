@@ -198,7 +198,15 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
     },
     {
       from: { element: { type: 'ui' } },
-      allow: { to: [kernel, ipcContract, { element: { type: 'ui' } }, anyExternal] },
+      // The renderer is sandboxed: npm packages yes, but never Node built-ins or Electron.
+      allow: {
+        to: [
+          kernel,
+          ipcContract,
+          { element: { type: 'ui' } },
+          { module: { origin: 'external', source: '!electron' } },
+        ],
+      },
     },
     // Tests may import anything: they exercise internals on purpose. Except plugin tests, which are
     // limited like their plugin (above), so a plugin's tests travel with it when it's extracted.

@@ -28,8 +28,18 @@ rewriting the app.
 
 ## Development
 
-Requirements: Node.js 24 (`nvm use` reads `.nvmrc`) and pnpm. Scripts arrive with the M0 skeleton
-and will be documented here.
+Requirements: Node.js 24 (`nvm use` reads `.nvmrc`) and pnpm.
+
+```sh
+pnpm install        # also enables the git hooks
+pnpm dev            # run the app with hot reload
+pnpm check          # what CI checks: types, lint, formatting, tests
+pnpm test:watch     # tests, re-run on change
+pnpm build          # production build into out/
+```
+
+`pnpm dev` removes `ELECTRON_RUN_AS_NODE` from the environment before starting Electron. VS Code
+sets it for processes its extensions start, and it would make Electron run as plain Node.
 
 ## License
 
