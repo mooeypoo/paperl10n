@@ -107,10 +107,10 @@ with a manifest (`paperl10n-plugin.json`), an `index.ts` that exports `plugin`, 
 its tests ([ADR 0005](adr/0005-built-in-plugins.md), [`domains/formats.md`](domains/formats.md)).
 
 ```
-src/plugins/format-stub/  ──imports──►  #plugin-api  (formats' narrow surface: contracts, Result,
+src/plugins/format-<x>/   ──imports──►  #plugin-api  (formats' narrow surface: contracts, Result,
         ▲                                             ProjectFiles, documentKey, …)
         │ only app/ imports plugins
-src/app/plugins.ts  builtInPlugins = [formatStub]
+src/app/plugins.ts  builtInPlugins = [formatStarlight, formatStub]
         │
         ▼
 createFormatRegistry(builtInPlugins)   validates manifests, creates plugins, refuses a broken set
@@ -126,8 +126,9 @@ guarded views: every plugin call returns a Result; a throw becomes formats.plugi
   no `if (format === 'vitepress')` anywhere.
 - Every plugin runs the shared contract kit (`describePluginContract` from `#plugin-api/testing`)
   and its own fixture tests. The plugin API's export list is frozen by a test.
-- `format-stub` (folder per locale: `en/…`, `he/…`) is the reference plugin for M0. Real ones
-  (`format-vitepress`, `catalog-banana`, …) follow the same shape.
+- Built in: **`format-starlight`** (Astro Starlight sites, the first real system, M1) and
+  **`format-stub`** (folder per locale, the reference plugin). Others (`format-vitepress`,
+  `catalog-banana`, …) follow the same shape.
 
 ## Data flow: opening a project
 
@@ -153,8 +154,25 @@ The walking skeleton is one slice through every layer. Clicking **Open folder…
 6. The result (a `ProjectSummary`, or a domain error) is mapped to DTOs (`app/error-dto.ts`:
    an exhaustive `switch`, so every error has a code, and every code has a UI message).
 7. Back in the UI, `useProject` stores the summary and calls `listSourceDocuments({ projectId })`,
-   which goes the same way to the layout's `listSourceDocuments()` and `targetPathFor()`.
-   `ProjectPanes` shows source and target panes, each with its own `lang` and `dir`.
+   which goes the same way to the layout's `listSourceDocuments()` and `targetPathFor()`, and
+   checks which translations exist. The Pages sidebar lists them and selects the first.
+
+## Data flow: reading a page
+
+Selecting a page in the sidebar:
+
+1. **UI** (`useDocumentPair`) calls `client.readDocumentPair({ projectId, key })`; only the newest
+   request may update the view.
+2. Preload → main's checks → app, as above.
+3. **Use case** (`workspace/application/read-document-pair.ts`) finds the page among the layout's
+   source documents, reads the source and the translation through `ProjectFiles` (a missing
+   translation is `null`), and parses both with the **`MarkdownParser` port**
+   (`#domains/document`, implemented by the lezer adapter, injected by the composition root).
+4. A `ParsedDocument` is the exact text plus positions: blocks and inline spans, in UTF-16
+   offsets ([`domains/document.md`](domains/document.md)). The handler maps it to plain DTOs.
+5. **UI** (`MarkdownView`) shows each pane's text as written, block by block, always as text
+   (never as HTML): syntax dimmed, code in mono, inline code and link destinations isolated as
+   left-to-right runs, and code, data, and HTML blocks taking direction line by line.
 
 ## How it's tested
 
@@ -209,9 +227,9 @@ And for the work ahead:
 
 | Future piece | Home |
 |---|---|
-| VitePress / Starlight layout rules | `src/plugins/format-vitepress/`, `format-starlight/` |
-| Markdown parser library | `document/adapters/`, behind a `MarkdownParser` port |
-| Block model, segmentation into sections | `document/domain/` |
+| VitePress layout rules | `src/plugins/format-vitepress/` (Starlight's are in `format-starlight/`) |
+| Edits as text splices, frontmatter fields | `document/domain/` (+ a CST-preserving YAML library in `document/adapters/`) |
+| Segmentation into sections | `document/domain/`, over the existing block model |
 | Pairing by section, status (missing/draft/translated/outdated), source-change tracking | `translation/domain/` |
 | Drafts and sidecar state storage | a port in `translation/application/`, an adapter in `translation/adapters/` |
 | Placeholder/plural validation | `catalog/domain/`, using the plugin's `placeholders.scan` |

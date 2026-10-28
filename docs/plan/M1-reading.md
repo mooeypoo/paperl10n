@@ -1,6 +1,7 @@
 # M1 plan, part 1: reading documents
 
-Status: **in progress.** Steps R1–R5 below. The other part of M1, choosing languages, is its own
+Status: **done (2026-10-28)**, except the PRD change, which waits for the maintainer (its own PR).
+Steps R1–R5 below. The other part of M1, choosing languages, is its own
 discussion first ([M1-languages](M1-languages.md)).
 
 PRD M1 is "read-only longform": open a project, list its pages with status, and show a static split
@@ -121,3 +122,5 @@ view. This part covers reading and showing documents.
 
 - `docs/domains/document.md` grows with each step; the architecture doc and the README are updated.
   The PRD change (Starlight first) is its own PR.
+- *Done-notes:* the architecture doc has the plugin list and the "reading a page" data flow; the
+  README shows how to open your own Starlight site; the PRD change is in its own PR.

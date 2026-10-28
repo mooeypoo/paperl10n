@@ -16,9 +16,10 @@ It handles two kinds of translation work:
 Each system is supported through a format plugin, so adding one means adding a plugin, not
 rewriting the app.
 
-> **Status: pre-alpha.** The architectural skeleton is done (milestone M0): it opens a project
-> and lists its documents side by side, through every layer. Translating comes next. Nothing is
-> usable yet.
+> **Status: pre-alpha.** Paper Lion opens a project (Astro Starlight sites, or a plain folder per
+> locale), lists its pages with which ones have a translation, and shows each page's source and
+> translation side by side, read-only. Choosing languages in the app, editing, and saving come
+> next.
 
 ## Documentation
 
@@ -27,7 +28,7 @@ rewriting the app.
 - [Architecture](docs/architecture.md): how the code is organized, and where new code goes
 - [Domains](docs/domains/): the vocabulary and invariants of each domain
 - [Architecture decision records](docs/adr/)
-- Plans: [M0](docs/plan/M0.md), [UI/UX](docs/plan/UI-UX.md), [M1 languages](docs/plan/M1-languages.md)
+- Plans: [M0](docs/plan/M0.md), [UI/UX](docs/plan/UI-UX.md), [M1 reading](docs/plan/M1-reading.md), [M1 languages](docs/plan/M1-languages.md)
 
 ## Development
 
@@ -45,7 +46,16 @@ pnpm check          # what CI checks: types, lint, formatting, tests
 pnpm dev            # run the app with hot reload
 ```
 
-In the app, **Open folder…** and choose `examples/sample-docs`, a small sample docs site with
+**Your own Starlight site:** add a `paperl10n.config.json` to its folder and open it:
+
+```json
+{ "sourceLocale": "en", "targetLocale": "he", "documentFormat": "format-starlight" }
+```
+
+See [`format-starlight`'s README](src/plugins/format-starlight/README.md) for folder conventions
+and options.
+
+Or, in the app, **Open folder…** and choose `examples/sample-docs`, a small sample docs site with
 English sources and partial Hebrew translations (see its README). Edit it freely to try things
 out.
 
