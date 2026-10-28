@@ -39,8 +39,8 @@ Initial domains (add new ones only via ADR):
 - `document`: longform Markdown/frontmatter model, parsing and serializing, block segmentation.
 - `catalog`: message catalogs, messages, documentation (`qqq`), placeholder/plural validation.
 - `translation`: source↔target pairing, status (missing/draft/translated/outdated), source-change
-  tracking, and hints. Longform translations are not assumed to match the source block by block
-  (PRD §7.2).
+  tracking, and hints. Longform translations are paired by section (at headings), never block by
+  block or line by line (PRD §7.2).
 - `locale`: languages, text direction (LTR/RTL), locale metadata.
 - `formats`: the plugin contracts (`DocumentFormat`, `CatalogFormat`) and their registry.
 

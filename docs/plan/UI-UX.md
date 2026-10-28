@@ -65,9 +65,10 @@ check:
   highlights and preservation hints), a viewport-based renderer, a CSP nonce, and framework independence. To be
   confirmed by a spike, not assumed.
 - Source pane vs. target pane: read-only styling, loose heading-anchored scroll sync, and how
-  source changes and preservation hints are shown. **Longform is not one-to-one** (PRD §7.2):
-  never mark a block or line of a translation as "missing". Exact per-item status belongs to
-  catalogs (direction C).
+  source changes and preservation hints are shown. **Longform is paired by section, not by line**
+  (PRD §7.2): the default section view pairs sections at headings, with per-section status and
+  progress; a full-page view is the secondary mode. Never mark a paragraph or line of a
+  translation as "missing". Exact per-item status belongs to catalogs (direction C).
 - Raw ↔ preview toggle; how frontmatter fields are edited; placeholders for custom components.
 
 ### Banana-i18n helpers (catalogs, M4)
