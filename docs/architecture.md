@@ -1,8 +1,8 @@
 # Architecture
 
-This is the big picture of how Paper Lion's code is organized and why. The binding rules live in
-[`AGENTS.md`](../AGENTS.md); decisions and their reasoning live in [`adr/`](adr/). This document
-grows during milestone M0. Sections marked *(coming in M0)* fill in as the skeleton is built.
+This is the big picture of how Paper Lion's code is organized and why, written for a newcomer's
+first afternoon. The binding rules live in [`AGENTS.md`](../AGENTS.md); decisions and their
+reasoning live in [`adr/`](adr/); each domain's vocabulary lives in [`domains/`](domains/).
 
 ## In one paragraph
 
@@ -20,6 +20,7 @@ Vue UI is a replaceable adapter that talks to use cases over a typed IPC contrac
             │ ui/ (Vue)   main/ preload/ (Electron)        │  outside world
             ├──────────────────────────────────────────────┤
             │ app/  composition root: wires it all         │
+            │ (app/node/ for Electron, ui-harness/ dev)    │
             ├──────────────────────────────────────────────┤
             │ domains/*/adapters/   plugins/*/             │  fs, libraries, systems
             ├──────────────────────────────────────────────┤
@@ -93,6 +94,84 @@ The renderer and main share one typed contract, `#ipc-contract`: plain DTOs, err
 ([ADR 0006](adr/0006-process-model-and-ipc.md)). `src/app/` is pure and shared by every
 composition root. Electron's (`src/app/node/`) passes in the real disk and the native dialog.
 
+A second, development-only root is the **browser UI harness** (`src/ui-harness/`,
+`pnpm dev:harness`, [ADR 0015](adr/0015-browser-ui-harness.md)): the same UI on the same
+`createAppApi`, over in-memory copies of the plugin fixtures, through a transport that
+structured-clones every call like IPC does. It's a testing aid, never shipped (`pnpm build`
+checks), and it proves nothing about the preload, the sandbox, or the real disk.
+
+## The plugin system
+
+Each translation system is a **format plugin**: a self-contained folder in `src/plugins/<id>/`
+with a manifest (`paperl10n-plugin.json`), an `index.ts` that exports `plugin`, its fixtures, and
+its tests ([ADR 0005](adr/0005-built-in-plugins.md), [`domains/formats.md`](domains/formats.md)).
+
+```
+src/plugins/format-stub/  ──imports──►  #plugin-api  (formats' narrow surface: contracts, Result,
+        ▲                                             ProjectFiles, documentKey, …)
+        │ only app/ imports plugins
+src/app/plugins.ts  builtInPlugins = [formatStub]
+        │
+        ▼
+createFormatRegistry(builtInPlugins)   validates manifests, creates plugins, refuses a broken set
+        │
+        ▼
+guarded views: every plugin call returns a Result; a throw becomes formats.plugin-failed
+```
+
+- A plugin sees the project only through `ProjectFiles` (read-only, project-relative paths). It
+  never imports `fs`, Electron, a domain, or another plugin. Lint enforces it per plugin, from
+  each manifest.
+- `app/plugins.ts` is the only place that names a plugin. Core code asks the registry, so there's
+  no `if (format === 'vitepress')` anywhere.
+- Every plugin runs the shared contract kit (`describePluginContract` from `#plugin-api/testing`)
+  and its own fixture tests. The plugin API's export list is frozen by a test.
+- `format-stub` (folder per locale: `en/…`, `he/…`) is the reference plugin for M0. Real ones
+  (`format-vitepress`, `catalog-banana`, …) follow the same shape.
+
+## Data flow: opening a project
+
+The walking skeleton is one slice through every layer. Clicking **Open folder…**:
+
+1. **UI** (`ui/App.vue` → `useProject`) calls `client.openProject()`. The client is the injected
+   `PaperLionApi` ([ADR 0008](adr/0008-ui-state-and-injected-client.md)).
+2. **Preload** (`preload/create-api.ts`) sends it on the `paperl10n:openProject` channel. Only
+   contract fields cross; the renderer never sends a path.
+3. **Main** (`main/ipc.ts`) checks the sender (the app's own top-level page) and the arguments.
+   Anything else gets `internal.invalid-request` and never reaches the app.
+4. **App** (`app/api-handlers.ts`, behind `guardApi`) calls the `openProject` use case. An
+   unexpected throw becomes `internal.unexpected` ([ADR 0007](adr/0007-errors-as-values.md)).
+5. **Use case** (`workspace/application/open-project.ts`):
+   1. `FolderPicker.pick()`: the native dialog (adapter `dialog-folder-picker`). `null` = cancelled.
+   2. `ProjectFilesOpener.open(folder)`: the disk adapter (`node-project-files`), rooted at the
+      folder.
+   3. Reads and validates `paperl10n.config.json` (`workspace/domain/project-config.ts`).
+   4. Chooses the document format: the one pinned in the config, otherwise the best detection
+      from the registry.
+   5. `format.open(…)` → a layout bound to this project; the project is stored in
+      `ProjectSessions` under a random, opaque id.
+6. The result (a `ProjectSummary`, or a domain error) is mapped to DTOs (`app/error-dto.ts`:
+   an exhaustive `switch`, so every error has a code, and every code has a UI message).
+7. Back in the UI, `useProject` stores the summary and calls `listSourceDocuments({ projectId })`,
+   which goes the same way to the layout's `listSourceDocuments()` and `targetPathFor()`.
+   `ProjectPanes` shows source and target panes, each with its own `lang` and `dir`.
+
+## How it's tested
+
+| Level | What | Where |
+|---|---|---|
+| Domain rules, use cases | table-driven tests with in-memory fakes | next to the code (`*.test.ts`) |
+| Ports | one contract suite per port, run against the fake *and* every real adapter | `domains/<domain>/testing/` |
+| Plugins | the plugin contract kit + fixture tests | `src/plugins/<id>/` |
+| Architecture rules | violation samples and positive controls | `tests/architecture/` |
+| Every IPC method | preload → cloning → main's checks → app → use case → disk, without Electron | `tests/integration/` |
+| UI | the real `mountApp` with a fake client; the harness on the real wiring (happy-dom) | `src/ui/`, `src/ui-harness/` |
+| The built app | Playwright on Electron: panes, `lang`/`dir`, no Node in the renderer, sandbox, CSP | `tests/e2e/` |
+
+[ADR 0011](adr/0011-testing-strategy.md) has the strategy. Every guard (lint rule, check script,
+contract kit check) has a failing sample and a positive control, and was mutation-checked once by
+hand.
+
 ## How the rules are enforced
 
 [ADR 0003](adr/0003-boundary-enforcement.md) has the details:
@@ -122,6 +201,33 @@ src/domains/document/domain/block.ts
 | A fake or a shared contract test for a port | `domains/<domain>/testing/` |
 | Support for a new translation system | `src/plugins/format-<system>/` or `catalog-<system>/` |
 | A small primitive needed by many domains | `shared/kernel/` (keep it tiny) |
+| A new renderer ↔ main call | one method in `shared/ipc-contract/` + its handler, `guardApi` entry, preload method, argument validator, and harness transport method (the compiler flags each missing one) |
+| A new UI string | `ui/i18n/messages/en.json` + `qqq.json` (+ `he.json`) |
 | A new domain | an ADR first, then a folder + an entry in `scripts/domain-graph.ts` |
 
-*(coming in M0: the plugin system and the data flow of the walking skeleton.)*
+And for the work ahead:
+
+| Future piece | Home |
+|---|---|
+| VitePress / Starlight layout rules | `src/plugins/format-vitepress/`, `format-starlight/` |
+| Markdown parser library | `document/adapters/`, behind a `MarkdownParser` port |
+| Block model, segmentation into sections | `document/domain/` |
+| Pairing by section, status (missing/draft/translated/outdated), source-change tracking | `translation/domain/` |
+| Drafts and sidecar state storage | a port in `translation/application/`, an adapter in `translation/adapters/` |
+| Placeholder/plural validation | `catalog/domain/`, using the plugin's `placeholders.scan` |
+| Atomic file writes | a `ProjectWriter` port in `formats/application/`, an adapter beside `node-project-files` |
+| File watching (external changes) | a port in `workspace/application/`, an `fs.watch` adapter |
+| The locale picker and language data | `locale/` (designed first: [`plan/M1-languages.md`](plan/M1-languages.md)) |
+| Editor components (CodeMirror, visual editing) | `ui/`, fed by composables ([`plan/UI-UX.md`](plan/UI-UX.md)) |
+
+## Running, testing, linting
+
+```sh
+pnpm dev            # the app, with hot reload
+pnpm dev:harness    # the UI in a browser over fixture projects (testing aid)
+pnpm check          # types, lint (architecture rules included), formatting, unit tests
+pnpm test:e2e       # build, then Playwright on the built Electron app
+```
+
+The README has the setup. The pre-commit hook runs the fast checks; CI runs `pnpm check`, the
+build, and the end-to-end tests on `ubuntu-24.04` and `ubuntu-latest`.

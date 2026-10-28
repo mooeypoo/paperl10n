@@ -62,12 +62,12 @@ path, and target path for the project's target locale. Errors: `workspace.unknow
 
 | Port | Implemented by | Notes |
 |---|---|---|
-| `FolderPicker` | `app/` (Electron dialog, step 12) | `pick(): Promise<string \| null>` |
-| `ProjectFilesOpener` | `app/` (wraps `openNodeProjectFiles`) | returns the files and the folder's display name |
+| `FolderPicker` | `createDialogFolderPicker` (`#adapters/workspace/dialog-folder-picker`, with Electron's dialog injected) | `pick(): Promise<string \| null>`; contract: `describeFolderPickerContract` |
+| `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files and the folder's display name; contract: `describeProjectFilesOpenerContract` |
 | `ProjectSessions` | `InMemoryProjectSessions` (`#adapters/workspace/in-memory-project-sessions`) | random UUID ids; contract: `describeProjectSessionsContract` |
 
 Test support (`#domain-testing/workspace`): `FakeFolderPicker`, `FakeProjectFilesOpener`, and the
-sessions contract suite. Use-case tests also use `fakeDocumentPlugin` from
+three contract suites, which run against the fakes and every real implementation. Use-case tests also use `fakeDocumentPlugin` from
 `#domain-testing/formats`.
 
 ## Invariants

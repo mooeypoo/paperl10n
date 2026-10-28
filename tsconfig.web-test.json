@@ -12,6 +12,7 @@
   "references": [
     { "path": "./tsconfig.web.json" },
     { "path": "./tsconfig.harness.json" },
+    { "path": "./tsconfig.test.json" },
     { "path": "./tsconfig.core.json" }
   ]
 }

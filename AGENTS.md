@@ -55,14 +55,14 @@ Initial domains (add new ones only via ADR):
    Allowed domain → domain edges are declared in `scripts/domain-graph.ts`; adding one is a reviewed change.
 7. Imports go through subpath aliases (`#domains/<domain>`, `#kernel/<module>`, `#plugin-api`),
    which resolve only to entry points, so deep imports into another domain don't resolve.
-   Two narrow exceptions: `app/` may import adapter files directly, via `#adapters/<domain>/<file>`
-   (it's the composition root),
-   and `*.test.ts` files may import a domain's `testing/` entry (a domain's own `testing/` may
-   also use the `testing/` of domains it depends on).
+   Narrow exceptions: `app/` may import adapter files directly, via `#adapters/<domain>/<file>`
+   (it's the composition root); so may the dev-only browser root `ui-harness/`, which also mounts
+   the UI through `#ui/mount` (ADR 0015); and `*.test.ts` files may import a domain's `testing/`
+   entry (a domain's own `testing/` may also use the `testing/` of domains it depends on).
 
 Enforcement: `eslint-plugin-boundaries` (rules), a TypeScript project for pure code without Node or
 DOM types (purity), and architecture tests that lint known-bad samples (so rules can't silently rot).
-All run in CI and pre-commit.
+Lint and type checks run in pre-commit and CI; the architecture tests run with the test suite in CI.
 
 ## Electron boundary
 - `contextIsolation: true`, `nodeIntegration: false`, sandboxed renderer.

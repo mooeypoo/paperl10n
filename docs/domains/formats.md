@@ -19,6 +19,8 @@ system is a new plugin plus fixtures, with zero changes to domain code.
 | Layout | Where a system keeps documents (or catalogs) for each locale. A plugin's `open()` returns one, bound to the project. |
 | Document key | The locale-independent identity of a document (`guide/getting-started`), shared by a source and its translations. Lives in `document`. |
 | Project files | The read-only view of the project a plugin gets (`ProjectFiles`). The only way a plugin sees the disk. |
+| Catalog location | Where one catalog file lives, for which locale, and its role: `messages`, or `documentation` (banana-i18n's `qqq.json`). |
+| Placeholder token | A piece of a message that must survive translation unchanged: `$1`, `{{PLURAL:…}}`, `%s`, `{name}`. A catalog plugin's `placeholders.scan` finds them. |
 | Plugin error | An expected failure a plugin returns (`formats.invalid-options`, `formats.unsupported-project`, `formats.file-access`). |
 | Format error | A plugin error as the app sees it: with the plugin's `formatId` added, plus `formats.plugin-failed` for crashes. |
 
@@ -96,8 +98,11 @@ project-relative listings; `.git` and `node_modules` skipped at any depth (other
 `.vitepress` are kept); text returned exactly as stored (BOM and CRLF kept); UTF-8 only. Errors:
 `files.not-found`, `not-a-directory`, `not-a-file`, `not-utf8`, `unreadable`, `outside-project`.
 
-The disk implementation is `openNodeProjectFiles(root)` (`#adapters/formats/node-project-files`,
-for `app/` only). It resolves symlinks. A link to a file inside the project is listed and readable;
+Two implementations pass that suite. `InMemoryProjectFiles`
+(`#adapters/formats/in-memory-project-files`) holds a tree in memory: tests use it as a fake
+(through `#domain-testing/formats` or `#plugin-api/testing`), and the browser UI harness uses it as
+its file system ([ADR 0015](../adr/0015-browser-ui-harness.md)). The disk implementation is
+`openNodeProjectFiles(root)` (`#adapters/formats/node-project-files`, for `app/` only). It resolves symlinks. A link to a file inside the project is listed and readable;
 anything whose real location is outside the project is never listed, and reading it gives
 `files.outside-project`. Symlinked folders aren't followed when listing, which also rules out
 loops. Opening a missing or non-folder root fails with `files.root-not-found` or
@@ -128,6 +133,17 @@ domain's policy, not the registry's.
 - **Identity lives in the manifest.** Plugin code doesn't repeat its id or name.
 - **The plugin API is frozen by a test** (`plugin-api.test.ts`). Changing what plugins can see is a
   deliberate diff. Breaking changes need a new `apiVersion`.
+
+## Versioning
+
+- **`apiVersion`** in the manifest is the plugin API version the plugin was written for. The
+  manifest validator accepts only versions this app supports (`SUPPORTED_API_VERSIONS`, now
+  `[1]`), and the registry passes the host's version to `create(host)`.
+- Adding an optional capability, or a field to `PluginHost`, is not breaking: v1 plugins keep
+  working. Removing or changing anything a plugin can see is breaking, needs a new `apiVersion`,
+  and shows up as a diff in the frozen export list (`plugin-api.test.ts`).
+- `manifestVersion` versions the manifest's own shape, separately from the API.
+- `version` is the plugin's own semantic version.
 
 ## Writing a plugin
 

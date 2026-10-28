@@ -16,33 +16,51 @@ It handles two kinds of translation work:
 Each system is supported through a format plugin, so adding one means adding a plugin, not
 rewriting the app.
 
-> **Status: pre-alpha.** The architectural skeleton is being built (milestone M0). Nothing is
+> **Status: pre-alpha.** The architectural skeleton is done (milestone M0): it opens a project
+> and lists its documents side by side, through every layer. Translating comes next. Nothing is
 > usable yet.
 
 ## Documentation
 
 - [Product requirements](docs/PRD.md): scope, glossary, milestones
 - [Agent and contributor rules](AGENTS.md): architecture rules this codebase follows
+- [Architecture](docs/architecture.md): how the code is organized, and where new code goes
+- [Domains](docs/domains/): the vocabulary and invariants of each domain
 - [Architecture decision records](docs/adr/)
-- [M0 plan](docs/plan/M0.md)
+- Plans: [M0](docs/plan/M0.md), [UI/UX](docs/plan/UI-UX.md), [M1 languages](docs/plan/M1-languages.md)
 
 ## Development
 
-Requirements: Node.js 24 (`nvm use` reads `.nvmrc`) and pnpm.
+Requirements: Node.js 24 and pnpm. With [nvm](https://github.com/nvm-sh/nvm), `nvm use` picks the
+Node version from `.nvmrc`. `corepack enable` then provides the pnpm version pinned in
+`package.json`.
 
 ```sh
+git clone https://github.com/mooeypoo/paperl10n.git
+cd paperl10n
+nvm use
+corepack enable
 pnpm install        # also enables the git hooks
-pnpm dev            # run the app with hot reload
-pnpm dev:harness    # the UI in a browser over fixture projects (a testing aid, ADR 0015)
 pnpm check          # what CI checks: types, lint, formatting, tests
+pnpm dev            # run the app with hot reload
+```
+
+In the app, **Open folder…** and choose `src/plugins/format-stub/fixtures/basic` to see both
+panes.
+
+More commands:
+
+```sh
+pnpm dev:harness    # the UI in a browser over fixture projects (a testing aid, ADR 0015)
 pnpm test:watch     # tests, re-run on change
 pnpm test:e2e       # build, then run the Electron end-to-end tests
 pnpm build          # production build into out/
+pnpm lint:fix       # fix what lint and SPDX headers can fix
 ```
 
 **On Ubuntu 23.10+**, Electron's sandbox needs a one-time AppArmor profile:
 [docs/development/linux-sandbox.md](docs/development/linux-sandbox.md). `pnpm dev` tells you when
-it's missing.
+it's missing. Never turn the sandbox off instead.
 
 `pnpm dev` removes `ELECTRON_RUN_AS_NODE` from the environment before starting Electron. VS Code
 sets it for processes its extensions start, and it would make Electron run as plain Node.

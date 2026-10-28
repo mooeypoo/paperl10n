@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { describeProjectFilesOpenerContract } from '#domain-testing/workspace';
 import type { ProjectPath } from '#kernel/project-path';
 import { fixtureFolder, fixtureOpener, fixturePicker, fixturesFrom } from './fixtures';
 
@@ -52,3 +53,11 @@ describe('the fixture picker and opener', () => {
     });
   });
 });
+
+describeProjectFilesOpenerContract('fixtureOpener (UI harness)', (tree, folderName) =>
+  Promise.resolve({
+    opener: fixtureOpener(new Map([[`format-stub/${folderName}`, tree]])),
+    folder: fixtureFolder(`format-stub/${folderName}`),
+    missing: fixtureFolder('format-stub/nope'),
+  }),
+);

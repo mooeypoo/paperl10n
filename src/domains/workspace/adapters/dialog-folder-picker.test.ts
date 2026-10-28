@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { describeFolderPickerContract } from '../testing/folder-picker-contract.ts';
 import { createDialogFolderPicker } from './dialog-folder-picker.ts';
 
 describe('createDialogFolderPicker', () => {
@@ -13,3 +14,13 @@ describe('createDialogFolderPicker', () => {
     expect(await createDialogFolderPicker(() => Promise.resolve(result)).pick()).toBe(expected);
   });
 });
+
+describeFolderPickerContract('createDialogFolderPicker', (answer) =>
+  createDialogFolderPicker(() =>
+    Promise.resolve(
+      answer === null
+        ? { canceled: true, filePaths: [] }
+        : { canceled: false, filePaths: [answer] },
+    ),
+  ),
+);
