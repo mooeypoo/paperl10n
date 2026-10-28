@@ -10,7 +10,7 @@
 
 ## 1. Summary
 Paper Lion is a local desktop app for translating a project's content side by side. Source on one side,
-target language on the other, kept in sync, with first-class RTL support.
+target language on the other, with the source always in view, and first-class RTL support.
 
 It handles two kinds of translation work:
 1. **Longform**: Markdown pages of static docs and sites (VitePress, Astro Starlight, Nuxt Content, …).
@@ -55,12 +55,14 @@ adding a plugin, not rewriting the app.
 | Locale | A language/region id (`en`, `he`, `pt-BR`) with a text direction. |
 | Source / Target | The locale being translated from / into. |
 | Longform document | A Markdown file (with frontmatter) representing a page. |
-| Block | A structural unit of a document (heading, paragraph, list, code, image, component). Blocks are the unit of alignment. |
+| Block | A structural unit of a document (heading, paragraph, list, code, image, component). Blocks are the unit of **source-change tracking**: they say *where the source changed*, not where the translation must match. |
 | Translation pair | A source document + its target counterpart (which may not exist yet). |
 | Message catalog | A set of key → string messages for one locale (e.g. `i18n/he.json`). |
 | Message | One key with its source text, target text, and documentation. |
 | Format plugin | An adapter that knows how a specific system finds, reads, and writes translations. |
-| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). |
+| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document**; for catalogs, to **each message**. |
+| Source change | A change in the source document since its translation was last marked up to date. Shown on the source side, as a reference. |
+| Preservation hint | A neutral note that something usually kept as is (code blocks, link targets, images, components, frontmatter keys) appears a different number of times in the translation. A hint, never an error. |
 
 ## 7. Core experiences
 
@@ -76,8 +78,22 @@ adding a plugin, not rewriting the app.
   `dir`/`lang`.
 - **Seed from source:** create a missing target by copying the source. Code blocks, images, links,
   and components are kept, and the prose is ready to overwrite.
-- **Block-aligned sync:** scrolling, cursor, and selection in one pane follow the matching block
-  in the other. Misaligned blocks (added or removed in one side) are highlighted.
+- **The source is a reference, not a template.** A translation may split, merge, reorder, or
+  restructure paragraphs and lists. Paper Lion never claims that a block or line is "missing" or
+  "extra" in a longform translation, and never pushes toward the same structure, word count, or
+  line count.
+- **Source changes:** when the source changed after the translation was last marked up to date,
+  the changed parts are highlighted **in the source pane**, so the translator knows what to revisit.
+- **Preservation hints:** neutral notes about things usually kept as is (code blocks, link
+  targets, images, components, frontmatter keys) whose counts differ between source and
+  translation.
+- **Length, as information only:** a document-level comparison of the rendered text's length
+  (for example "about 20% of the source"), useful for spotting an obviously unfinished
+  translation. Never per block, never a warning threshold: lengths differ naturally between
+  languages.
+- **Loose scroll sync (optional):** scrolling follows headings when they happen to correspond,
+  and otherwise relative position. It's a navigation aid; when headings don't correspond, that's
+  not an error.
 - Frontmatter is edited as fields, with per-field "translatable or keep as-is" rules set by the plugin.
 - Toggle between raw Markdown and a rendered preview per pane. Custom components get a placeholder
   render.
@@ -134,14 +150,17 @@ Principles:
   discussion first: `docs/plan/M1-languages.md`), list pairs with status, and show a static
   split view.
 - **M2: Edit and save longform.** Seed from source, edit the target, and save with round-trip safety.
-- **M3: Sync.** Block alignment, synced scroll and selection, and misalignment hints.
+- **M3: Changes and hints.** Source-change highlighting (needs the outdated-detection decision
+  below), preservation hints, the length comparison, and loose heading-anchored scroll sync.
 - **M4: banana-i18n.** Catalog list, split message editor, `qqq` docs, and validation.
 - **M5: Second plugins.** Starlight + gettext `.po`, to prove the plugin contracts hold.
 
 ## 11. Open questions
 - **Outdated detection:** how do we know the source changed after translating? Options include git
   history, a stored source hash in a sidecar file, or a frontmatter field. Which is least intrusive?
-- **Alignment strategy:** match blocks by structure only, or let the user pin pairs manually?
+- **One-to-one longform (revisit later):** a (semi-)one-to-one, block-paired mode for longform,
+  for projects that want strict structural parity. Deliberately not a starting point: source
+  changes, hints, and loose sync come first.
 - **Custom components in Markdown** (Vue in VitePress, MDX-like in Astro): how much preview is
   worth building?
 - **Git awareness:** show diffs and branch info, or stay out of git entirely?
