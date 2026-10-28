@@ -33,6 +33,7 @@ export default defineConfig({
         'src/domains/*/application/**/*.ts',
         'src/plugins/*/**/*.ts',
         'scripts/spdx.ts',
+        'scripts/language-data.ts',
       ],
       exclude: ['**/*.test.ts', 'src/plugins/*/fixtures/**'],
       reporter: ['text', 'json-summary'],

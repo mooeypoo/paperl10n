@@ -46,6 +46,30 @@ scripts) during the locale-picker design discussion: see
 [`docs/plan/M1-languages.md`](../plan/M1-languages.md). Callers only use `localeFrom` and
 `parseLocale`, so replacing the data doesn't change them.
 
+## The language catalog (M1, step L1)
+
+`domain/language-data.json` is the catalog of languages Paper Lion knows: 1,471 languages, each
+with its BCP 47 tag (what Paper Lion saves), MediaWiki code, direction, autonym (when known),
+names in the interface languages (`en`, `he`), script, regions, and fallbacks; plus aliases (old
+and MediaWiki codes → tags) and, for 254 regions, their languages by number of speakers. L2 wires
+it in; until then the M0 tables above still decide direction.
+
+- **Generated, never hand-edited:** `pnpm update:language-data` (needs the network; run by hand
+  and review the diff). A test fails if the file differs from what the generator writes.
+- **Sources** (recorded in the file): MediaWiki's `languageinfo` API (GPL-2.0-or-later; its
+  names include Unicode CLDR data, Unicode-3.0) and `@wikimedia/language-data`, the data behind
+  Wikipedia's language selector (GPL-2.0-or-later). Both are compatible with GPL-3.0-or-later.
+- **Rules the generator follows:**
+  - Tags are MediaWiki's, **checked but never canonicalized**: CLDR's aliases would merge
+    languages localization keeps apart (Tagalog/Filipino, Serbo-Croatian and Montenegrin into
+    Serbian, Dari into Persian, Western Punjabi into Lahnda).
+  - **Right to left if either source says so:** MediaWiki only knows the direction of languages it
+    has interface messages for, and says "ltr" for the rest; a right-to-left script settles it
+    (17 languages, such as `ar-001`, `ars`, `ydd`, `syc`).
+  - Special codes (`qqq`, `qqx`, `mis`, `mul`, `und`, `zxx`) are left out; codes that share a tag
+    (`be-x-old`, `sr-el`) become aliases. Lookups ignore case, so `pt-br` finds `pt-BR`.
+  - The autonym comes from MediaWiki, then from ULS; 645 languages have only an English name.
+
 ## Not here (yet)
 
 - Language names and autonyms, the picker, fallback chains (`pt-BR` → `pt`), custom locales,

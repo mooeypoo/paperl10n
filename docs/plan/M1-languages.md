@@ -62,6 +62,25 @@ Each is its own branch and PR, as in M0.
   language via `uselang`), the committed JSON in `src/domains/locale/data/`, and tests that
   validate it (unique BCP 47 tags, a direction and an autonym for each, RTL agreeing with ULS's
   RTL scripts, aliases pointing at real entries). Attribution for both sources.
+  - *Done-notes:* `scripts/language-data.ts` (pure builder, under the coverage floor),
+    `scripts/update-language-data.ts` (`pnpm update:language-data`), and
+    `src/domains/locale/domain/language-data.json`: 1,471 languages, 49 aliases, 254 regions,
+    218 KB, one entry per line for clean diffs. Tests check the builder on small inputs and the
+    committed file (no hand edits, unique tags, references resolve, RTL agrees with scripts).
+  - **Found while building it:**
+    - `Intl.getCanonicalLocales` merges languages through CLDR aliases (`tl` → `fil`,
+      `sh`/`cnr` → Serbian, `prs` → `fa-AF`, `pnb` → `lah`; 42 tags changed). Tags are now
+      checked, never canonicalized.
+    - `languageinfo` says "ltr" for 17 languages written in right-to-left scripts (it only knows
+      the direction of languages with MediaWiki interface messages), so a right-to-left script
+      makes a language RTL too. **To review:** `rhg` (Rohingya) becomes RTL from ULS's Hanifi
+      script, though the Rohingya Wikipedia uses Latin; a project can override a direction in its
+      config (round 2).
+    - 910 of 1,489 entries have no autonym in `languageinfo`; ULS fills 265, so 645 languages show
+      their English name only. The planned "an autonym for each" check became "an English name for
+      each, an autonym when known".
+  - Mutation checks: ignoring the script's direction, canonicalizing tags, and a hand edit to the
+    file (Hebrew as "ltr") each fail tests.
 - **L2, the `locale` domain:** a `LanguageCatalog` (lookup by BCP 47 tag or alias, direction,
   names); `localeFrom` uses it instead of M0's RTL table; custom languages from the config
   (`languages: { "<code>": { "name", "dir" } }`); pure search ranking and suggestion rules
