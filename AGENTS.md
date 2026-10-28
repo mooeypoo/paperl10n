@@ -54,7 +54,8 @@ Initial domains (add new ones only via ADR):
    which resolve only to entry points, so deep imports into another domain don't resolve.
    Two narrow exceptions: `app/` may import adapter files directly, via `#adapters/<domain>/<file>`
    (it's the composition root),
-   and `*.test.ts` files may import a domain's `testing/` entry.
+   and `*.test.ts` files may import a domain's `testing/` entry (a domain's own `testing/` may
+   also use the `testing/` of domains it depends on).
 
 Enforcement: `eslint-plugin-boundaries` (rules), a TypeScript project for pure code without Node or
 DOM types (purity), and architecture tests that lint known-bad samples (so rules can't silently rot).

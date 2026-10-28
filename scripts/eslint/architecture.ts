@@ -60,8 +60,22 @@ function domainPolicies(domain: DomainName): DependenciesPolicy[] {
       allow: { to: [inDomain(domain, ['domain', 'application']), kernel] },
     },
     {
-      from: inDomain(domain, ['adapters', 'testing']),
+      from: inDomain(domain, ['adapters']),
       allow: { to: [inDomain(domain), kernel, ...otherDomains, anyExternal] },
+    },
+    // Test support may also compose the test support of domains it depends on (fakes built on
+    // fakes). Production code never imports any testing/ folder.
+    {
+      from: inDomain(domain, ['testing']),
+      allow: {
+        to: [
+          inDomain(domain),
+          kernel,
+          ...otherDomains,
+          ...domainGraph[domain].map((other) => inDomain(other, ['testing'])),
+          anyExternal,
+        ],
+      },
     },
   ];
 }

@@ -142,6 +142,12 @@ describe('architecture rules report violations', () => {
       [DEPENDENCIES],
     ],
     [
+      "test support importing the test support of a domain it doesn't depend on",
+      'src/domains/locale/testing/sample.ts',
+      "import { FakeFolderPicker } from '#domain-testing/workspace';\nexport const x = FakeFolderPicker;\n",
+      [DEPENDENCIES],
+    ],
+    [
       "production code importing a domain's test support",
       'src/domains/workspace/application/sample.ts',
       "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
@@ -205,6 +211,11 @@ describe('architecture rules allow the intended dependencies (positive controls)
       'app imports an adapter through #adapters',
       'src/app/sample.ts',
       "import { openNodeProjectFiles } from '#adapters/formats/node-project-files';\nexport const x = openNodeProjectFiles;\n",
+    ],
+    [
+      'test support composing the test support of a domain it depends on',
+      'src/domains/workspace/testing/sample.ts',
+      "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
     ],
     [
       'ui imports the kernel',
