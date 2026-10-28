@@ -7,6 +7,7 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { FileTree } from '#domain-testing/formats';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '#domain-testing/workspace';
+import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
 import type { PaperLionApi } from '#ipc-contract';
 import type { PluginModule } from '#domains/formats';
@@ -37,6 +38,7 @@ function appWith(
     folderPicker: new FakeFolderPicker(answer),
     opener: new FakeProjectFilesOpener(folders),
     sessions: new InMemoryProjectSessions(randomUUID),
+    parser: createLezerMarkdownParser(),
     plugins,
     onUnexpected: (method, thrown) => {
       throw new Error(`unexpected in ${method}: ${String(thrown)}`);
@@ -77,9 +79,38 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
           key: 'guide/getting-started',
           sourcePath: 'en/guide/getting-started.md',
           targetPath: 'he/guide/getting-started.md',
+          targetExists: false,
         },
-        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md' },
+        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
       ],
+    });
+  });
+
+  it('reads and parses a page with the real parser, and a missing translation as null', async () => {
+    const api = appWith({ '/projects/basic': basic });
+    const opened = await api.openProject();
+    if (!opened.ok || opened.value === null) throw new Error('test setup');
+    const pair = cloned(
+      await api.readDocumentPair({
+        projectId: opened.value.projectId,
+        key: 'guide/getting-started',
+      }),
+    );
+    expect(pair).toEqual({
+      ok: true,
+      value: {
+        key: 'guide/getting-started',
+        source: {
+          path: 'en/guide/getting-started.md',
+          text: '# Getting started\n\nInstall, then run.\n',
+          blocks: [
+            { kind: 'heading', start: 0, end: 17, depth: 1 },
+            { kind: 'paragraph', start: 19, end: 37 },
+          ],
+          inline: [{ kind: 'markup', start: 0, end: 1 }],
+        },
+        target: null,
+      },
     });
   });
 
@@ -107,6 +138,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
       folderPicker: new FakeFolderPicker(null),
       opener: new FakeProjectFilesOpener({}),
       sessions: new InMemoryProjectSessions(randomUUID),
+      parser: createLezerMarkdownParser(),
       plugins: [...builtInPlugins, ...builtInPlugins],
       onUnexpected: () => undefined,
     });

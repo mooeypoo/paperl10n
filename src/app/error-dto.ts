@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import type { ListSourceDocumentsError, OpenProjectError } from '#domains/workspace';
+import type {
+  ListSourceDocumentsError,
+  OpenProjectError,
+  ReadDocumentPairError,
+} from '#domains/workspace';
 import type { ErrorDto } from '#ipc-contract';
 
-export type AppError = OpenProjectError | ListSourceDocumentsError;
+export type AppError = OpenProjectError | ListSourceDocumentsError | ReadDocumentPairError;
 
 /** Turns a use-case error into the plain DTO the UI shows a message for. Exhaustive by lint. */
 export function toErrorDto(error: AppError): ErrorDto {
@@ -24,6 +28,10 @@ export function toErrorDto(error: AppError): ErrorDto {
         {},
         error.problems.map((p) => `${p.field}: ${p.problem}`),
       );
+    case 'workspace.unknown-document':
+      return dto({ key: error.key });
+    case 'workspace.document-unreadable':
+      return dto({ file: error.cause.path, problem: error.cause.code });
     case 'workspace.unknown-document-format':
       return dto({ formatId: error.formatId });
     case 'workspace.no-document-format':

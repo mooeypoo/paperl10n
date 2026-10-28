@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The app's wiring, shared by every composition root: Electron (src/app/node/, step 13) and the
 // browser UI harness (src/ui-harness/, step 14, a testing aid). Roots differ only in the ports they pass in.
+import type { MarkdownParser } from '#domains/document';
 import { createFormatRegistry, type PluginModule, type RegistryError } from '#domains/formats';
 import {
   createListSourceDocuments,
   createOpenProject,
+  createReadDocumentPair,
   type FolderPicker,
   type ProjectFilesOpener,
   type ProjectSessions,
@@ -18,6 +20,7 @@ export interface AppDependencies {
   readonly folderPicker: FolderPicker;
   readonly opener: ProjectFilesOpener;
   readonly sessions: ProjectSessions;
+  readonly parser: MarkdownParser;
   readonly plugins: readonly PluginModule[];
   readonly onUnexpected: OnUnexpected;
 }
@@ -34,6 +37,7 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
       sessions: deps.sessions,
     }),
     listSourceDocuments: createListSourceDocuments({ sessions: deps.sessions }),
+    readDocumentPair: createReadDocumentPair({ sessions: deps.sessions, parser: deps.parser }),
   });
   return ok(guardApi(handlers, deps.onUnexpected));
 }

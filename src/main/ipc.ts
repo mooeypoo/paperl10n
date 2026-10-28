@@ -16,15 +16,29 @@ export const argumentValidators: Readonly<
 > = {
   openProject: (args) => args.length === 0,
   listSourceDocuments: ([request, ...rest]) =>
+    rest.length === 0 && hasExactly(request, ['projectId']) && isProjectId(request.projectId),
+  readDocumentPair: ([request, ...rest]) =>
     rest.length === 0 &&
-    typeof request === 'object' &&
-    request !== null &&
-    Object.keys(request).length === 1 &&
-    'projectId' in request &&
-    typeof request.projectId === 'string' &&
-    request.projectId.length > 0 &&
-    request.projectId.length <= 200,
+    hasExactly(request, ['projectId', 'key']) &&
+    isProjectId(request.projectId) &&
+    typeof request.key === 'string' &&
+    request.key.length > 0 &&
+    request.key.length <= 1000,
 };
+
+/** A plain object with exactly these keys, and nothing else. */
+function hasExactly<K extends string>(
+  value: unknown,
+  keys: readonly K[],
+): value is Record<K, unknown> {
+  if (typeof value !== 'object' || value === null) return false;
+  const actual = Object.keys(value);
+  return actual.length === keys.length && keys.every((key) => actual.includes(key));
+}
+
+function isProjectId(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= 200;
+}
 
 export interface IpcEvent {
   readonly senderFrame: { readonly url: string; readonly parent: unknown } | null;
@@ -50,6 +64,10 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
     case 'listSourceDocuments': {
       const [request] = args as [{ projectId: string }]; // checked by argumentValidators
       return api.listSourceDocuments({ projectId: request.projectId });
+    }
+    case 'readDocumentPair': {
+      const [request] = args as [{ projectId: string; key: string }]; // checked by argumentValidators
+      return api.readDocumentPair({ projectId: request.projectId, key: request.key });
     }
   }
 }

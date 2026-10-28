@@ -37,5 +37,7 @@
   "paperl10n-find-page-placeholder": "Name or path",
   "paperl10n-pages-matching": "$1 of $2",
   "paperl10n-no-matching-pages": "No page matches \"$1\".",
-  "paperl10n-content-later": "Page content doesn't show here yet. Reading, sections, translation status, and editing come next."
+  "paperl10n-content-later": "Page content doesn't show here yet. Reading, sections, translation status, and editing come next.",
+  "paperl10n-error-workspace-unknown-document": "The page \"$1\" isn't in this project anymore. Open the project again to refresh the list.",
+  "paperl10n-error-workspace-document-unreadable": "The file $1 can't be read ($2)."
 }

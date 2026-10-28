@@ -4,6 +4,7 @@
 import type { PaperLionApi } from '#ipc-contract';
 import { createAppApi } from '#app/create-app-api';
 import { builtInPlugins } from '#app/plugins';
+import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
 import { mountApp } from '#ui/mount';
 import type { App as VueApp } from 'vue';
@@ -25,6 +26,7 @@ export function createHarnessApi(fixtures: Fixtures, fixture: string): PaperLion
     folderPicker: fixturePicker(fixture),
     opener: fixtureOpener(fixtures),
     sessions: new InMemoryProjectSessions(() => crypto.randomUUID()),
+    parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: (method, thrown) => {
       console.error(`Unexpected error in ${method}:`, thrown);

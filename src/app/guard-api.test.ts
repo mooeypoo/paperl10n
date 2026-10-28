@@ -19,14 +19,24 @@ describe('guardApi', () => {
       {
         openProject: () => Promise.resolve(ok(null)),
         listSourceDocuments: ({ projectId }) =>
-          Promise.resolve(ok([{ key: projectId, sourcePath: 'a', targetPath: 'b' }])),
+          Promise.resolve(
+            ok([{ key: projectId, sourcePath: 'a', targetPath: 'b', targetExists: false }]),
+          ),
+        readDocumentPair: ({ key }) =>
+          Promise.resolve(
+            ok({ key, source: { path: 'a', text: '', blocks: [], inline: [] }, target: null }),
+          ),
       },
       onUnexpected,
     );
     expect(await api.openProject()).toEqual({ ok: true, value: null });
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual({
       ok: true,
-      value: [{ key: 'p', sourcePath: 'a', targetPath: 'b' }],
+      value: [{ key: 'p', sourcePath: 'a', targetPath: 'b', targetExists: false }],
+    });
+    expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual({
+      ok: true,
+      value: { key: 'k', source: { path: 'a', text: '', blocks: [], inline: [] }, target: null },
     });
     expect(calls).toEqual([]);
   });
@@ -41,6 +51,9 @@ describe('guardApi', () => {
         listSourceDocuments: () => {
           throw new Error('sync boom');
         },
+        readDocumentPair: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -48,6 +61,7 @@ describe('guardApi', () => {
       {
         openProject: () => Promise.reject(new Error('async boom')),
         listSourceDocuments: () => Promise.reject(new Error('async boom')),
+        readDocumentPair: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -59,7 +73,12 @@ describe('guardApi', () => {
     };
     expect(await api.openProject()).toEqual(unexpected);
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual(unexpected);
-    expect(calls.map(([method]) => method)).toEqual(['openProject', 'listSourceDocuments']);
+    expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual(unexpected);
+    expect(calls.map(([method]) => method)).toEqual([
+      'openProject',
+      'listSourceDocuments',
+      'readDocumentPair',
+    ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });
 });

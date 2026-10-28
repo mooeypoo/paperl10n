@@ -27,6 +27,55 @@ export interface SourceDocumentDto {
   readonly sourcePath: string;
   /** Project-relative; the file may not exist yet. */
   readonly targetPath: string;
+  /** Whether the translation file exists. */
+  readonly targetExists: boolean;
+}
+
+/** Kept equal to the `document` domain's block kinds by a test. */
+export const blockKindDtos = [
+  'frontmatter',
+  'heading',
+  'paragraph',
+  'list',
+  'blockquote',
+  'code',
+  'table',
+  'html',
+  'thematic-break',
+  'link-definition',
+  'container-fence',
+  'mdx-esm',
+] as const;
+
+/** Offsets are UTF-16 code units into the document's `text`; `end` is exclusive. */
+export interface BlockDto {
+  readonly kind: (typeof blockKindDtos)[number];
+  readonly start: number;
+  readonly end: number;
+  /** Headings only: 1–6. */
+  readonly depth?: number;
+}
+
+export interface InlineSpanDto {
+  readonly kind: 'markup' | 'code' | 'url';
+  readonly start: number;
+  readonly end: number;
+}
+
+export interface DocumentTextDto {
+  /** Project-relative. */
+  readonly path: string;
+  /** The file's exact text. */
+  readonly text: string;
+  readonly blocks: readonly BlockDto[];
+  readonly inline: readonly InlineSpanDto[];
+}
+
+export interface DocumentPairDto {
+  readonly key: string;
+  readonly source: DocumentTextDto;
+  /** `null` when the translation file doesn't exist yet. */
+  readonly target: DocumentTextDto | null;
 }
 
 /** Every error the renderer can receive. Each one has a UI message (enforced by a test). */
@@ -38,6 +87,8 @@ export const errorCodes = [
   'workspace.unknown-document-format',
   'workspace.no-document-format',
   'workspace.unknown-project',
+  'workspace.unknown-document',
+  'workspace.document-unreadable',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.file-access',
@@ -65,6 +116,11 @@ export interface PaperLionApi {
   listSourceDocuments(request: {
     readonly projectId: string;
   }): Promise<Result<readonly SourceDocumentDto[], ErrorDto>>;
+  /** A page's source and its translation, read and parsed. */
+  readDocumentPair(request: {
+    readonly projectId: string;
+    readonly key: string;
+  }): Promise<Result<DocumentPairDto, ErrorDto>>;
 }
 
 export type ApiMethod = keyof PaperLionApi;
@@ -72,6 +128,7 @@ export type ApiMethod = keyof PaperLionApi;
 export const apiMethods = [
   'openProject',
   'listSourceDocuments',
+  'readDocumentPair',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

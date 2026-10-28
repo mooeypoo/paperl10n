@@ -9,6 +9,7 @@ describe('#domains/workspace public API', () => {
       'DEFAULT_SOURCE_LOCALE',
       'createListSourceDocuments',
       'createOpenProject',
+      'createReadDocumentPair',
       'parseProjectConfig',
     ]);
   });

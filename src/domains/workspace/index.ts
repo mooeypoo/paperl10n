@@ -31,3 +31,10 @@ export {
   type ListSourceDocumentsError,
   type SourceDocumentEntry,
 } from './application/list-source-documents.ts';
+export {
+  createReadDocumentPair,
+  type DocumentPair,
+  type ReadDocument,
+  type ReadDocumentPair,
+  type ReadDocumentPairError,
+} from './application/read-document-pair.ts';

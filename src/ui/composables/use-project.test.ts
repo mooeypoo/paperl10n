@@ -89,6 +89,7 @@ describe('useProject', () => {
     const client: PaperLionApi = {
       openProject: () => new Promise((resolve) => (finish = resolve)),
       listSourceDocuments: () => Promise.reject(new Error('unused')),
+      readDocumentPair: () => Promise.reject(new Error('unused')),
     };
     const project = useProject(client);
     const pending = project.open();
@@ -104,6 +105,7 @@ describe('useProject', () => {
     const client: PaperLionApi = {
       openProject: () => new Promise((resolve) => resolvers.push(resolve)),
       listSourceDocuments: () => Promise.resolve({ ok: true, value: documents }),
+      readDocumentPair: () => Promise.reject(new Error('unused')),
     };
     const project = useProject(client);
     const first = project.open();

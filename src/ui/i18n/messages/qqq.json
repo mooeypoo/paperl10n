@@ -37,5 +37,7 @@
   "paperl10n-find-page-placeholder": "Placeholder text in the page search box: what you can search by.",
   "paperl10n-pages-matching": "Shown while searching pages. $1: the number of pages that match; $2: the number of pages in total.",
   "paperl10n-no-matching-pages": "Shown when no page matches the search. $1: what the user typed.",
-  "paperl10n-content-later": "Note under the document panes: Paper Lion can't show page contents yet; those features come in later versions."
+  "paperl10n-content-later": "Note under the document panes: Paper Lion can't show page contents yet; those features come in later versions.",
+  "paperl10n-error-workspace-unknown-document": "Error when the chosen page is no longer among the project's documents. $1: the page's key, e.g. \"guide/intro\".",
+  "paperl10n-error-workspace-document-unreadable": "Error when a page's file can't be read. $1: the file's path; $2: the problem code, e.g. files.not-utf8."
 }

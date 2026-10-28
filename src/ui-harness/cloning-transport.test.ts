@@ -13,13 +13,22 @@ const summary: ProjectSummaryDto = {
 };
 
 const documents: SourceDocumentDto[] = [
-  { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md' },
+  { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
 ];
 
 function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
   return {
     openProject: () => Promise.resolve({ ok: true, value: summary }),
     listSourceDocuments: () => Promise.resolve({ ok: true, value: documents }),
+    readDocumentPair: ({ key }) =>
+      Promise.resolve({
+        ok: true,
+        value: {
+          key,
+          source: { path: 'en/a.md', text: 'a', blocks: [], inline: [] },
+          target: null,
+        },
+      }),
     ...overrides,
   };
 }

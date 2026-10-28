@@ -21,6 +21,7 @@ async function openWith(plugin: PluginModule) {
         'paperl10n.config.json': JSON.stringify({ targetLocale: 'he' }),
         'en/index.md': '',
         'en/guide/intro.md': '',
+        'he/index.md': '',
       },
     }),
     registry: registry.value,
@@ -34,15 +35,20 @@ async function openWith(plugin: PluginModule) {
 }
 
 describe('listSourceDocuments', () => {
-  it('lists source documents with their target paths for the project target locale', async () => {
+  it('lists source documents with their target paths, and whether each translation exists', async () => {
     const { listSourceDocuments, projectId } = await openWith(
       fakeDocumentPlugin('format-fake', detects('likely')),
     );
     expect(await listSourceDocuments(projectId)).toEqual({
       ok: true,
       value: [
-        { key: 'guide/intro', sourcePath: 'en/guide/intro.md', targetPath: 'he/guide/intro.md' },
-        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md' },
+        {
+          key: 'guide/intro',
+          sourcePath: 'en/guide/intro.md',
+          targetPath: 'he/guide/intro.md',
+          targetExists: false,
+        },
+        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
       ],
     });
   });

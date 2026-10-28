@@ -49,6 +49,19 @@ view. This part covers reading and showing documents.
 - IPC: `readDocumentPair({ projectId, key })` → `{ source, target | null }`, each with its text,
   blocks, and inline spans as plain DTOs. Argument validation, error codes, and the end-to-end
   IPC test extend as before.
+- *Done-notes:*
+  - `createReadDocumentPair({ sessions, parser })` in `workspace/application`, and `targetExists`
+    on `listSourceDocuments` (one `exists` check per page). New error codes
+    `workspace.unknown-document` and `workspace.document-unreadable`, with UI messages.
+  - The parser is injected into `createAppApi` like the other ports (shared `app/` code is pure
+    and can't import adapters); Electron's root and the harness pass the lezer parser.
+  - IPC: `readDocumentPair` in the contract, `guardApi`, the preload, main's validator (exactly
+    `projectId` and a 1–1,000-character `key`), and the harness transport. The compiler listed
+    each place. A test keeps the contract's block and inline kinds equal to the domain's.
+  - `FakeMarkdownParser` (`#domain-testing/document`) keeps use-case tests about orchestration;
+    it satisfies the same invariants as the real parser, checked over the tricky documents.
+  - Mutation checks: a validator that allows extra fields, a stray block kind in the contract,
+    and `targetExists` hard-coded: each fails its tests.
 
 ### R3: the split view
 

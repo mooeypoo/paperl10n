@@ -37,6 +37,16 @@ function setup() {
       calls.push(['listSourceDocuments', request]);
       return Promise.resolve(ok([]));
     },
+    readDocumentPair: (request) => {
+      calls.push(['readDocumentPair', request]);
+      return Promise.resolve(
+        ok({
+          key: request.key,
+          source: { path: 'a', text: '', blocks: [], inline: [] },
+          target: null,
+        }),
+      );
+    },
   };
   registerApi(
     registrar,
@@ -65,7 +75,14 @@ describe('registerApi', () => {
       ok: true,
       value: [],
     });
-    expect(calls).toEqual([['openProject'], ['listSourceDocuments', { projectId: 'p1' }]]);
+    expect(await send('readDocumentPair', trusted, { projectId: 'p1', key: 'k' })).toMatchObject({
+      ok: true,
+    });
+    expect(calls).toEqual([
+      ['openProject'],
+      ['listSourceDocuments', { projectId: 'p1' }],
+      ['readDocumentPair', { projectId: 'p1', key: 'k' }],
+    ]);
   });
 
   it.each<[string, IpcEvent]>([
@@ -121,5 +138,21 @@ describe('argumentValidators', () => {
     ['a very long id', [{ projectId: 'x'.repeat(201) }], false],
   ])('listSourceDocuments: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.listSourceDocuments(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a project id and a key', [{ projectId: 'abc', key: 'guide/intro' }], true],
+    ['no arguments', [], false],
+    ['null', [null], false],
+    ['no key', [{ projectId: 'abc' }], false],
+    ['an empty key', [{ projectId: 'abc', key: '' }], false],
+    ['a numeric key', [{ projectId: 'abc', key: 1 }], false],
+    ['an empty project id', [{ projectId: '', key: 'k' }], false],
+    ['an extra field', [{ projectId: 'abc', key: 'k', path: '/etc/passwd' }], false],
+    ['an extra argument', [{ projectId: 'abc', key: 'k' }, 'more'], false],
+    ['a very long key', [{ projectId: 'abc', key: 'x'.repeat(1001) }], false],
+    ['an array', [['abc', 'k']], false],
+  ])('readDocumentPair: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.readDocumentPair(args)).toBe(valid);
   });
 });

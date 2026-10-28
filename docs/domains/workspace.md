@@ -55,8 +55,20 @@ problems are reported at once (`workspace.config-invalid`, with a list of `{ fie
 ### `listSourceDocuments(projectId)`
 
 `createListSourceDocuments({ sessions })`. It returns each source document with its key, source
-path, and target path for the project's target locale. Errors: `workspace.unknown-project`, or a
-`FormatError` from the layout.
+path, target path for the project's target locale, and whether that translation file exists
+(`targetExists`). Errors: `workspace.unknown-project`, or a `FormatError` from the layout.
+
+### `readDocumentPair(projectId, key)`
+
+`createReadDocumentPair({ sessions, parser })`. It finds the page by key among the layout's source
+documents, reads the source and the translation, and parses both with the `MarkdownParser` port
+(`#domains/document`; `.mdx` files with MDX tolerance). A translation that doesn't exist yet is
+`null`, not an error. Errors: `workspace.unknown-project`, `workspace.unknown-document` (the key
+isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
+file that vanished), or a `FormatError`.
+
+Pairing *within* a page (sections, PRD §7.2) belongs to the `translation` domain from M3. Reading
+the two files is workspace's job: it holds the open project's files and layout.
 
 ## Ports
 

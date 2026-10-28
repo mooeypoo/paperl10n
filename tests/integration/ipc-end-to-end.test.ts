@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { FakeFolderPicker } from '#domain-testing/workspace';
+import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
 import type { ApiMethod, PaperLionApi } from '#ipc-contract';
 import { createAppApi } from '#app/create-app-api';
@@ -27,6 +28,7 @@ function rendererApi(): { api: PaperLionApi; rejections: string[] } {
     folderPicker: new FakeFolderPicker(basicFixture),
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(randomUUID),
+    parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: (method, thrown) => {
       throw new Error(`unexpected in ${method}: ${String(thrown)}`);
@@ -89,10 +91,21 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
           key: 'guide/getting-started',
           sourcePath: 'en/guide/getting-started.md',
           targetPath: 'he/guide/getting-started.md',
+          targetExists: false,
         },
-        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md' },
+        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
       ],
     });
+  },
+  readDocumentPair: async () => {
+    const { api } = rendererApi();
+    const projectId = await openBasic(api);
+    const pair = await api.readDocumentPair({ projectId, key: 'index' });
+    if (!pair.ok) throw new Error(`expected a pair: ${JSON.stringify(pair)}`);
+    expect(pair.value.source.path).toBe('en/index.md');
+    expect(pair.value.source.blocks[0]).toEqual({ kind: 'heading', start: 0, end: 9, depth: 1 });
+    expect(pair.value.target?.path).toBe('he/index.md');
+    expect(pair.value.target?.text.length).toBeGreaterThan(0);
   },
 };
 

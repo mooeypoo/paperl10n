@@ -59,6 +59,21 @@ const cases: [AppError, ErrorDto][] = [
     { code: 'workspace.unknown-project', params: {}, details: [] },
   ],
   [
+    { code: 'workspace.unknown-document', key: 'guide/gone' },
+    { code: 'workspace.unknown-document', params: { key: 'guide/gone' }, details: [] },
+  ],
+  [
+    {
+      code: 'workspace.document-unreadable',
+      cause: { code: 'files.not-utf8', path: 'he/index.md' as ProjectPath },
+    },
+    {
+      code: 'workspace.document-unreadable',
+      params: { file: 'he/index.md', problem: 'files.not-utf8' },
+      details: [],
+    },
+  ],
+  [
     { code: 'formats.invalid-options', formatId, reason: 'bad root' },
     { code: 'formats.invalid-options', params: { formatId, reason: 'bad root' }, details: [] },
   ],

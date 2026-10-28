@@ -16,5 +16,10 @@ export function createApi(invoke: Invoke): PaperLionApi {
       invoke(channelFor('listSourceDocuments'), { projectId: request.projectId }) as ReturnType<
         PaperLionApi['listSourceDocuments']
       >,
+    readDocumentPair: (request) =>
+      invoke(channelFor('readDocumentPair'), {
+        projectId: request.projectId,
+        key: request.key,
+      }) as ReturnType<PaperLionApi['readDocumentPair']>,
   };
 }

@@ -10,6 +10,8 @@ export interface SourceDocumentEntry {
   readonly sourcePath: ProjectPath;
   /** Where the translation lives (or will live) for the project's target locale. */
   readonly targetPath: ProjectPath;
+  /** Whether that translation file exists yet. */
+  readonly targetExists: boolean;
 }
 
 export type ListSourceDocumentsError = { readonly code: 'workspace.unknown-project' } | FormatError;
@@ -18,7 +20,7 @@ export type ListSourceDocuments = (
   projectId: string,
 ) => Promise<Result<readonly SourceDocumentEntry[], ListSourceDocumentsError>>;
 
-/** The open project's source documents, each with its target path. */
+/** The open project's source documents, each with its target path and whether it exists. */
 export function createListSourceDocuments(deps: {
   readonly sessions: ProjectSessions;
 }): ListSourceDocuments {
@@ -33,7 +35,12 @@ export function createListSourceDocuments(deps: {
     for (const document of documents.value) {
       const targetPath = project.layout.targetPathFor(document, project.targetLocale.id);
       if (!targetPath.ok) return targetPath;
-      entries.push({ key: document.key, sourcePath: document.path, targetPath: targetPath.value });
+      entries.push({
+        key: document.key,
+        sourcePath: document.path,
+        targetPath: targetPath.value,
+        targetExists: await project.files.exists(targetPath.value),
+      });
     }
     return ok(entries);
   };

@@ -3,6 +3,7 @@
 // Everything else is the shared app wiring (createAppApi).
 import { randomUUID } from 'node:crypto';
 import type { RegistryError } from '#domains/formats';
+import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import type { PaperLionApi } from '#ipc-contract';
 import type { Result } from '#kernel/result';
 import {
@@ -27,6 +28,7 @@ export function createElectronAppApi(
     folderPicker: createDialogFolderPicker(deps.showFolderDialog),
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(() => randomUUID()),
+    parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: deps.onUnexpected,
   });

@@ -27,5 +27,7 @@ export function guardApi(api: PaperLionApi, onUnexpected: OnUnexpected): PaperLi
     openProject: () => guard('openProject', onUnexpected, () => api.openProject()),
     listSourceDocuments: (request) =>
       guard('listSourceDocuments', onUnexpected, () => api.listSourceDocuments(request)),
+    readDocumentPair: (request) =>
+      guard('readDocumentPair', onUnexpected, () => api.readDocumentPair(request)),
   };
 }
