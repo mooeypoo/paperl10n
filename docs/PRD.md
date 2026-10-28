@@ -164,7 +164,7 @@ Principles:
 
 ## 10. Milestones (rough)
 - **M0: Skeleton.** Electron + Vue + TS, domain folders, lint boundaries, CI, fixture projects.
-- **M1: Read-only longform.** Open a VitePress project, choose source and target locales (design
+- **M1: Read-only longform.** Open an Astro Starlight project, choose source and target locales (design
   discussion first: `docs/plan/M1-languages.md`), list pairs with status, and show a static
   split view.
 - **M2: Edit and save longform.** Seed from source, edit the target, and save with round-trip safety.
@@ -172,7 +172,7 @@ Principles:
   full-page view, source-change highlighting (needs the outdated-detection decision below),
   preservation hints, the length comparison, and loose scroll sync.
 - **M4: banana-i18n.** Catalog list, split message editor, `qqq` docs, and validation.
-- **M5: Second plugins.** Starlight + gettext `.po`, to prove the plugin contracts hold.
+- **M5: Second plugins.** VitePress + gettext `.po`, to prove the plugin contracts hold.
 
 ## 11. Open questions
 - **Visual editing approach:** live-preview decorations on a Markdown source editor (for example
