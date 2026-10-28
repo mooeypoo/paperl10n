@@ -9,6 +9,11 @@
     "outDir": "node_modules/.cache/tsbuild/core",
     "tsBuildInfoFile": "node_modules/.cache/tsbuild/core.tsbuildinfo"
   },
-  "include": ["src/shared/kernel/**/*.ts"],
+  "include": [
+    "src/shared/kernel/**/*.ts",
+    "src/domains/*/index.ts",
+    "src/domains/*/domain/**/*.ts",
+    "src/domains/*/application/**/*.ts"
+  ],
   "exclude": ["**/*.test.ts"]
 }

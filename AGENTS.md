@@ -49,7 +49,7 @@ Initial domains (add new ones only via ADR):
 4. `ui/` talks to use cases only (through composables). No business logic in components.
 5. Dependencies point inward. Nothing imports from `app/` except entry points.
 6. No circular dependencies between domains. If two domains need each other, the model is wrong.
-   Allowed domain → domain edges are declared in `scripts/domain-graph.js`; adding one is a reviewed change.
+   Allowed domain → domain edges are declared in `scripts/domain-graph.ts`; adding one is a reviewed change.
 7. Imports go through subpath aliases (`#domains/<domain>`, `#kernel/<module>`, `#plugin-api`),
    which resolve only to entry points, so deep imports into another domain don't resolve.
    Two narrow exceptions: `app/` may import adapter files directly (it's the composition root),

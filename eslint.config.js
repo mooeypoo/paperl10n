@@ -3,6 +3,7 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier/flat';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
+import { architectureConfig } from './scripts/eslint/architecture.ts';
 
 export default defineConfig(
   globalIgnores([
@@ -13,6 +14,8 @@ export default defineConfig(
     // Fixtures stand in for users' projects; they are data, not our code.
     'tests/fixtures/',
     'src/plugins/*/fixtures/',
+    // Deliberately broken samples, linted only by tests/architecture/.
+    'tests/architecture/samples/',
   ]),
 
   js.configs.recommended,
@@ -28,6 +31,9 @@ export default defineConfig(
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
     },
   },
+
+  // AGENTS.md architecture rules (boundaries, entry points, relative imports).
+  ...architectureConfig,
 
   // Plain JavaScript (config files) isn't part of a TypeScript project.
   { files: ['**/*.js', '**/*.mjs', '**/*.cjs'], extends: [tseslint.configs.disableTypeChecked] },

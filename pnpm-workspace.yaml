@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# A single-package repo; this file holds pnpm settings.
+
+# pnpm blocks dependency install scripts unless they're listed here.
+# Deny when the script is only a fallback; allow only when a package can't work without it.
+allowBuilds:
+  # Its script only fetches a platform binary as a fallback. pnpm already installs the binary
+  # through optional dependencies, so the script isn't needed.
+  unrs-resolver: false

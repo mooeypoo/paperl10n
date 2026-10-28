@@ -8,7 +8,7 @@
     "outDir": "node_modules/.cache/tsbuild/node",
     "tsBuildInfoFile": "node_modules/.cache/tsbuild/node.tsbuildinfo"
   },
-  "include": ["scripts/**/*.ts"],
+  "include": ["scripts/**/*.ts", "src/domains/*/adapters/**/*.ts"],
   "exclude": ["**/*.test.ts"],
   "references": [{ "path": "./tsconfig.core.json" }]
 }

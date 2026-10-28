@@ -20,7 +20,9 @@
     "node": ">=24"
   },
   "imports": {
-    "#kernel/*": "./src/shared/kernel/*.ts"
+    "#kernel/*": "./src/shared/kernel/*.ts",
+    "#domains/*": "./src/domains/*/index.ts",
+    "#domain-testing/*": "./src/domains/*/testing/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --build",
@@ -40,6 +42,8 @@
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-boundaries": "^7.3.0",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",

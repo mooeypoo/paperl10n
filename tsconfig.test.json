@@ -8,6 +8,12 @@
     "outDir": "node_modules/.cache/tsbuild/test",
     "tsBuildInfoFile": "node_modules/.cache/tsbuild/test.tsbuildinfo"
   },
-  "include": ["src/**/*.test.ts", "scripts/**/*.test.ts", "tests/**/*.ts", "vitest.config.ts"],
+  "include": [
+    "src/**/*.test.ts",
+    "src/domains/*/testing/**/*.ts",
+    "scripts/**/*.test.ts",
+    "tests/**/*.ts",
+    "vitest.config.ts"
+  ],
   "references": [{ "path": "./tsconfig.core.json" }, { "path": "./tsconfig.node.json" }]
 }
