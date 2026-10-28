@@ -67,6 +67,10 @@ describe('#plugin-api', () => {
 
 describe('#plugin-api/testing', () => {
   it('exports exactly these runtime values', () => {
-    expect(Object.keys(pluginApiTesting).sort()).toEqual(['InMemoryProjectFiles']);
+    expect(Object.keys(pluginApiTesting).sort()).toEqual([
+      'InMemoryProjectFiles',
+      'describePluginContract',
+      'openFixture',
+    ]);
   });
 });

@@ -5,6 +5,7 @@
 import { ESLint, type Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 import { describe, expect, it } from 'vitest';
+import { buildArchitectureConfig } from '../../scripts/eslint/architecture.ts';
 
 const repoRoot = new URL('../..', import.meta.url).pathname;
 
@@ -222,5 +223,112 @@ describe('type-aware rules still run', () => {
     expect(result?.messages.map((message) => message.ruleId)).toContain(
       '@typescript-eslint/no-floating-promises',
     );
+  });
+});
+
+describe('plugin isolation (ADR 0005)', () => {
+  const plugin = 'src/plugins/format-stub';
+
+  it.each<[string, string, string, string[]]>([
+    [
+      'a plugin importing a domain',
+      `${plugin}/sample.ts`,
+      "import * as f from '#domains/formats';\nexport const x = f;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'a plugin importing the kernel directly (use #plugin-api)',
+      `${plugin}/sample.ts`,
+      "import { ok } from '#kernel/result';\nexport const x = ok;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'a plugin importing Node',
+      `${plugin}/sample.ts`,
+      "import { readFile } from 'node:fs/promises';\nexport const x = readFile;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'a plugin importing an npm package its manifest does not declare',
+      `${plugin}/sample.ts`,
+      "import ts from 'typescript';\nexport const x = ts;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'a plugin importing another plugin',
+      `${plugin}/sample.ts`,
+      "import * as other from '../format-other/index.ts';\nexport const x = other;\n",
+      [RELATIVE],
+    ],
+    [
+      "a plugin's test importing core test support",
+      `${plugin}/sample.test.ts`,
+      "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'a domain importing a plugin',
+      'src/domains/workspace/application/sample.ts',
+      "import { plugin } from '#plugins/format-stub';\nexport const x = plugin;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      "app/ reaching past a plugin's index.ts",
+      'src/app/sample.ts',
+      "import { formatStub } from '../plugins/format-stub/format-stub.ts';\nexport const x = formatStub;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
+  ])('reports %s', async (_description, filePath, code, expected) => {
+    expect(await ruleIdsFor(filePath, code)).toEqual(expected);
+  });
+
+  it.each<[string, string, string]>([
+    [
+      'a plugin importing #plugin-api',
+      `${plugin}/sample.ts`,
+      "import { ok } from '#plugin-api';\nexport const x = ok;\n",
+    ],
+    [
+      'a plugin importing its own files',
+      `${plugin}/sample.ts`,
+      "import { formatStub } from './format-stub.ts';\nexport const x = formatStub;\n",
+    ],
+    [
+      "a plugin's test importing #plugin-api/testing and Vitest",
+      `${plugin}/sample.test.ts`,
+      "import { it } from 'vitest';\nimport { openFixture } from '#plugin-api/testing';\nexport const x = [it, openFixture];\n",
+    ],
+    [
+      'app/ importing a plugin through #plugins',
+      'src/app/sample.ts',
+      "import { plugin } from '#plugins/format-stub';\nexport const x = plugin;\n",
+    ],
+  ])('allows %s', async (_description, filePath, code) => {
+    expect(await ruleIdsFor(filePath, code)).toEqual([]);
+  });
+
+  // Only the generated architecture config plus the TypeScript parser, not eslint.config.js:
+  // that file is loaded by Node, this test's imports by Vitest, so their plugin objects differ.
+  async function ruleIdsWithManifest(externalDependencies: string[]): Promise<(string | null)[]> {
+    const isolated = new ESLint({
+      cwd: repoRoot,
+      overrideConfigFile: true,
+      overrideConfig: [
+        { files: ['**/*.ts'], languageOptions: { parser: tseslint.parser } },
+        ...buildArchitectureConfig([{ plugin: 'format-stub', externalDependencies }]),
+      ],
+    });
+    const [result] = await isolated.lintText(
+      "import ts from 'typescript';\nexport const x = ts;\n",
+      {
+        filePath: `${repoRoot}${plugin}/sample.ts`,
+      },
+    );
+    return (result?.messages ?? []).map((message) => message.ruleId);
+  }
+
+  it('allows an npm package once the manifest declares it (and only then)', async () => {
+    expect(await ruleIdsWithManifest([])).toEqual([DEPENDENCIES]);
+    expect(await ruleIdsWithManifest(['typescript'])).toEqual([]);
   });
 });

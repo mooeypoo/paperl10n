@@ -1,0 +1,15 @@
+{
+  "manifestVersion": 1,
+  "id": "format-stub",
+  "packageName": "@paperl10n/format-stub",
+  "kind": "document",
+  "apiVersion": 1,
+  "version": "0.1.0",
+  "displayName": "Folder per locale (stub)",
+  "description": "Reference plugin: Markdown files in <root>/<locale>/ folders.",
+  "license": "GPL-3.0-or-later",
+  "author": { "name": "Moriel", "url": "https://moriel.tech" },
+  "builtIn": true,
+  "capabilities": [],
+  "externalDependencies": []
+}

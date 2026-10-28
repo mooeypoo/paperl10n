@@ -83,6 +83,7 @@ Built-in plugins live in `src/plugins/<name>/` and are written as if they were a
   `fixtures/`, `README.md`. Moving the folder out must not require touching anything else.
 - **Imports only `#plugin-api`** (the narrow plugin surface of `formats`) and the external
   libraries its manifest declares. Never other plugins, never domain internals, never fs/Electron.
+  Its tests may also use `#plugin-api/testing` and `vitest`, nothing else.
 - **Only `app/` imports a plugin**, through its `index.ts`. Core code never names a plugin.
 - The manifest is data and the single source of the plugin's id, kind, and API version.
 

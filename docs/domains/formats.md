@@ -143,9 +143,42 @@ src/plugins/format-example/
 └─ README.md
 ```
 
-It imports only `#plugin-api` (and `#plugin-api/testing` in tests), plus the npm packages listed
-in `externalDependencies`. `format-stub` (M0 step 9) is the reference walkthrough. The plugin
-contract kit (step 9) checks the invariants every plugin must hold.
+It imports only `#plugin-api`, plus the npm packages listed in `externalDependencies`. Its tests
+may also import `#plugin-api/testing` and `vitest`, and nothing else. Lint enforces all of this
+per plugin, reading each manifest (`scripts/eslint/architecture.ts`), so a plugin and its tests
+can always move out together. [`src/plugins/format-stub/`](../../src/plugins/format-stub/) is the
+reference plugin; read its README and `format-stub.ts` first.
+
+### The plugin contract kit
+
+Every plugin's test file calls it once:
+
+```ts
+import { describePluginContract } from '#plugin-api/testing';
+import { plugin } from './index.ts';
+
+describePluginContract(plugin, {
+  folder: new URL('.', import.meta.url).pathname,
+  fixtures: [
+    { name: 'basic', root: fixture('basic'), sourceLocale: 'en', targetLocales: ['he'], detected: true },
+  ],
+});
+```
+
+It checks, through the registry's guarded views (so a crash reads as `formats.plugin-failed`):
+
+- the manifest is valid, its `id` equals the folder name, and the plugin registers with the kind
+  its manifest declares;
+- on an empty project, `detect` returns a result and `open` returns a layout or a plugin error,
+  never a crash;
+- options it doesn't understand produce `formats.invalid-options`;
+- per fixture: detection matches the expectation, the same way every time; source documents come
+  in a stable order, with unique keys, in the source locale, and exist; each maps to itself for the
+  source locale; target paths are distinct and never a source path.
+
+The kit itself is tested against deliberately broken plugins (`testing/plugin-contract.test.ts`).
+Adding a check means adding a broken-plugin case for it. Round-trip checks arrive with writing
+(M2), and catalog checks with the first catalog plugin (M4).
 
 ## Extracting a plugin into a package (when it's needed)
 
