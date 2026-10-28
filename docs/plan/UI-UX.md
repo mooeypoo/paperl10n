@@ -3,6 +3,23 @@
 Status: **discussion seed, not a plan.** We brainstorm and experiment with this after M0 is done,
 and **only if M0 delivers a properly decoupled UI** (the gate below).
 
+## Decisions so far
+
+- **Mockups:** [Paper Lion UI directions](https://claude.ai/artifact/Vv9QBjG4RTofxSSViU8wB4)
+  (private to the maintainer; a design canvas with interactive artboards).
+- **A "Manuscript" for longform.** The default is the **section view**: sections are paired at
+  headings, headings on their own row, with per-section status and progress ("2 of 4 sections up to
+  date"). **Full page** is the secondary view, with loose scroll sync. Source changes are
+  highlighted on the source side, and hints (code blocks, links, images, length) are neutral chips.
+- **C "Catalog" for banana-i18n.** Keyed rows with exact status (missing, outdated, placeholder
+  issue, not in source), placeholder chips, a plural preview, and the `qqq` documentation shown
+  **prominently when a row is expanded** (small when collapsed).
+- **B "Studio" is set aside**, at most a raw-file editor inside A later. Its per-line "missing"
+  markers are wrong for longform.
+- **Palette:** A's, seeded by the mark; it's already the app's design tokens (M0 step 13).
+- **Visual (rendered) editing** of sections and full pages, with bidi-safe link insertion, is a
+  planned requirement (see below, and PRD §7.2/§11).
+
 ## Goals (from the maintainer)
 
 - A **beautiful UI**, with light and dark themes.
@@ -70,6 +87,17 @@ check:
   progress; a full-page view is the secondary mode. Never mark a paragraph or line of a
   translation as "missing". Exact per-item status belongs to catalogs (direction C).
 - Raw ↔ preview toggle; how frontmatter fields are edited; placeholders for custom components.
+
+### Visual (rendered) editing
+
+- Translators shouldn't have to write Markdown by hand, and especially not links. Editing a
+  section (or the full page) as formatted text, with controls for links, emphasis, and code, is a
+  planned requirement (PRD §7.2).
+- **The RTL reason:** a raw `[text](url)` in the middle of a Hebrew sentence can reorder the
+  sentence visually, through the bidi algorithm. The editor must keep link targets and inline
+  syntax isolated from the surrounding text.
+- Open choice (PRD §11): decorations over Markdown source (CodeMirror live preview) or a rich-text
+  editor that serializes to Markdown. Round-trip safety decides it as much as UX does.
 
 ### Banana-i18n helpers (catalogs, M4)
 

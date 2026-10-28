@@ -109,6 +109,13 @@ adding a plugin, not rewriting the app.
 - Toggle between raw Markdown and a rendered preview per pane. Custom components get a placeholder
   render.
 - RTL editing: correct caret movement with mixed-direction text, and Markdown syntax that stays legible.
+- **Visual (rendered) editing (planned, soon after M2):** translators edit sections, or the full
+  page, as formatted text instead of writing Markdown by hand. Formatting and especially **links
+  are inserted with controls**, not typed syntax. This matters most in RTL: a raw
+  `[text](url)` in the middle of a Hebrew or Arabic sentence can visually reorder the sentence,
+  because of the bidi algorithm. The editor isolates link targets and inline syntax from the
+  surrounding text so that can't happen. Markdown stays the file format: visual edits become
+  minimal Markdown changes, under the same round-trip guarantee.
 
 ### 7.3 Message catalog editor (banana-i18n first)
 - A list or table of messages: key · source · target · status, with search and filters.
@@ -168,6 +175,11 @@ Principles:
 - **M5: Second plugins.** Starlight + gettext `.po`, to prove the plugin contracts hold.
 
 ## 11. Open questions
+- **Visual editing approach:** live-preview decorations on a Markdown source editor (for example
+  CodeMirror, where Markdown stays the single source of truth) versus a rich-text editor that
+  serializes to Markdown (for example ProseMirror/Tiptap). Compare round-trip safety, bidi
+  behavior around links and inline code, and custom components. Decide before M2's editor
+  choice.
 - **Outdated detection:** how do we know the source changed after translating? Options include git
   history, a stored source hash in a sidecar file, or a frontmatter field. Which is least intrusive?
 - **Finer-grained pairing (revisit later):** pairing below the section level (paragraphs or
