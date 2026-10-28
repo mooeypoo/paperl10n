@@ -12,6 +12,7 @@ type FileCategory = 'domain' | 'application' | 'adapters' | 'testing' | 'entry';
 
 const elements = [
   { type: 'kernel', pattern: 'src/shared/kernel', partialMatch: false },
+  { type: 'ipc-contract', pattern: 'src/shared/ipc-contract', partialMatch: false },
   { type: 'domain', pattern: 'src/domains/*', capture: ['domain'], partialMatch: false },
   { type: 'plugin', pattern: 'src/plugins/*', capture: ['plugin'], partialMatch: false },
   { type: 'app', pattern: 'src/app', partialMatch: false },
@@ -33,6 +34,7 @@ const files = [
 ];
 
 const kernel = { element: { type: 'kernel' } };
+const ipcContract = { element: { type: 'ipc-contract' } };
 const anyExternal = { module: { origin: ['external', 'core'] } };
 
 function inDomain(domain: DomainName | '*', categories?: readonly FileCategory[]) {
@@ -164,6 +166,8 @@ export function pluginPolicies({
 function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy[] {
   return [
     { from: kernel, allow: { to: kernel } },
+    // The IPC contract is plain data: it may only use kernel types (Result).
+    { from: ipcContract, allow: { to: [kernel, ipcContract] } },
     ...domainNames.flatMap(domainPolicies),
     ...pluginApiPolicies,
     ...plugins.flatMap(pluginPolicies),
@@ -174,6 +178,7 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
       allow: {
         to: [
           kernel,
+          ipcContract,
           inDomain('*', ['entry', 'adapters']),
           { element: { type: 'plugin' }, file: { categories: 'plugin-entry' } },
           { element: { type: 'app' } },
@@ -183,15 +188,17 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
     },
     {
       from: { element: { type: 'main' } },
-      allow: { to: [kernel, { element: { type: ['app', 'main'] } }, anyExternal] },
+      allow: { to: [kernel, ipcContract, { element: { type: ['app', 'main'] } }, anyExternal] },
     },
     {
       from: { element: { type: 'preload' } },
-      allow: { to: [{ element: { type: 'preload' } }, { module: { source: 'electron' } }] },
+      allow: {
+        to: [ipcContract, { element: { type: 'preload' } }, { module: { source: 'electron' } }],
+      },
     },
     {
       from: { element: { type: 'ui' } },
-      allow: { to: [kernel, { element: { type: 'ui' } }, anyExternal] },
+      allow: { to: [kernel, ipcContract, { element: { type: 'ui' } }, anyExternal] },
     },
     // Tests may import anything: they exercise internals on purpose. Except plugin tests, which are
     // limited like their plugin (above), so a plugin's tests travel with it when it's extracted.

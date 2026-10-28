@@ -70,3 +70,10 @@ adapters gets one `imports` entry:
 Node's subpath patterns allow a single `*`, so there's one line per domain
 (`"#adapters/formats/*": "./src/domains/formats/adapters/*.ts"`). Lint allows the alias only from
 `app/`, the domain's own adapters and `testing/`, and tests.
+
+## Amendment (2026-10-28, M0 step 11)
+
+The IPC contract is a folder, `src/shared/ipc-contract/` (`#ipc-contract` →
+`src/shared/ipc-contract/index.ts`), not a single file. That way it's an architectural element
+like the kernel: it may import only kernel types, and lint checks who may import it (`app/`,
+`main/`, `preload/`, `ui/`).

@@ -28,8 +28,8 @@ src/
   plugins/<name>/    # built-in format plugins, self-contained (see "Formats are plugins")
   shared/
     kernel/          # tiny cross-domain primitives (Result, Locale id, ids). Keep minimal.
-    ipc-contract.ts  # the typed renderer↔main API, defined once
-  app/               # composition root: wires adapters and plugins into use cases
+    ipc-contract/    # the typed renderer↔main API, defined once
+  app/               # wiring: pure app API shared by every composition root; app/node/ for Electron
   main/ preload/     # Electron processes, thin
   ui/                # Vue app. A replaceable adapter, nothing more.
 ```
@@ -64,7 +64,7 @@ All run in CI and pre-commit.
 ## Electron boundary
 - `contextIsolation: true`, `nodeIntegration: false`, sandboxed renderer.
 - The renderer never touches Node. The preload exposes a **typed IPC contract** defined in one place:
-  `src/shared/ipc-contract.ts`. It carries plain DTOs, not domain types.
+  `src/shared/ipc-contract/` (`#ipc-contract`). It carries plain DTOs, not domain types.
 - The renderer never sends filesystem paths. Main picks folders and hands back opaque handles.
 - All file I/O happens in main, behind ports.
 

@@ -8,9 +8,8 @@ import { posix } from 'node:path';
  */
 export function unitOf(path: string): string | undefined {
   const match =
-    /^src\/(domains\/[^/]+|plugins\/[^/]+|shared\/kernel)\//.exec(path) ??
-    /^src\/(shared\/ipc-contract)\.ts$/.exec(path) ??
-    /^src\/(app|main|preload|ui)\//.exec(path);
+    /^src\/(domains\/[^/]+|plugins\/[^/]+|shared\/kernel|shared\/ipc-contract)\//.exec(path) ??
+    /^src\/(app|main|preload|ui|ui-harness)\//.exec(path);
   return match?.[1];
 }
 

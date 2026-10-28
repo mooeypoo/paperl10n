@@ -11,6 +11,8 @@
   },
   "include": [
     "src/shared/kernel/**/*.ts",
+    "src/shared/ipc-contract/**/*.ts",
+    "src/app/*.ts",
     "src/domains/*/index.ts",
     "src/domains/formats/plugin-api.ts",
     "src/domains/*/domain/**/*.ts",

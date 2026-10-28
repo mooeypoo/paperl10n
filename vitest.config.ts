@@ -11,6 +11,7 @@ export default defineConfig({
       // covered by behavior tests and e2e instead.
       include: [
         'src/shared/**/*.ts',
+        'src/app/*.ts',
         'src/domains/*/domain/**/*.ts',
         'src/domains/*/application/**/*.ts',
         'src/plugins/*/**/*.ts',

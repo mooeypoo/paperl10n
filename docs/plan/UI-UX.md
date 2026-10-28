@@ -25,10 +25,11 @@ check:
       hard-coded values.
 - [ ] Every string comes from the message files (`en.json` / `qqq.json`), so a new design can
       relabel anything without touching logic.
-- [ ] **Proposed:** a **browser-only UI sandbox** (`pnpm dev:ui`). It runs `src/ui/` in a normal
-      browser with a fake client backed by fixture projects. It's the strongest proof of
-      decoupling, and the fastest loop for design experiments (no Electron restart). See "Proposal
-      for M0" below.
+- [ ] A **browser UI harness** (`pnpm dev:harness`, M0 step 14). It runs `src/ui/` in a normal
+      browser on the *real* app wiring (use cases, registry, plugins) over in-memory fixture
+      projects. It's a development and testing aid: the strongest proof of decoupling, and the
+      fastest loop for design experiments. **Paper Lion stays a desktop app**: the harness is
+      never shipped and is no web target.
 
 ## Topics to brainstorm
 
@@ -73,13 +74,25 @@ check:
 - Keyboard-only use, screen-reader labels (already i18n-ready), contrast in both themes, and a
   WCAG 2.1 AA audit.
 
-## Proposal for M0 (needs a yes)
+## The UI harness: what it proves, and what it doesn't
 
-Add a **browser-only UI sandbox** to step 14: a Vite entry that mounts the same `src/ui/` app
-with a fake `PaperLionApi` returning fixture data, run with `pnpm dev:ui`. No new dependencies. It
-would let design work happen in any browser, with hot reload and devtools, and it makes "the UI
-is decoupled" something you can see working, not only something lint asserts.
+Accepted in review round 4 as a testing aid, built in M0 step 14, after the Electron UI.
+Electron comes first: the harness exists to make UI iteration and UI tests cheaper, not to
+steer the app toward the web.
 
-Also in M0, step 13: tokens get a light and a dark set, chosen by `prefers-color-scheme` with a
+- **Real:** the UI, the use cases, the format registry, the plugins, and the error-to-message
+  mapping. It's the same `createAppApi` the Electron app uses.
+- **Substituted, and proven:** the filesystem (in-memory fixture projects; the in-memory
+  `ProjectFiles` passes the same contract suite as the disk adapter), the transport (direct calls
+  that `structuredClone` every result, as IPC does), and the folder dialog.
+- **Not covered, so not evidence:** the preload, Electron's renderer sandbox, CSP, IPC sender and argument
+  validation, real disk behavior (symlinks, permissions), and native menus. The Electron
+  end-to-end test in CI is the authority for those.
+- **Development only:** never part of the app bundle, and no web-only features (routing,
+  offline support, mobile layouts) get built for it.
+- **Playwright on Electron is the authority** for end-to-end behavior. If browser-harness
+  Playwright tests are added for cheap UI-flow coverage, they supplement it, never replace it.
+
+Also in M0 (step 13): tokens get a light and a dark set, chosen by `prefers-color-scheme` with a
 `data-theme` override, so theme switching is designed in from the start. The M0 visual design
 itself stays deliberately minimal, so the real design work starts from a clean slate.

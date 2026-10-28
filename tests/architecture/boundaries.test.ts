@@ -130,6 +130,24 @@ describe('architecture rules report violations', () => {
       [DEPENDENCIES],
     ],
     [
+      'ui importing the app wiring (it may only talk to the IPC contract)',
+      'src/ui/sample.ts',
+      "import { createAppApi } from '../app/create-app-api.ts';\nexport const x = createAppApi;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
+    [
+      'the IPC contract importing a domain (it must stay plain data)',
+      'src/shared/ipc-contract/sample.ts',
+      "import * as workspace from '#domains/workspace';\nexport const x = workspace;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'preload importing the app wiring',
+      'src/preload/sample.ts',
+      "import { createAppApi } from '../app/create-app-api.ts';\nexport const x = createAppApi;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
+    [
       'index.ts exposing an adapter (adapters are for app/ only)',
       'src/domains/formats/index.ts',
       "export { openNodeProjectFiles } from './adapters/node-project-files.ts';\n",
@@ -216,6 +234,16 @@ describe('architecture rules allow the intended dependencies (positive controls)
       'test support composing the test support of a domain it depends on',
       'src/domains/workspace/testing/sample.ts',
       "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
+    ],
+    [
+      'ui imports the IPC contract',
+      'src/ui/sample.ts',
+      "import { errorCodes } from '#ipc-contract';\nexport const x = errorCodes;\n",
+    ],
+    [
+      'preload imports the IPC contract',
+      'src/preload/sample.ts',
+      "import { apiMethods } from '#ipc-contract';\nexport const x = apiMethods;\n",
     ],
     [
       'ui imports the kernel',
