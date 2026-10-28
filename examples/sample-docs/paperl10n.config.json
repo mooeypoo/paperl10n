@@ -1,0 +1,8 @@
+{
+  "sourceLocale": "en",
+  "targetLocale": "he",
+  "documentFormat": "format-stub",
+  "formatOptions": {
+    "format-stub": { "root": "docs" }
+  }
+}

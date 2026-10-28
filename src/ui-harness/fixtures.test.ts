@@ -11,11 +11,13 @@ describe('fixturesFrom', () => {
       '../plugins/format-stub/fixtures/basic/en/index.md': '# Hi',
       '../plugins/format-stub/fixtures/docs-root/docs/en/intro.md': '# Intro',
       '../plugins/catalog-banana/fixtures/basic/i18n/en.json': '{}',
+      '../../examples/sample-docs/docs/en/index.md': '# Lantern',
     });
     expect(Object.fromEntries(fixtures)).toEqual({
       'format-stub/basic': { 'paperl10n.config.json': '{}', 'en/index.md': '# Hi' },
       'format-stub/docs-root': { 'docs/en/intro.md': '# Intro' },
       'catalog-banana/basic': { 'i18n/en.json': '{}' },
+      'examples/sample-docs': { 'docs/en/index.md': '# Lantern' },
     });
   });
 
@@ -23,6 +25,7 @@ describe('fixturesFrom', () => {
     ['a plugin source file', '../plugins/format-stub/format-stub.ts'],
     ['a file directly in fixtures/', '../plugins/format-stub/fixtures/README.md'],
     ['something outside plugins', '../ui/App.vue'],
+    ['a file directly in examples/', '../../examples/README.md'],
   ])('ignores %s', (_description, path) => {
     expect(fixturesFrom({ [path]: 'x' }).size).toBe(0);
   });

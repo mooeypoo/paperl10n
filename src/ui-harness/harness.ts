@@ -16,7 +16,8 @@ import { fixtureOpener, fixturePicker, type Fixtures } from './fixtures';
  */
 export const HARNESS_MARKER = 'paperl10n-ui-harness';
 
-export const DEFAULT_FIXTURE = 'format-stub/basic';
+/** The hand-editable sample project (examples/sample-docs). */
+export const DEFAULT_FIXTURE = 'examples/sample-docs';
 
 /** The real app API over fixtures, behind a transport that behaves like IPC. */
 export function createHarnessApi(fixtures: Fixtures, fixture: string): PaperLionApi {

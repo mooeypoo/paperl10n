@@ -4,20 +4,26 @@ import type { FolderPicker, ProjectFilesOpener } from '#domains/workspace';
 import { err, ok } from '#kernel/result';
 import { InMemoryProjectFiles } from '#adapters/formats/in-memory-project-files';
 
-/** Fixture projects by name (`<plugin>/<fixture>`, e.g. `format-stub/basic`). */
+/**
+ * Projects by name: plugin fixtures as `<plugin>/<fixture>` (e.g. `format-stub/basic`), sample
+ * projects as `examples/<name>` (e.g. `examples/sample-docs`).
+ */
 export type Fixtures = ReadonlyMap<string, FileTree>;
 
-const fixtureFile = /(?:^|\/)plugins\/([^/]+)\/fixtures\/([^/]+)\/(.+)$/;
+const projectFile = [
+  /(?:^|\/)plugins\/([^/]+)\/fixtures\/([^/]+)\/(.+)$/,
+  /(?:^|\/)(examples)\/([^/]+)\/(.+)$/,
+];
 
-/** Groups fixture files (path → content, as Vite's glob import returns them) into projects. */
+/** Groups project files (path → content, as Vite's glob import returns them) into projects. */
 export function fixturesFrom(files: Readonly<Record<string, string>>): Fixtures {
   const fixtures = new Map<string, Record<string, string>>();
   for (const [path, content] of Object.entries(files)) {
-    const match = fixtureFile.exec(path);
-    if (match === null) continue;
-    const [, plugin, fixture, file] = match;
-    if (plugin === undefined || fixture === undefined || file === undefined) continue;
-    const name = `${plugin}/${fixture}`;
+    const match = projectFile.map((pattern) => pattern.exec(path)).find((found) => found !== null);
+    if (match === undefined) continue;
+    const [, group, project, file] = match;
+    if (group === undefined || project === undefined || file === undefined) continue;
+    const name = `${group}/${project}`;
     const tree = fixtures.get(name) ?? {};
     tree[file] = content;
     fixtures.set(name, tree);

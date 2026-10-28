@@ -25,8 +25,10 @@ target, ship in the app, or weaken the Electron boundary.
     import a `testing/` entry (those pull in Vitest).
   - Transport: `cloningTransport` `structuredClone`s every request and result, like Electron's IPC.
     A result that couldn't cross IPC rejects here too (tested).
-  - Folder dialog: "Open folder…" always opens one fixture, chosen with `?fixture=<plugin>/<name>`
-    (default `format-stub/basic`). An unknown name gives the real "folder unavailable" error.
+  - Folder dialog: "Open folder…" always opens one project, chosen with
+    `?fixture=<plugin>/<fixture>` or `?fixture=examples/<name>`. The default is
+    `examples/sample-docs`, the hand-editable sample project (added after M0). An unknown name
+    gives the real "folder unavailable" error.
   - Sessions: `InMemoryProjectSessions` with `crypto.randomUUID` ids.
 - **Boundaries.** `ui-harness` is its own lint element. It may import the kernel, the IPC
   contract, shared `app/` code, domain entry points and adapters, `src/ui/mount.ts` (alias
@@ -54,7 +56,8 @@ target, ship in the app, or weaken the Electron boundary.
 ## Consequences
 
 - Design experiments and UI-flow tests can run in a plain browser on realistic data.
-- A new fixture in any plugin shows up in the harness automatically.
+- A new fixture in any plugin, or a new sample project in `examples/`, shows up in the harness
+  automatically.
 - A new API method must be added to `cloningTransport` (a compile error until it is), as with the
   preload and `guardApi`.
 - No web-only features get built for the harness. If browser Playwright tests are added later, they

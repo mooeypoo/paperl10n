@@ -4,7 +4,7 @@
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_FIXTURE, HARNESS_MARKER, startHarness } from './harness';
-import { pluginFixtures } from './plugin-fixtures';
+import { fixtureProjects } from './fixture-projects';
 
 let unmount: (() => void) | undefined;
 afterEach(() => {
@@ -15,7 +15,7 @@ afterEach(() => {
 async function openWith(fixture?: string): Promise<Element> {
   const element = document.createElement('div');
   document.body.append(element);
-  const app = startHarness(element, pluginFixtures, fixture === undefined ? {} : { fixture });
+  const app = startHarness(element, fixtureProjects, fixture === undefined ? {} : { fixture });
   unmount = () => {
     app.unmount();
   };
@@ -30,13 +30,16 @@ async function openWith(fixture?: string): Promise<Element> {
 }
 
 describe('the UI harness', () => {
-  it('loads every plugin fixture, including the default one', () => {
-    expect(pluginFixtures.has(DEFAULT_FIXTURE)).toBe(true);
-    expect(pluginFixtures.get(DEFAULT_FIXTURE)?.['paperl10n.config.json']).toContain('format-stub');
+  it('loads the plugin fixtures and the sample projects, including the default one', () => {
+    expect(fixtureProjects.has('format-stub/basic')).toBe(true);
+    expect(fixtureProjects.has(DEFAULT_FIXTURE)).toBe(true);
+    expect(fixtureProjects.get(DEFAULT_FIXTURE)?.['paperl10n.config.json']).toContain(
+      'format-stub',
+    );
   });
 
   it('opens the basic fixture and shows both panes with their lang and dir', async () => {
-    const element = await openWith();
+    const element = await openWith('format-stub/basic');
     const panes = [...element.querySelectorAll('section')];
     expect(panes.map((pane) => [pane.getAttribute('lang'), pane.getAttribute('dir')])).toEqual([
       ['en', 'ltr'],
@@ -45,6 +48,14 @@ describe('the UI harness', () => {
     expect(element.textContent).toContain('en/guide/getting-started.md');
     expect(element.textContent).toContain('he/guide/getting-started.md');
     expect(document.documentElement.hasAttribute(`data-${HARNESS_MARKER}`)).toBe(true);
+  });
+
+  it('opens the sample project by default and lists all its source documents', async () => {
+    const element = await openWith();
+    const [source, target] = [...element.querySelectorAll('section')];
+    expect(source?.querySelectorAll('li')).toHaveLength(8);
+    expect(source?.textContent).toContain('docs/en/blog/2026-10-lantern-2.md');
+    expect(target?.textContent).toContain('docs/he/guide/configuration.md');
   });
 
   it('shows the real error for an unknown fixture', async () => {

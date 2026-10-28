@@ -45,13 +45,14 @@ pnpm check          # what CI checks: types, lint, formatting, tests
 pnpm dev            # run the app with hot reload
 ```
 
-In the app, **Open folder…** and choose `src/plugins/format-stub/fixtures/basic` to see both
-panes.
+In the app, **Open folder…** and choose `examples/sample-docs`, a small sample docs site with
+English sources and partial Hebrew translations (see its README). Edit it freely to try things
+out.
 
 More commands:
 
 ```sh
-pnpm dev:harness    # the UI in a browser over fixture projects (a testing aid, ADR 0015)
+pnpm dev:harness    # the UI in a browser over the sample and fixture projects (a testing aid, ADR 0015)
 pnpm test:watch     # tests, re-run on change
 pnpm test:e2e       # build, then run the Electron end-to-end tests
 pnpm build          # production build into out/
