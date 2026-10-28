@@ -21,9 +21,18 @@ export interface DocumentFormat {
   open(context: FormatContext): Promise<Result<DocumentLayout, PluginError>>;
 }
 
+/** A locale the project already has, and the folder its pages live in. */
+export interface ProjectLocale {
+  readonly locale: LocaleId;
+  /** Project-relative. Systems name these folders their own way (`pt-br/`, `hebrew/`, the root);
+   * the plugin knows the mapping, the rest of the app only sees locale ids. */
+  readonly folder: ProjectPath;
+}
+
 export interface DocumentLayout {
-  /** Locales the system itself declares, if it knows (VitePress does). */
-  readonly declaredLocales: readonly LocaleId[];
+  /** The locales this project already has (the source locale included), each with its folder:
+   * declared in the system's own config, or found on disk. Unique by locale. */
+  readonly locales: readonly ProjectLocale[];
   /** Every document in the source locale, in a stable order, with unique keys. */
   listSourceDocuments(): Promise<Result<readonly SourceDocument[], PluginError>>;
   /** Where `document`'s counterpart in `target` lives. Pure: the file may not exist yet.

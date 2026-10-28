@@ -15,6 +15,7 @@ import {
   type LocaleId,
   type PluginError,
   type ProjectFiles,
+  type ProjectLocale,
   type ProjectPath,
   type Result,
   type SourceDocument,
@@ -84,7 +85,44 @@ async function open(context: FormatContext): Promise<Result<DocumentLayout, Plug
       reason: `no "${sourceFolder.value}" folder`,
     });
   }
-  return ok(createLayout(context.files, root.value, sourceFolder.value, context.sourceLocale));
+  const locales = await localesUnder(
+    context.files,
+    root.value,
+    context.sourceLocale,
+    sourceFolder.value,
+  );
+  if (!locales.ok) return locales;
+  return ok(
+    createLayout(
+      context.files,
+      root.value,
+      sourceFolder.value,
+      context.sourceLocale,
+      locales.value,
+    ),
+  );
+}
+
+/** The locale folders under the root (`en/`, `he/`, `pt-BR/`), the source's first. */
+async function localesUnder(
+  files: ProjectFiles,
+  root: ProjectPath,
+  sourceLocale: LocaleId,
+  sourceFolder: ProjectPath,
+): Promise<Result<ProjectLocale[], PluginError>> {
+  const listed = await files.list(root, { extensions: [EXTENSION] });
+  if (!listed.ok) return err({ code: 'formats.file-access', cause: listed.error });
+  const prefix = root === PROJECT_ROOT ? '' : `${root}/`;
+  const locales: ProjectLocale[] = [{ locale: sourceLocale, folder: sourceFolder }];
+  for (const path of listed.value) {
+    const [first, ...rest] = path.slice(prefix.length).split('/');
+    if (first === undefined || rest.length === 0 || !looksLikeLocaleFolder(first)) continue;
+    const locale = localeId(first);
+    const folder = under(root, first);
+    if (!locale.ok || !folder.ok || locales.some((l) => l.locale === locale.value)) continue;
+    locales.push({ locale: locale.value, folder: folder.value });
+  }
+  return ok(locales);
 }
 
 function createLayout(
@@ -92,9 +130,10 @@ function createLayout(
   root: ProjectPath,
   sourceFolder: ProjectPath,
   sourceLocale: LocaleId,
+  locales: readonly ProjectLocale[],
 ): DocumentLayout {
   return {
-    declaredLocales: [],
+    locales,
 
     async listSourceDocuments() {
       const listed = await files.list(sourceFolder, { extensions: [EXTENSION] });

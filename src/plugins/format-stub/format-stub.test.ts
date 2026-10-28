@@ -85,8 +85,15 @@ describe('format-stub', () => {
     });
   });
 
-  it('declares no locales (it has no config of its own to read them from)', async () => {
-    expect((await open('basic')).declaredLocales).toEqual([]);
+  it('lists the locale folders it finds, the source locale first', async () => {
+    expect((await open('basic')).locales).toEqual([
+      { locale: 'en', folder: 'en' },
+      { locale: 'he', folder: 'he' },
+    ]);
+    expect((await open('docs-root', { root: 'docs' })).locales).toEqual([
+      { locale: 'en', folder: 'docs/en' },
+      { locale: 'fr', folder: 'docs/fr' },
+    ]);
   });
 
   describe('detect', () => {

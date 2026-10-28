@@ -19,7 +19,11 @@ export type { Detection, DetectionConfidence } from './domain/detection.ts';
 export type { FileAccessError, ProjectFiles } from './application/ports/project-files.ts';
 export type { FormatContext } from './application/ports/format-context.ts';
 export type { PluginError } from './application/ports/plugin-error.ts';
-export type { DocumentFormat, DocumentLayout } from './application/ports/document-format.ts';
+export type {
+  DocumentFormat,
+  DocumentLayout,
+  ProjectLocale,
+} from './application/ports/document-format.ts';
 export type {
   CatalogFormat,
   CatalogLayout,

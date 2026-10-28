@@ -13,7 +13,7 @@ export function fakeManifest(id: string): Record<string, unknown> {
     id,
     packageName: `@paperl10n/${id}`,
     kind: id.startsWith('format-') ? 'document' : 'catalog',
-    apiVersion: 1,
+    apiVersion: 2,
     version: '0.0.0',
     displayName: `Fake ${id}`,
     description: 'A fake plugin for tests',
@@ -41,7 +41,7 @@ export function fakeDocumentPlugin(
       if (!sourceFolder.ok)
         return Promise.resolve(err({ code: 'formats.unsupported-project', reason: 'bad locale' }));
       const layout: DocumentLayout = {
-        declaredLocales: [],
+        locales: [{ locale: context.sourceLocale, folder: sourceFolder.value }],
         listSourceDocuments: async () => {
           const listed = await context.files.list(sourceFolder.value, { extensions: ['.md'] });
           if (!listed.ok) return err({ code: 'formats.file-access', cause: listed.error });

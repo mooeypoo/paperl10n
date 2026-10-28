@@ -22,13 +22,23 @@ keeps its source's extension.
 
 ## Which folder is which locale
 
-Starlight's locale config is JavaScript (`astro.config.mjs`), which a plugin can't run. So this
-plugin follows Starlight's conventions by default, and you can name the folders yourself:
+Paper Lion saves BCP 47 locale ids (`pt-BR`); Starlight names folders by its `locales` keys
+(`pt-br`, or even `hebrew`), with each locale's BCP 47 tag in `lang`. A locale's folder is found
+in this order:
 
-- **The source locale:** its own folder if one exists (`src/content/docs/en/`), otherwise the root.
-- **A target locale:** the locale id in lowercase (`he` → `he/`, `pt-BR` → `pt-br/`).
-- **At the root**, folders named like a two-letter locale code (`he`, `pt-br`, `zh-cn`) belong to
-  other locales and aren't source pages. Three-letter names (`api`, `cli`) are pages.
+1. **`localeFolders`** in `paperl10n.config.json`, if set.
+2. **The `locales` in `astro.config.*`**, read statically, never run: the key is the folder
+   (`root`: none), `lang` the locale (defaulting to the key). A config whose locales are built in
+   code (a variable, an import, a spread) can't be read this way; the plugin moves on.
+3. **An existing folder with that name, ignoring case:** `zh-CN/` for `zh-CN`, `pt-br/` for `pt-BR`.
+4. **For the source locale, the root;** for others, **the locale id in lowercase** (`he` → `he/`).
+
+At the root, other locales' folders aren't source pages: the declared ones (1 or 2), or, without a
+declaration, folders named like a two-letter locale code (`he`, `pt-br`, `zh-cn`). Three-letter
+names (`api`, `cli`) are pages either way.
+
+The plugin reports the project's locales (`layout.locales`): the source locale, then the declared
+ones, or the existing locale-like folders.
 
 ## Options (`paperl10n.config.json`)
 
@@ -64,10 +74,13 @@ but no Starlight import. A custom `contentDir` isn't detected; pin the format in
   `reference/api` page (a three-letter folder that isn't a locale), and a missing translation.
 - `folder-locales`: English in `en/`, Hebrew in `he/`, an MDX page with an `export`.
 - `plain-astro`: an Astro site with the content folder but no Starlight import (`likely`).
+- `named-folders`: locales declared in the Astro config: Hebrew in `hebrew/`, `zh-cn` with
+  `lang: 'zh-CN'`, and a two-letter `ui/` folder that is pages (the config says so).
+- `cased-folders`: locales built in code (unreadable statically), folders `zh-CN/` and `pt-br/`
+  found by name, ignoring case.
 - `not-starlight`: no Astro site; opened with `contentDir: "docs"`.
 
 ## Not yet
 
-- Reading Starlight's locale list from `astro.config.*` (it's JavaScript; a static read may come
-  later, behind the same options).
+- Locales built in code (imported from another module, computed): set `localeFolders`.
 - A translation with a different extension than its source (`index.md` for `index.mdx`).

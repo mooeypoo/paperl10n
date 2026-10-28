@@ -3,7 +3,7 @@
   "id": "format-stub",
   "packageName": "@paperl10n/format-stub",
   "kind": "document",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "version": "0.1.0",
   "displayName": "Folder per locale (stub)",
   "description": "Reference plugin: Markdown files in <root>/<locale>/ folders.",

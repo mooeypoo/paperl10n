@@ -3,7 +3,7 @@
   "id": "format-starlight",
   "packageName": "@paperl10n/format-starlight",
   "kind": "document",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "version": "0.1.0",
   "displayName": "Astro Starlight",
   "description": "Starlight docs sites: Markdown and MDX pages in src/content/docs/, one folder per locale, with the default locale at the root or in its own folder.",

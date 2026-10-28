@@ -52,7 +52,7 @@ doesn't know many of them).
 | Unknown codes | Allowed. Shown with the code and an "unknown language" note; the user can give it a name and direction, saved in `paperl10n.config.json` (shared with the team), so nothing is guessed silently. |
 | Browse by region | Not now: sections + search. The ULS region data will already be in the file for later. |
 | Creating things | Choosing a language writes only the config in M1, atomically (Paper Lion's first small write). Folders and files appear when you start translating a page (M2, "seed from source"). |
-| Plugin code mapping | **Deferred to M4** (decided by the agent, to revisit): `format-starlight` maps codes internally, and the first plugin that needs a contract hook is banana-i18n. Fallback chains (`pt-BR` → `pt`) also wait for catalogs. |
+| Plugin code mapping | **Revised with the maintainer:** after checking Starlight, Astro, VitePress, Nuxt, Docusaurus, and Hugo (folder names are the site author's choice; the language tag is a separate BCP 47 field), plugins now report the project's locales as `ProjectLocale`s (locale id + folder) in the contract (plugin API v2), and `format-starlight` reads the Astro config statically and matches existing folders ignoring case. See `docs/domains/formats.md`, "Locale codes and folders". A fuller hook for systems that name *files* by code (banana-i18n's `pt-br.json`) waits for M4. Fallback chains (`pt-BR` → `pt`) also wait for catalogs. |
 
 ## Steps
 

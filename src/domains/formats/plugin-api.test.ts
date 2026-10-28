@@ -47,7 +47,7 @@ describe('#plugin-api', () => {
       open: () =>
         Promise.resolve(
           ok({
-            declaredLocales: [],
+            locales: [],
             listSourceDocuments: () => Promise.resolve(ok([document])),
             targetPathFor: (_doc, target) => {
               const target_ = projectPath(`${target}/index.md`);
@@ -60,7 +60,7 @@ describe('#plugin-api', () => {
     };
     const module: PluginModule = { manifest: {}, create: () => format };
 
-    expectTypeOf(module.create({ apiVersion: 1 })).toEqualTypeOf<FormatPlugin>();
+    expectTypeOf(module.create({ apiVersion: 2 })).toEqualTypeOf<FormatPlugin>();
     expectTypeOf(document.path).toEqualTypeOf<ProjectPath>();
   });
 });

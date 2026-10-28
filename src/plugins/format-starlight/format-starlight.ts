@@ -17,10 +17,12 @@ import {
   type LocaleId,
   type PluginError,
   type ProjectFiles,
+  type ProjectLocale,
   type ProjectPath,
   type Result,
   type SourceDocument,
 } from '#plugin-api';
+import { readStarlightLocales } from './astro-config.ts';
 
 const EXTENSIONS = ['.md', '.mdx'];
 const DEFAULT_CONTENT_DIR = 'src/content/docs';
@@ -67,12 +69,12 @@ function parseOptions(options: Readonly<Record<string, unknown>>): Result<Option
   const folders: Record<string, string> = {};
   const bad: string[] = [];
   for (const [locale, folder] of Object.entries(rawFolders as Record<string, unknown>)) {
-    if (isFolderName(folder)) folders[locale] = folder;
+    if (isFolderName(folder) && localeId(locale).ok) folders[locale] = folder;
     else bad.push(locale);
   }
   if (bad.length > 0) {
     return invalid(
-      `"localeFolders" values must be "" (the root) or a folder name: ${bad.join(', ')}`,
+      `"localeFolders" needs locale ids mapped to "" (the root) or a folder name: ${bad.join(', ')}`,
     );
   }
   return ok({ contentDir: contentDir.value, localeFolders: folders });
@@ -110,30 +112,115 @@ async function detect(files: ProjectFiles): Promise<Detection> {
   return { matches: false };
 }
 
+/** A folder name read as a locale id (`pt-br` → `pt-BR`), if it is one. */
+function asLocale(name: string): LocaleId | undefined {
+  const locale = localeId(name);
+  return locale.ok ? locale.value : undefined;
+}
+
+/** A locale and its folder name under the content dir (`''` is the root). */
+interface LocaleFolder {
+  readonly locale: LocaleId;
+  readonly folder: string;
+}
+
+/** The project's own word on its locale folders: the plugin options, else the Astro config. */
+async function declaredLocaleFolders(
+  files: ProjectFiles,
+  localeFolders: Readonly<Record<string, string>> | undefined,
+): Promise<LocaleFolder[] | undefined> {
+  if (localeFolders !== undefined) {
+    return Object.entries(localeFolders).flatMap(([raw, folder]) => {
+      const locale = localeId(raw);
+      return locale.ok ? [{ locale: locale.value, folder }] : [];
+    });
+  }
+  for (const name of ASTRO_CONFIGS) {
+    const config = projectPath(name);
+    if (!config.ok) continue;
+    const text = await files.readText(config.value);
+    if (!text.ok) continue;
+    const read = readStarlightLocales(text.value);
+    if (read === null) return undefined; // not readable without running it: use conventions
+    return read.flatMap(({ folder, lang }) => {
+      const locale = lang === null ? undefined : localeId(lang);
+      return locale?.ok === true ? [{ locale: locale.value, folder }] : [];
+    });
+  }
+  return undefined;
+}
+
+/** Top-level folders under the content dir that hold pages. */
+async function foldersWithPages(
+  files: ProjectFiles,
+  contentDir: ProjectPath,
+): Promise<Result<string[], PluginError>> {
+  const listed = await files.list(contentDir, { extensions: EXTENSIONS });
+  if (!listed.ok) return err({ code: 'formats.file-access', cause: listed.error });
+  const prefix = contentDir === PROJECT_ROOT ? '' : `${contentDir}/`;
+  const folders = new Set<string>();
+  for (const path of listed.value) {
+    const [first, ...rest] = path.slice(prefix.length).split('/');
+    if (first !== undefined && rest.length > 0) folders.add(first);
+  }
+  return ok([...folders].sort());
+}
+
 async function open(context: FormatContext): Promise<Result<DocumentLayout, PluginError>> {
   const options = parseOptions(context.options);
   if (!options.ok) return options;
-  const { contentDir, localeFolders } = options.value;
+  const { contentDir } = options.value;
   if (!(await context.files.exists(contentDir))) {
     return err({ code: 'formats.unsupported-project', reason: `no "${contentDir}" folder` });
   }
+  const declared = await declaredLocaleFolders(context.files, options.value.localeFolders);
+  const existing = await foldersWithPages(context.files, contentDir);
+  if (!existing.ok) return existing;
+  const sourceLocale = context.sourceLocale;
 
-  // The source locale's folder: as configured; else its own folder if there is one; else the root.
-  let sourceFolderName = localeFolders?.[context.sourceLocale];
-  if (sourceFolderName === undefined) {
-    const own = join(contentDir, context.sourceLocale.toLowerCase());
-    sourceFolderName =
-      own.ok && (await context.files.exists(own.value)) ? context.sourceLocale.toLowerCase() : '';
-  }
+  /**
+   * A locale's folder, from the most to the least explicit: declared (options or the Astro
+   * config); an existing folder with that name, ignoring case (`zh-CN/` for `zh-CN`); the root, for
+   * the source locale; else the lowercase convention (`pt-BR` → `pt-br`).
+   */
+  const folderFor = (locale: LocaleId): string => {
+    const fromDeclared = declared?.find((entry) => entry.locale === locale);
+    if (fromDeclared !== undefined) return fromDeclared.folder;
+    const onDisk = existing.value.find((name) => asLocale(name) === locale);
+    if (onDisk !== undefined) return onDisk;
+    return locale === sourceLocale ? '' : locale.toLowerCase();
+  };
+  const sourceFolderName = folderFor(sourceLocale);
   const sourceFolder = join(contentDir, sourceFolderName);
   if (!sourceFolder.ok) return sourceFolder;
 
-  // At the root, other locales' folders aren't source pages: the configured ones, or else folders
+  // The project's locales: the source first, then the declared ones; without a declaration, the
+  // existing folders named like a locale.
+  const candidates: LocaleFolder[] =
+    declared ??
+    existing.value.flatMap((name) => {
+      const locale = localeId(name);
+      return locale.ok && looksLikeLocaleFolder(name)
+        ? [{ locale: locale.value, folder: name }]
+        : [];
+    });
+  const locales: ProjectLocale[] = [];
+  for (const { locale, folder } of [
+    { locale: sourceLocale, folder: sourceFolderName },
+    ...candidates,
+  ]) {
+    const path = join(contentDir, folder);
+    if (path.ok && !locales.some((entry) => entry.locale === locale)) {
+      locales.push({ locale, folder: path.value });
+    }
+  }
+
+  // At the root, other locales' folders aren't source pages: the declared ones, or else folders
   // named like a locale.
-  const otherLocaleFolders = (name: string) =>
-    localeFolders === undefined
+  const otherLocaleFolder = (name: string) =>
+    declared === undefined
       ? looksLikeLocaleFolder(name)
-      : Object.values(localeFolders).some((folder) => folder !== '' && folder === name);
+      : declared.some((entry) => entry.folder !== '' && entry.folder === name);
 
   return ok(
     createLayout({
@@ -141,13 +228,10 @@ async function open(context: FormatContext): Promise<Result<DocumentLayout, Plug
       contentDir,
       sourceFolder: sourceFolder.value,
       sourceFolderName,
-      sourceLocale: context.sourceLocale,
-      isOtherLocaleFolder: sourceFolderName === '' ? otherLocaleFolders : () => false,
-      folderFor: (locale) =>
-        locale === context.sourceLocale
-          ? sourceFolderName
-          : (localeFolders?.[locale] ?? locale.toLowerCase()),
-      declaredLocales: localeFolders === undefined ? [] : Object.keys(localeFolders),
+      sourceLocale,
+      isOtherLocaleFolder: sourceFolderName === '' ? otherLocaleFolder : () => false,
+      folderFor,
+      locales,
     }),
   );
 }
@@ -160,17 +244,14 @@ interface LayoutParts {
   readonly sourceLocale: LocaleId;
   readonly isOtherLocaleFolder: (name: string) => boolean;
   readonly folderFor: (locale: LocaleId) => string;
-  readonly declaredLocales: readonly string[];
+  readonly locales: readonly ProjectLocale[];
 }
 
 function createLayout(parts: LayoutParts): DocumentLayout {
   const { files, contentDir, sourceFolder, sourceFolderName, sourceLocale } = parts;
   const prefix = sourceFolder === PROJECT_ROOT ? '' : `${sourceFolder}/`;
   return {
-    declaredLocales: parts.declaredLocales.flatMap((locale) => {
-      const id = localeId(locale);
-      return id.ok ? [id.value] : [];
-    }),
+    locales: parts.locales,
 
     async listSourceDocuments() {
       const listed = await files.list(sourceFolder, { extensions: EXTENSIONS });

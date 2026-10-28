@@ -51,7 +51,7 @@ const manifest = {
   id: 'format-good',
   packageName: '@paperl10n/format-good',
   kind: 'document',
-  apiVersion: 1,
+  apiVersion: 2,
   version: '1.0.0',
   displayName: 'Good',
   description: 'A well-behaved test plugin',
@@ -63,7 +63,10 @@ const manifest = {
 };
 
 const goodLayout: DocumentLayout = {
-  declaredLocales: [],
+  locales: [
+    { locale: locale('en'), folder: path('en') },
+    { locale: locale('he'), folder: path('he') },
+  ],
   listSourceDocuments: () => Promise.resolve(ok([doc('a', 'en/a.md'), doc('b', 'en/b.md')])),
   targetPathFor: (document, target) => ok(path(`${target}/${document.key}.md`)),
 };
@@ -183,6 +186,32 @@ describe('the plugin contract kit', () => {
     [
       'maps documents to distinct target paths that are never a source path',
       withLayout({ targetPathFor: (d) => ok(d.path) }),
+    ],
+    [
+      "lists the project's locales once each, the source locale included, where its documents are",
+      withLayout({
+        locales: [
+          { locale: locale('en'), folder: path('en') },
+          { locale: locale('en'), folder: path('english') },
+        ],
+      }),
+    ],
+    [
+      "lists the project's locales once each, the source locale included, where its documents are",
+      withLayout({ locales: [{ locale: locale('he'), folder: path('he') }] }),
+    ],
+    [
+      "lists the project's locales once each, the source locale included, where its documents are",
+      withLayout({ locales: [{ locale: locale('en'), folder: path('docs/en') }] }),
+    ],
+    [
+      "maps documents into each listed locale's folder",
+      withLayout({
+        locales: [
+          { locale: locale('en'), folder: path('en') },
+          { locale: locale('he'), folder: path('hebrew') },
+        ],
+      }),
     ],
   ])('fails "%s" for a plugin that breaks it', async (check, plugin) => {
     expect(await runAll(plugin)).toContain(check);

@@ -59,7 +59,7 @@ function expectOk<T>(result: Result<T, FormatError>, what: string): T {
 }
 
 function registered(plugin: PluginModule): RegisteredDocumentFormat {
-  const registry = createFormatRegistry([plugin], { apiVersion: 1 });
+  const registry = createFormatRegistry([plugin], { apiVersion: 2 });
   if (!registry.ok) expect.fail(`registration failed: ${JSON.stringify(registry.error)}`);
   const format = registry.value.documentFormats[0];
   if (format === undefined) expect.fail('the kit supports document plugins in API v1');
@@ -186,6 +186,30 @@ export const fixtureChecks: Readonly<
       );
       expect(new Set(targets).size).toBe(targets.length);
       for (const target of targets) expect(sourcePaths.has(target)).toBe(false);
+    }
+  },
+  "lists the project's locales once each, the source locale included, where its documents are":
+    async (plugin, subject) => {
+      const layout = await openLayout(plugin, subject);
+      const locales = layout.locales.map((l) => l.locale);
+      expect(new Set(locales).size).toBe(locales.length);
+      const sourceLocale = parseLocale(subject.fixture.sourceLocale);
+      const source = layout.locales.find((l) => l.locale === sourceLocale);
+      expect(source, 'the source locale is listed').toBeDefined();
+      const inFolder = (folder: string, path: string) =>
+        folder === '' || path.startsWith(`${folder}/`);
+      for (const document of expectOk(await layout.listSourceDocuments(), 'listSourceDocuments')) {
+        expect(inFolder(source?.folder ?? '', document.path), document.path).toBe(true);
+      }
+    },
+  "maps documents into each listed locale's folder": async (plugin, subject) => {
+    const layout = await openLayout(plugin, subject);
+    const documents = expectOk(await layout.listSourceDocuments(), 'listSourceDocuments');
+    for (const { locale, folder } of layout.locales) {
+      for (const document of documents) {
+        const target = expectOk(layout.targetPathFor(document, locale), 'targetPathFor');
+        expect(folder === '' || target.startsWith(`${folder}/`), `${locale}: ${target}`).toBe(true);
+      }
     }
   },
 };

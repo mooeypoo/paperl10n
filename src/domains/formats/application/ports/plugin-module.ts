@@ -7,7 +7,7 @@ export type FormatPlugin = DocumentFormat | CatalogFormat;
 /** Services the app gives plugins. Only a version in v1; a logger or clock can be added later
  * without breaking plugins, because plugins receive it through `create`. */
 export interface PluginHost {
-  readonly apiVersion: 1;
+  readonly apiVersion: 2;
 }
 
 /** What a plugin's `index.ts` exports as `plugin`: a manifest (data) and a factory (code). */

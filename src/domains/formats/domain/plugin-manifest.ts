@@ -5,7 +5,7 @@ import { formatId, kindOfFormatId, type FormatId, type FormatKind } from './form
 /** Manifest format versions this app understands. */
 export const SUPPORTED_MANIFEST_VERSIONS: readonly number[] = [1];
 /** Plugin API versions this app implements. */
-export const SUPPORTED_API_VERSIONS: readonly number[] = [1];
+export const SUPPORTED_API_VERSIONS: readonly number[] = [2];
 
 /**
  * Optional features a plugin can declare, per kind. Plugin API v1 defines none yet. A capability

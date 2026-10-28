@@ -19,7 +19,7 @@ async function openWith(
   tree: FileTree,
   plugin = fakeDocumentPlugin('format-fake', detects('likely')),
 ) {
-  const registry = createFormatRegistry([plugin], { apiVersion: 1 });
+  const registry = createFormatRegistry([plugin], { apiVersion: 2 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opened = await createOpenProject({
@@ -54,7 +54,7 @@ function pluginWithDocumentAt(path: string): PluginModule {
       };
       return Promise.resolve(
         ok({
-          declaredLocales: [],
+          locales: [],
           listSourceDocuments: () => Promise.resolve(ok([document])),
           targetPathFor: () => ok(target.value),
         }),
@@ -157,7 +157,7 @@ describe('readDocumentPair', () => {
       open: () =>
         Promise.resolve(
           ok({
-            declaredLocales: [],
+            locales: [],
             listSourceDocuments: () =>
               Promise.resolve(err({ code: 'formats.unsupported-project', reason: 'no docs' })),
             targetPathFor: () => err({ code: 'formats.unsupported-project', reason: 'unused' }),
@@ -170,7 +170,7 @@ describe('readDocumentPair', () => {
       error: { code: 'formats.unsupported-project', reason: 'no docs', formatId: 'format-fake' },
     });
 
-    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 1 });
+    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 2 });
     if (base.kind !== 'document') throw new Error('test setup');
     const noTarget = fakeDocumentPlugin('format-fake', {
       ...detects('likely'),

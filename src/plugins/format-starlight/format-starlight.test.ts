@@ -38,6 +38,20 @@ describePluginContract(plugin, {
       detected: true,
     },
     {
+      name: 'named-folders',
+      root: fixture('named-folders'),
+      sourceLocale: 'en',
+      targetLocales: ['he', 'zh-CN'],
+      detected: true,
+    },
+    {
+      name: 'cased-folders',
+      root: fixture('cased-folders'),
+      sourceLocale: 'en',
+      targetLocales: ['zh-CN', 'pt-BR', 'he'],
+      detected: true,
+    },
+    {
       name: 'not-starlight',
       root: fixture('not-starlight'),
       sourceLocale: 'en',
@@ -139,7 +153,10 @@ describe('format-starlight with the source locale at the root', () => {
       ok: true,
       value: 'src/content/docs/hebrew/index.mdx',
     });
-    expect(layout.declaredLocales).toEqual(['en', 'he']);
+    expect(layout.locales).toEqual([
+      { locale: 'en', folder: 'src/content/docs' },
+      { locale: 'he', folder: 'src/content/docs/hebrew' },
+    ]);
   });
 
   it('refuses a target that would share the source locale’s folder', async () => {
@@ -194,17 +211,17 @@ describe('format-starlight options', () => {
     [
       'a nested locale folder',
       { localeFolders: { he: 'a/b' } },
-      '"localeFolders" values must be "" (the root) or a folder name: he',
+      '"localeFolders" needs locale ids mapped to "" (the root) or a folder name: he',
     ],
     [
       'a parent locale folder',
       { localeFolders: { he: '..' } },
-      '"localeFolders" values must be "" (the root) or a folder name: he',
+      '"localeFolders" needs locale ids mapped to "" (the root) or a folder name: he',
     ],
     [
       'a non-string locale folder',
       { localeFolders: { he: 1 } },
-      '"localeFolders" values must be "" (the root) or a folder name: he',
+      '"localeFolders" needs locale ids mapped to "" (the root) or a folder name: he',
     ],
   ])('rejects %s', async (_description, options, reason) => {
     const result = await formatStarlight.open({
@@ -224,6 +241,81 @@ describe('format-starlight options', () => {
     expect(result).toEqual({
       ok: false,
       error: { code: 'formats.unsupported-project', reason: 'no "src/content/docs" folder' },
+    });
+  });
+});
+
+describe("format-starlight's locale folders", () => {
+  const targetOf = async (name: string, key: string, target: string, options = {}) => {
+    const layout = await layoutOf(name, options);
+    const document = (await listed(name, options)).find((d) => d.key === key);
+    if (document === undefined) throw new Error(`test setup: no ${key}`);
+    return layout.targetPathFor(document, locale(target));
+  };
+
+  it('reads them from the Astro config: named folders, and lang that differs from the key', async () => {
+    expect((await layoutOf('named-folders')).locales).toEqual([
+      { locale: 'en', folder: 'src/content/docs' },
+      { locale: 'he', folder: 'src/content/docs/hebrew' },
+      { locale: 'zh-CN', folder: 'src/content/docs/zh-cn' },
+    ]);
+    expect(await targetOf('named-folders', 'index', 'he')).toEqual({
+      ok: true,
+      value: 'src/content/docs/hebrew/index.md',
+    });
+    expect(await targetOf('named-folders', 'index', 'zh-CN')).toEqual({
+      ok: true,
+      value: 'src/content/docs/zh-cn/index.md',
+    });
+  });
+
+  it('trusts the config over the two-letter heuristic: ui/ is pages, hebrew/ is a locale', async () => {
+    expect((await listed('named-folders')).map((d) => d.key)).toEqual(['index', 'ui/buttons']);
+  });
+
+  it('falls back to existing folders, matching case-insensitively, when the config is dynamic', async () => {
+    expect((await layoutOf('cased-folders')).locales).toEqual([
+      { locale: 'en', folder: 'src/content/docs/en' },
+      { locale: 'pt-BR', folder: 'src/content/docs/pt-br' },
+      { locale: 'zh-CN', folder: 'src/content/docs/zh-CN' },
+    ]);
+    expect(await targetOf('cased-folders', 'index', 'zh-CN')).toEqual({
+      ok: true,
+      value: 'src/content/docs/zh-CN/index.md',
+    });
+    expect(await targetOf('cased-folders', 'index', 'pt-BR')).toEqual({
+      ok: true,
+      value: 'src/content/docs/pt-br/index.md',
+    });
+    // A locale with no folder yet: the lowercase convention.
+    expect(await targetOf('cased-folders', 'index', 'he')).toEqual({
+      ok: true,
+      value: 'src/content/docs/he/index.md',
+    });
+  });
+
+  it('lets localeFolders override the Astro config', async () => {
+    expect(
+      await targetOf('named-folders', 'index', 'he', { localeFolders: { en: '', he: 'he-IL' } }),
+    ).toEqual({
+      ok: true,
+      value: 'src/content/docs/he-IL/index.md',
+    });
+  });
+
+  it('rejects localeFolders keys that are not locale ids', async () => {
+    const result = await formatStarlight.open({
+      files: await openFixture(fixture('root-locale')),
+      sourceLocale: locale('en'),
+      options: { localeFolders: { 'not a locale': 'x' } },
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: 'formats.invalid-options',
+        reason:
+          '"localeFolders" needs locale ids mapped to "" (the root) or a folder name: not a locale',
+      },
     });
   });
 });

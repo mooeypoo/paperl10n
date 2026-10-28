@@ -22,7 +22,11 @@ export {
 } from './application/ports/project-files.ts';
 export type { FormatContext } from './application/ports/format-context.ts';
 export type { FormatError, PluginError } from './application/ports/plugin-error.ts';
-export type { DocumentFormat, DocumentLayout } from './application/ports/document-format.ts';
+export type {
+  DocumentFormat,
+  DocumentLayout,
+  ProjectLocale,
+} from './application/ports/document-format.ts';
 export type { CatalogFormat, CatalogLayout } from './application/ports/catalog-format.ts';
 export type { FormatPlugin, PluginHost, PluginModule } from './application/ports/plugin-module.ts';
 export {

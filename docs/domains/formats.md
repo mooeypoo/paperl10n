@@ -61,9 +61,14 @@ interface DocumentFormat {
 }
 
 interface DocumentLayout {
-  readonly declaredLocales: readonly LocaleId[];                        // if the system declares them
+  readonly locales: readonly ProjectLocale[];                           // the project's locales, source included
   listSourceDocuments(): Promise<Result<readonly SourceDocument[], PluginError>>;
   targetPathFor(document: SourceDocument, target: LocaleId): Result<ProjectPath, PluginError>;
+}
+
+interface ProjectLocale {
+  readonly locale: LocaleId;                                            // BCP 47: what Paper Lion saves
+  readonly folder: ProjectPath;                                         // where its pages live
 }
 
 interface FormatContext {
@@ -134,11 +139,33 @@ domain's policy, not the registry's.
 - **The plugin API is frozen by a test** (`plugin-api.test.ts`). Changing what plugins can see is a
   deliberate diff. Breaking changes need a new `apiVersion`.
 
+## Locale codes and folders
+
+**Paper Lion always works with BCP 47 locale ids** (`pt-BR`, `zh-Hans`), the code it saves. **Each
+system names its locale folders its own way, and the plugin owns that mapping.** Nearly every docs
+system separates the two (checked 2026-10-28):
+
+| System | Folder name | Language tag | Default locale |
+|---|---|---|---|
+| Starlight | the `locales` key (`'zh-cn'`, `hebrew`) | `lang` (BCP 47), defaults to the key | `root`: no folder |
+| Astro i18n | each `locales` string, or a `path` (`french`) | `codes` (browser tags) | usually no folder |
+| VitePress | the `locales` key | `lang` | `root`: no folder |
+| Nuxt i18n | `code` (any id) | `language` (BCP 47) | |
+| Docusaurus | the locale name, or `path` (`i18n/<locale>/<plugin>/…`) | `htmlLang` (BCP 47) | |
+| Hugo | `contentDir`, or a file-name suffix (lowercase) | its own setting | |
+
+So a plugin must never assume "folder = code". It reports the project's locales as
+`ProjectLocale`s (locale id + folder), and `targetPathFor` puts a locale's pages in that folder
+(the contract kit checks both). Where the system's config is code (`astro.config.mjs`), the plugin
+reads what it can statically and never runs it.
+
 ## Versioning
 
 - **`apiVersion`** in the manifest is the plugin API version the plugin was written for. The
   manifest validator accepts only versions this app supports (`SUPPORTED_API_VERSIONS`, now
-  `[1]`), and the registry passes the host's version to `create(host)`.
+  `[2]`), and the registry passes the host's version to `create(host)`. Version 2 (M1) replaced
+  `declaredLocales` with `locales: ProjectLocale[]`; no plugins outside this repository existed
+  yet.
 - Adding an optional capability, or a field to `PluginHost`, is not breaking: v1 plugins keep
   working. Removing or changing anything a plugin can see is breaking, needs a new `apiVersion`,
   and shows up as a diff in the frozen export list (`plugin-api.test.ts`).

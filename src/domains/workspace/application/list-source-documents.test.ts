@@ -11,7 +11,7 @@ import { createOpenProject } from './open-project.ts';
 
 /** Opens a project through the real use case, so the session is exactly what the app stores. */
 async function openWith(plugin: PluginModule) {
-  const registry = createFormatRegistry([plugin], { apiVersion: 1 });
+  const registry = createFormatRegistry([plugin], { apiVersion: 2 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opened = await createOpenProject({
@@ -69,7 +69,7 @@ describe('listSourceDocuments', () => {
       open: () =>
         Promise.resolve(
           ok({
-            declaredLocales: [],
+            locales: [],
             listSourceDocuments: () =>
               Promise.resolve(err({ code: 'formats.unsupported-project', reason: 'no docs' })),
             targetPathFor: () => err({ code: 'formats.unsupported-project', reason: 'unused' }),
@@ -84,7 +84,7 @@ describe('listSourceDocuments', () => {
   });
 
   it('passes a target path error through, with the format id', async () => {
-    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 1 });
+    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 2 });
     if (base.kind !== 'document') throw new Error('test setup');
     const plugin = fakeDocumentPlugin('format-fake', {
       ...detects('likely'),

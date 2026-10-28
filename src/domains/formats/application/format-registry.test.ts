@@ -12,7 +12,7 @@ import type { FormatContext } from './ports/format-context.ts';
 import type { PluginHost, PluginModule } from './ports/plugin-module.ts';
 import { createFormatRegistry, type FormatRegistry } from './format-registry.ts';
 
-const host: PluginHost = { apiVersion: 1 };
+const host: PluginHost = { apiVersion: 2 };
 
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: unknown }): T {
   if (!result.ok) throw new Error(`test setup: ${JSON.stringify(result.error)}`);
@@ -30,7 +30,7 @@ function manifest(
     id,
     packageName: `@paperl10n/${id}`,
     kind,
-    apiVersion: 1,
+    apiVersion: 2,
     version: '0.1.0',
     displayName: id,
     description: 'test plugin',
@@ -49,7 +49,10 @@ const intro: SourceDocument = {
 };
 
 const workingLayout: DocumentLayout = {
-  declaredLocales: [locale('en'), locale('he')],
+  locales: [
+    { locale: locale('en'), folder: path('en') },
+    { locale: locale('he'), folder: path('he') },
+  ],
   listSourceDocuments: () => Promise.resolve(ok([intro])),
   targetPathFor: (document, target) => ok(path(`${target}/${document.key}.md`)),
 };
@@ -265,7 +268,10 @@ describe('guarded document formats', () => {
 
   it('passes a working layout through', async () => {
     const layout = unwrap(await openLayout({}));
-    expect(layout.declaredLocales).toEqual(['en', 'he']);
+    expect(layout.locales).toEqual([
+      { locale: 'en', folder: 'en' },
+      { locale: 'he', folder: 'he' },
+    ]);
     expect(await layout.listSourceDocuments()).toEqual({ ok: true, value: [intro] });
     expect(layout.targetPathFor(intro, locale('he'))).toEqual({ ok: true, value: 'he/intro.md' });
   });
@@ -301,7 +307,7 @@ describe('guarded document formats', () => {
         open: () =>
           Promise.resolve(
             ok<DocumentLayout>({
-              declaredLocales: [],
+              locales: [],
               listSourceDocuments: () => Promise.reject(new Error('boom')),
               targetPathFor: boom,
             }),
@@ -323,7 +329,7 @@ describe('guarded document formats', () => {
         open: () =>
           Promise.resolve(
             ok<DocumentLayout>({
-              declaredLocales: [],
+              locales: [],
               listSourceDocuments: () =>
                 Promise.resolve(err({ code: 'formats.file-access', cause })),
               targetPathFor: () =>

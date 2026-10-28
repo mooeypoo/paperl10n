@@ -14,7 +14,7 @@ import type {
   ParsedCatalog,
   PlaceholderToken,
 } from './ports/catalog-format.ts';
-import type { DocumentFormat } from './ports/document-format.ts';
+import type { DocumentFormat, ProjectLocale } from './ports/document-format.ts';
 import type { FormatContext } from './ports/format-context.ts';
 import type { FormatError, PluginError } from './ports/plugin-error.ts';
 import type { FormatPlugin, PluginHost, PluginModule } from './ports/plugin-module.ts';
@@ -24,7 +24,7 @@ import type { ProjectFiles } from './ports/project-files.ts';
 // throws or rejects produces `formats.plugin-failed` instead of crashing the app.
 
 export interface GuardedDocumentLayout {
-  readonly declaredLocales: readonly LocaleId[];
+  readonly locales: readonly ProjectLocale[];
   listSourceDocuments(): Promise<Result<readonly SourceDocument[], FormatError>>;
   targetPathFor(document: SourceDocument, target: LocaleId): Result<ProjectPath, FormatError>;
 }
@@ -130,7 +130,7 @@ function guardDocumentFormat(
       if (!layout.ok) return layout;
       const inner = layout.value;
       return ok({
-        declaredLocales: inner.declaredLocales,
+        locales: inner.locales,
         listSourceDocuments: () => guardAsync(id, () => inner.listSourceDocuments()),
         targetPathFor: (document, target) => guard(id, () => inner.targetPathFor(document, target)),
       });
