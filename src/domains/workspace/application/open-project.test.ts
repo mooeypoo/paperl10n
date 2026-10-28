@@ -84,6 +84,29 @@ describe('openProject', () => {
     expect(sessions.get('anything')).toBeUndefined();
   });
 
+  it.each<[string, Record<string, unknown>, { id: string; direction: string }]>([
+    ['the catalog', { targetLocale: 'ydd' }, { id: 'ydd', direction: 'rtl' }],
+    [
+      "the config's override of a known language",
+      { targetLocale: 'rhg', languages: { rhg: { dir: 'ltr' } } },
+      { id: 'rhg', direction: 'ltr' },
+    ],
+    [
+      "the config's own language",
+      {
+        targetLocale: 'art-x-lantern',
+        languages: { 'art-x-lantern': { name: 'Lanternese', dir: 'rtl' } },
+      },
+      { id: 'art-x-lantern', direction: 'rtl' },
+    ],
+  ])("takes each side's direction from %s", async (_description, settings, expected) => {
+    const { openProject } = setup({
+      tree: { ...project, 'paperl10n.config.json': config(settings) },
+    });
+    const result = await openProject();
+    expect(result.ok && result.value?.targetLocale).toEqual(expected);
+  });
+
   it('passes config warnings through', async () => {
     const { openProject } = setup({
       tree: { ...project, 'paperl10n.config.json': config({ targetLocale: 'he', colour: 'red' }) },

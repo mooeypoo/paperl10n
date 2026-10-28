@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { localeId, type InvalidLocaleId, type LocaleId } from '#kernel/locale-id';
 import { ok, type Result } from '#kernel/result';
+import { bundledLanguageCatalog } from './bundled-catalog.ts';
+import type { LanguageCatalog } from './language-catalog.ts';
 
 export type TextDirection = 'ltr' | 'rtl';
 
@@ -10,10 +12,7 @@ export interface Locale {
   readonly direction: TextDirection;
 }
 
-// Placeholder data until M1 chooses a real language-data source (docs/plan/M1-languages.md).
-// Callers only see `localeFrom`, so replacing these tables doesn't change them.
-
-/** ISO 15924 scripts written right to left. */
+/** ISO 15924 scripts written right to left: for tags the catalog doesn't know (`az-Arab-IR`). */
 const rtlScripts: ReadonlySet<string> = new Set([
   'Adlm', // Adlam
   'Arab', // Arabic
@@ -29,48 +28,35 @@ const rtlScripts: ReadonlySet<string> = new Set([
   'Yezi', // Yezidi
 ]);
 
-/** Languages whose usual script (when the tag names none) is written right to left. */
-const rtlLanguages: ReadonlySet<string> = new Set([
-  'ar', // Arabic
-  'azb', // South Azerbaijani
-  'ckb', // Central Kurdish (Sorani)
-  'dv', // Dhivehi
-  'fa', // Persian
-  'he', // Hebrew
-  'iw', // Hebrew (deprecated code, still found in the wild)
-  'ji', // Yiddish (deprecated code)
-  'ks', // Kashmiri
-  'lrc', // Northern Luri
-  'mzn', // Mazanderani
-  'nqo', // N'Ko
-  'pnb', // Western Punjabi
-  'prs', // Dari
-  'ps', // Pashto
-  'sd', // Sindhi
-  'sdh', // Southern Kurdish
-  'syr', // Syriac
-  'ug', // Uyghur
-  'ur', // Urdu
-  'yi', // Yiddish
-]);
+/** Deprecated codes still found in the wild that the catalog doesn't list. */
+const legacyCodes: Readonly<Record<string, string>> = { iw: 'he', ji: 'yi' };
 
 const SCRIPT_SUBTAG = /^[A-Z][a-z]{3}$/;
 
 /**
- * Text direction for a locale. An explicit script subtag decides (`az-Arab` is RTL, `ku-Latn`
- * is LTR); otherwise the language's usual script does. Unknown languages are LTR.
+ * Text direction for a locale, from the language catalog (docs/domains/locale.md):
+ * 1. a language the catalog knows (or the project's config defines) has its own direction;
+ * 2. otherwise an explicit script subtag decides (`az-Arab-IR` is RTL, `ku-Latn-TR` is LTR);
+ * 3. otherwise the base language does (`ar-EG` → `ar`), and unknown languages are LTR.
  */
-function directionOf(id: LocaleId): TextDirection {
+function directionOf(id: LocaleId, catalog: LanguageCatalog): TextDirection {
+  const known = catalog.find(id);
+  if (known !== undefined) return known.direction;
   const [language = '', ...rest] = id.split('-');
   // Private-use subtags (after `x`) never carry a script.
   const publicSubtags = rest.slice(0, rest.indexOf('x') === -1 ? undefined : rest.indexOf('x'));
   const script = publicSubtags.find((subtag) => SCRIPT_SUBTAG.test(subtag));
   if (script !== undefined) return rtlScripts.has(script) ? 'rtl' : 'ltr';
-  return rtlLanguages.has(language) ? 'rtl' : 'ltr';
+  return catalog.find(legacyCodes[language] ?? language)?.direction ?? 'ltr';
 }
 
-export function localeFrom(id: LocaleId): Locale {
-  return { id, direction: directionOf(id) };
+/** The `Locale` for an id, with its direction from the catalog (the bundled one by default; pass
+ * one with the project's custom languages to honor its config). */
+export function localeFrom(
+  id: LocaleId,
+  catalog: LanguageCatalog = bundledLanguageCatalog(),
+): Locale {
+  return { id, direction: directionOf(id, catalog) };
 }
 
 /** Validates a raw tag (see `localeId`) and returns its `Locale`. */

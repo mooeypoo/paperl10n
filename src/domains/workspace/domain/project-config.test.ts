@@ -19,6 +19,7 @@ describe('parseProjectConfig', () => {
           targetLocale: 'he-il',
           documentFormat: 'format-stub',
           formatOptions: { 'format-stub': { root: 'docs' } },
+          languages: { rhg: { dir: 'ltr' }, 'ART-x-lantern': { name: ' Lanternese ', dir: 'rtl' } },
         }),
       ),
     ).toEqual({
@@ -29,6 +30,10 @@ describe('parseProjectConfig', () => {
           targetLocale: 'he-IL',
           documentFormat: 'format-stub',
           formatOptions: { 'format-stub': { root: 'docs' } },
+          languages: [
+            { tag: 'rhg', direction: 'ltr' },
+            { tag: 'art-x-lantern', name: 'Lanternese', direction: 'rtl' },
+          ],
         },
         warnings: [],
       },
@@ -39,7 +44,7 @@ describe('parseProjectConfig', () => {
     expect(parseProjectConfig(json({ targetLocale: 'he' }))).toEqual({
       ok: true,
       value: {
-        config: { sourceLocale: 'en', targetLocale: 'he', formatOptions: {} },
+        config: { sourceLocale: 'en', targetLocale: 'he', formatOptions: {}, languages: [] },
         warnings: [],
       },
     });
@@ -70,6 +75,32 @@ describe('parseProjectConfig', () => {
       "a plugin's options that are not an object",
       { targetLocale: 'he', formatOptions: { 'format-stub': 'docs' } },
       ['formatOptions.format-stub'],
+    ],
+    ['languages that is not an object', { targetLocale: 'he', languages: ['he'] }, ['languages']],
+    [
+      'a language code that is not a locale id',
+      { targetLocale: 'he', languages: { pt_BR: { name: 'x' } } },
+      ['languages.pt_BR'],
+    ],
+    [
+      'a language entry that is not an object',
+      { targetLocale: 'he', languages: { rhg: 'ltr' } },
+      ['languages.rhg'],
+    ],
+    [
+      'a language with an unknown key',
+      { targetLocale: 'he', languages: { rhg: { direction: 'ltr' } } },
+      ['languages.rhg'],
+    ],
+    [
+      'a language with an empty name',
+      { targetLocale: 'he', languages: { rhg: { name: '  ' } } },
+      ['languages.rhg.name'],
+    ],
+    [
+      'a language with a bad direction',
+      { targetLocale: 'he', languages: { rhg: { dir: 'right' } } },
+      ['languages.rhg.dir'],
     ],
     [
       'several problems at once',

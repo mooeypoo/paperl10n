@@ -2,6 +2,12 @@
 // Builds Paper Lion's language catalog from MediaWiki's languageinfo and Wikimedia's ULS language
 // data. Pure, so it's tested without the network; scripts/update-language-data.ts fetches and
 // writes. Decisions: docs/plan/M1-languages.md.
+import { localeId } from '../src/shared/kernel/locale-id.ts';
+import type {
+  LanguageDataFile,
+  LanguageNamesFile,
+  LanguageRecord,
+} from '../src/domains/locale/domain/language-data-file.ts';
 
 /** One entry of MediaWiki's `meta=languageinfo` (liprop=code|bcp47|dir|autonym|name|fallbacks). */
 export interface LanguageInfoEntry {
@@ -22,41 +28,11 @@ export interface UlsData {
   readonly territories: Readonly<Record<string, readonly string[]>>;
 }
 
-export interface LanguageRecord {
-  /** The BCP 47 tag, as MediaWiki gives it: what Paper Lion saves (`pt-BR`). */
-  readonly tag: string;
-  /** MediaWiki's code (`pt-br`), for systems that use it (banana-i18n). */
-  readonly mw: string;
-  readonly dir: 'ltr' | 'rtl';
-  /** The language's name in itself, when either source knows it. */
-  readonly autonym: string | null;
-  /** The English name. Names in other interface languages live in their own files. */
-  readonly name: string;
-  /** ISO 15924 script (`Hebr`), from ULS. */
-  readonly script?: string;
-  /** ULS region groups (`ME`, `EU`, …). */
-  readonly regions?: readonly string[];
-  /** Fallback languages, as tags. */
-  readonly fallbacks?: readonly string[];
-}
-
-export interface LanguageDataFile {
-  readonly generated: string;
-  readonly sources: readonly {
-    readonly name: string;
-    readonly url: string;
-    readonly license: string;
-  }[];
-  /** Scripts written right to left, from ULS. */
-  readonly rtlScripts: readonly string[];
-  /** Sorted by tag. */
-  readonly languages: readonly LanguageRecord[];
-  /** Lowercase alias (a MediaWiki or deprecated code) → tag. Lookups ignore case, so codes that
-   * differ from their tag only in case (`pt-br`) aren't listed. */
-  readonly aliases: Readonly<Record<string, string>>;
-  /** ISO 3166 region → its languages, most spoken first, as tags. */
-  readonly territories: Readonly<Record<string, readonly string[]>>;
-}
+export type {
+  LanguageDataFile,
+  LanguageNamesFile,
+  LanguageRecord,
+} from '../src/domains/locale/domain/language-data-file.ts';
 
 export interface BuildInput {
   readonly generated: string;
@@ -67,9 +43,6 @@ export interface BuildInput {
   readonly localizedNames: Readonly<Record<string, Readonly<Record<string, string>>>>;
   readonly uls: UlsData;
 }
-
-/** Names in one interface language: tag → name, only where it differs from the English name. */
-export type LanguageNamesFile = Readonly<Record<string, string>>;
 
 export interface BuildResult {
   readonly data: LanguageDataFile;
@@ -90,16 +63,6 @@ export const EXCLUDED_CODES: readonly string[] = [
   'en-x-piglatin',
 ];
 
-/**
- * MediaWiki's BCP 47 tag, checked but never canonicalized: `Intl.getCanonicalLocales` applies
- * CLDR's alias table, which merges languages MediaWiki (and localization) keeps apart: Tagalog
- * into Filipino, Serbo-Croatian and Montenegrin into Serbian, Dari into Persian.
- */
-export function checkedTag(bcp47: string): string {
-  Intl.getCanonicalLocales(bcp47); // throws on a malformed tag
-  return bcp47;
-}
-
 export function buildLanguageData(input: BuildInput): BuildResult {
   const { uls } = input;
   const ulsEntry = (code: string) => {
@@ -113,7 +76,13 @@ export function buildLanguageData(input: BuildInput): BuildResult {
   const groups = new Map<string, LanguageInfoEntry[]>();
   for (const entry of Object.values(input.languageInfo)) {
     if (EXCLUDED_CODES.includes(entry.code)) continue;
-    const tag = checkedTag(entry.bcp47);
+    // Tags are kept as MediaWiki writes them, never canonicalized: `Intl.getCanonicalLocales`
+    // applies CLDR's aliases, which merge languages localization keeps apart (Tagalog into
+    // Filipino, Serbo-Croatian and Montenegrin into Serbian, Dari into Persian). They must pass
+    // Paper Lion's own locale-id rules, which allow no extensions: a tag it couldn't save isn't
+    // offered (`nl-u-SD-bebru`, Brussels Dutch, uses `-u-`).
+    if (!localeId(entry.bcp47).ok) continue;
+    const tag = entry.bcp47;
     const group = groups.get(tag.toLowerCase()) ?? [];
     group.push(entry);
     groups.set(tag.toLowerCase(), group);
@@ -124,7 +93,7 @@ export function buildLanguageData(input: BuildInput): BuildResult {
   const chosen: { tag: string; entry: LanguageInfoEntry }[] = [];
   for (const group of groups.values()) {
     const sorted = [...group].sort((a, b) => a.code.localeCompare(b.code));
-    const tag = checkedTag(sorted[0]?.bcp47 ?? '');
+    const tag = sorted[0]?.bcp47 ?? '';
     // The code that *is* the tag wins (`be-tarask` over `be-x-old`), else the first.
     const main = sorted.find((e) => e.code === tag.toLowerCase()) ?? sorted[0];
     if (main === undefined) continue;

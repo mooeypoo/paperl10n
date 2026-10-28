@@ -16,6 +16,7 @@
     "src/domains/*/index.ts",
     "src/domains/formats/plugin-api.ts",
     "src/domains/*/domain/**/*.ts",
+    "src/domains/*/domain/**/*.json",
     "src/domains/*/application/**/*.ts",
     "src/plugins/*/**/*.ts",
     "src/plugins/*/paperl10n-plugin.json"

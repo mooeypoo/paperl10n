@@ -31,28 +31,41 @@ parseLocale(input: string): Result<Locale, InvalidLocaleId>    // for raw input 
   deprecated codes (`iw` stays `iw`) or a system's own codes (`pt_BR`, VitePress's `root`):
   translating those is the format plugin's job.
 
-## Direction rules (M0)
+## Direction rules
 
-1. An explicit **script subtag decides**: `az-Arab`, `pa-Arab` → `rtl`; `az-Latn`, `ku-Latn`,
-   `ur-Latn` → `ltr`. Scripts written right to left: Adlam, Arabic, Arabic Nastaliq, Hebrew,
-   Mandaic, Mende Kikakui, N'Ko, Hanifi Rohingya, Samaritan, Syriac, Thaana, Yezidi.
-2. Otherwise the **language's usual script** decides: `he`, `ar`, `fa`, `ur`, `yi`, `ckb`, `ps`,
-   `dv`, `ug`, `sd`, … → `rtl` (the full list is in `domain/locale.ts`).
-3. Regions don't matter (`en-IL` is `ltr`, `ar-EG` is `rtl`). Private-use subtags (`-x-…`) are
-   ignored. Unknown languages are `ltr`.
+`localeFrom(id, catalog)` decides a locale's direction:
 
-**These tables are a placeholder.** M1 picks a real language-data source (names, autonyms,
-scripts) during the locale-picker design discussion: see
-[`docs/plan/M1-languages.md`](../plan/M1-languages.md). Callers only use `localeFrom` and
-`parseLocale`, so replacing the data doesn't change them.
+1. A language the **catalog** knows, or the project's config defines or adjusts, has its own
+   direction (`he`, `ar`, `ydd` → `rtl`).
+2. Otherwise an explicit **script subtag** decides (`az-Arab-IR` → `rtl`, `ku-Latn-TR` → `ltr`).
+   Scripts written right to left: Adlam, Arabic, Arabic Nastaliq, Hebrew, Mandaic, Mende Kikakui,
+   N'Ko, Hanifi Rohingya, Samaritan, Syriac, Thaana, Yezidi.
+3. Otherwise the **base language** does (`ar-EG` → `ar`), including two deprecated codes still
+   found in the wild (`iw` → `he`, `ji` → `yi`). Unknown languages are `ltr`. Private-use subtags
+   (`-x-…`) never carry a script.
 
-## The language catalog (M1, step L1)
+## The language catalog (M1, steps L1–L2)
 
 `domain/language-data.json` is the catalog of languages Paper Lion knows: 1,471 languages, each
 with its BCP 47 tag (what Paper Lion saves), MediaWiki code, direction, autonym (when known),
 English name, script, regions, and fallbacks; plus aliases (old and MediaWiki codes → tags) and,
-for 254 regions, their languages by number of speakers. L2 wires it in; until then the M0 tables
-above still decide direction.
+for 254 regions, their languages by number of speakers.
+
+In code (`#domains/locale`):
+
+- `bundledLanguageCatalog()` loads the shipped files once, checking their shape. A test checks
+  every names file is bundled.
+- `catalog.find(code)` by tag or alias, ignoring case (`pt-br`, `sr-el`); `languagesOfRegion`;
+  `nameIn(language, uiLanguage)`, falling back to English.
+- `catalog.withCustom(languages)` adds a project's own languages or adjusts known ones (from the
+  config's `languages`, `docs/domains/workspace.md`): how a project fixes a direction (`rhg`) or
+  uses a code the catalog doesn't know.
+- `searchLanguages(catalog, query, { uiLanguage })`: an exact code first, then an exact name, a
+  name that starts with the query, a word that starts with it, then a name that contains it, over
+  the autonym, the English name, and the interface-language name, ignoring case and accents.
+- `suggestLanguages(catalog, …)`: the picker's sections before typing: the project's languages,
+  the user's last six picks, and suggestions (English, the OS languages, exact then base, then the
+  OS region's five most spoken), each language once.
 
 **Names in other interface languages live in their own files**, one per interface language the
 app ships: `domain/language-names/he.json` (tag → name, only where it differs from English, one
@@ -79,6 +92,5 @@ update, and a test fails until it does.
 
 ## Not here (yet)
 
-- Language names and autonyms, the picker, fallback chains (`pt-BR` → `pt`), custom locales,
-  plural rules: all in M1 or later.
+- The picker (L5), fallback chains in use (`pt-BR` → `pt`, catalogs, M4), plural rules.
 - Mapping system-specific codes to locale ids: done by format plugins.

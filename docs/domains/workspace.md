@@ -20,7 +20,8 @@ there is to translate. Code: `src/domains/workspace/`, public API `#domains/work
   "sourceLocale": "en",
   "targetLocale": "he",
   "documentFormat": "format-stub",
-  "formatOptions": { "format-stub": { "root": "docs" } }
+  "formatOptions": { "format-stub": { "root": "docs" } },
+  "languages": { "rhg": { "dir": "ltr" }, "art-x-lantern": { "name": "Lanternese", "dir": "rtl" } }
 }
 ```
 
@@ -30,6 +31,7 @@ there is to translate. Code: `src/domains/workspace/`, public API `#domains/work
 | `targetLocale` | **yes, in M0** | Locale id to translate into. Must differ from the source. Choosing it in the app arrives in M1 ([discussion](../plan/M1-languages.md)). |
 | `documentFormat` | no | Pins a document plugin by id instead of detecting one. |
 | `formatOptions` | no | Each plugin's own options, keyed by plugin id. The plugin validates its section. |
+| `languages` | no | Languages the project defines or adjusts, keyed by locale id: `name` and/or `dir` (`ltr`/`rtl`). Adds codes the language catalog doesn't know, or fixes a direction. Shared with the team, so nothing is guessed silently (M1). |
 | `$schema` | no | Ignored (editor support). |
 
 Unknown keys produce **warnings**, not errors, so a newer config still opens in an older app. All

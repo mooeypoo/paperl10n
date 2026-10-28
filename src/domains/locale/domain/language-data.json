@@ -895,7 +895,6 @@
     {"tag":"nl-NL","mw":"nl-nl","dir":"ltr","autonym":null,"name":"Netherlands Dutch"},
     {"tag":"nl-SR","mw":"nl-sr","dir":"ltr","autonym":null,"name":"Surinamese Dutch"},
     {"tag":"nl-SX","mw":"nl-sx","dir":"ltr","autonym":null,"name":"Sint Maarten Dutch"},
-    {"tag":"nl-u-SD-bebru","mw":"nl-u-sd-bebru","dir":"ltr","autonym":null,"name":"Brussels Dutch"},
     {"tag":"nl-x-informal","mw":"nl-informal","dir":"ltr","autonym":"Nederlands (informeel)","name":"Dutch (informal address)","script":"Latn","regions":["EU","AM"],"fallbacks":["nl"]},
     {"tag":"nla","mw":"nla","dir":"ltr","autonym":null,"name":"Ngombala"},
     {"tag":"nmg","mw":"nmg","dir":"ltr","autonym":null,"name":"Kwasio"},

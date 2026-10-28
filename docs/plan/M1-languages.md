@@ -91,6 +91,19 @@ Each is its own branch and PR, as in M0.
   names); `localeFrom` uses it instead of M0's RTL table; custom languages from the config
   (`languages: { "<code>": { "name", "dir" } }`); pure search ranking and suggestion rules
   (project languages, recents, OS languages, region), with table tests.
+  - *Done-notes:* `language-data-file.ts` (the file types, now the single source for the
+    generator too, and a shape check for the bundled JSON), `language-catalog.ts`,
+    `bundled-catalog.ts`, `language-search.ts`, `language-suggestions.ts`. `localeFrom` takes its
+    direction from the catalog; M0's RTL language table is gone (the script list stays for unknown
+    tags). The config's `languages` (workspace) feeds `catalog.withCustom`, so a project can fix
+    `rhg` or add its own code; `openProject` uses it for both sides.
+  - The generator now also applies Paper Lion's own locale-id rules: `nl-u-SD-bebru` (Brussels
+    Dutch, a `-u-` extension) is left out; 1,470 languages.
+  - Found while testing suggestions: the catalog has regional variants as languages in their own
+    right (`en-US`, `pt-PT`). Suggestions offer the exact OS language when it exists, then its base
+    language.
+  - Mutation checks: ignoring the catalog's direction, custom languages without their direction,
+    search without the exact-code rank, suggestions without de-duplication: each fails tests.
 - **L3, the use cases and IPC:** list the project's languages (from the plugin: declared locales
   and existing locale folders), search and suggestions, and choosing a target. Opening a project
   without a target language returns a "needs a target" state instead of an error.

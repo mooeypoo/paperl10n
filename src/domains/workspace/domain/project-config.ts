@@ -15,6 +15,15 @@ export interface ProjectConfig {
   readonly documentFormat?: string;
   /** Each plugin's own options, keyed by plugin id. Plugins validate their section. */
   readonly formatOptions: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  /** Languages the project defines (codes the catalog doesn't know) or adjusts (a direction). */
+  readonly languages: readonly ConfiguredLanguage[];
+}
+
+/** One entry of the config's `languages`: `"rhg": { "dir": "ltr" }`, `"art-x-lantern": { "name": "Lanternese" }`. */
+export interface ConfiguredLanguage {
+  readonly tag: LocaleId;
+  readonly name?: string;
+  readonly direction?: 'ltr' | 'rtl';
 }
 
 export interface ConfigProblem {
@@ -33,7 +42,15 @@ export interface ParsedConfig {
   readonly warnings: readonly string[];
 }
 
-const KNOWN_KEYS = ['$schema', 'sourceLocale', 'targetLocale', 'documentFormat', 'formatOptions'];
+const KNOWN_KEYS = [
+  '$schema',
+  'sourceLocale',
+  'targetLocale',
+  'documentFormat',
+  'formatOptions',
+  'languages',
+];
+const LANGUAGE_KEYS = ['name', 'dir'];
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -109,6 +126,41 @@ export function parseProjectConfig(text: string): Result<ParsedConfig, InvalidCo
     }
   }
 
+  const languages: ConfiguredLanguage[] = [];
+  const rawLanguages = input.languages ?? {};
+  if (!isRecord(rawLanguages)) {
+    problems.push({ field: 'languages', problem: 'must be an object keyed by locale id' });
+  } else {
+    for (const [code, entry] of Object.entries(rawLanguages)) {
+      const field = `languages.${code}`;
+      const tag = localeId(code);
+      if (!tag.ok) {
+        problems.push({ field, problem: `"${code}" isn't a valid locale id` });
+        continue;
+      }
+      if (!isRecord(entry)) {
+        problems.push({ field, problem: 'must be an object with "name" and/or "dir"' });
+        continue;
+      }
+      const unknownKeys = Object.keys(entry).filter((key) => !LANGUAGE_KEYS.includes(key));
+      if (unknownKeys.length > 0) {
+        problems.push({ field, problem: `unknown key(s): ${unknownKeys.join(', ')}` });
+      }
+      const { name, dir } = entry;
+      if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+        problems.push({ field: `${field}.name`, problem: 'must be a non-empty string' });
+      }
+      if (dir !== undefined && dir !== 'ltr' && dir !== 'rtl') {
+        problems.push({ field: `${field}.dir`, problem: 'must be "ltr" or "rtl"' });
+      }
+      languages.push({
+        tag: tag.value,
+        ...(typeof name === 'string' && name.trim() !== '' ? { name: name.trim() } : {}),
+        ...(dir === 'ltr' || dir === 'rtl' ? { direction: dir } : {}),
+      });
+    }
+  }
+
   if (problems.length > 0 || sourceLocale === undefined || targetLocale === undefined) {
     return err({ code: 'workspace.config-invalid', problems });
   }
@@ -118,6 +170,7 @@ export function parseProjectConfig(text: string): Result<ParsedConfig, InvalidCo
       targetLocale,
       ...(typeof documentFormat === 'string' ? { documentFormat } : {}),
       formatOptions,
+      languages,
     },
     warnings,
   });

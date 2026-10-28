@@ -6,7 +6,7 @@ import type {
   ProjectFiles,
   RegisteredDocumentFormat,
 } from '#domains/formats';
-import { localeFrom, type Locale } from '#domains/locale';
+import { bundledLanguageCatalog, localeFrom, type Locale } from '#domains/locale';
 import { projectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import {
@@ -83,12 +83,14 @@ export function createOpenProject(deps: OpenProjectDependencies): OpenProject {
     });
     if (!layout.ok) return layout;
 
+    // The project's own languages: codes the catalog doesn't know, or adjusted directions.
+    const catalog = bundledLanguageCatalog().withCustom(config.languages);
     const project = {
       name,
       files,
       config,
-      sourceLocale: localeFrom(config.sourceLocale),
-      targetLocale: localeFrom(config.targetLocale),
+      sourceLocale: localeFrom(config.sourceLocale, catalog),
+      targetLocale: localeFrom(config.targetLocale, catalog),
       documentFormat: format.value,
       layout: layout.value,
     };

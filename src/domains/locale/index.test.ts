@@ -4,7 +4,15 @@ import * as locale from '#domains/locale';
 
 describe('#domains/locale public API', () => {
   it('exports exactly the intended names', () => {
-    expect(Object.keys(locale).sort()).toEqual(['localeFrom', 'parseLocale']);
+    expect(Object.keys(locale).sort()).toEqual([
+      'bundledLanguageCatalog',
+      'createLanguageCatalog',
+      'foldForSearch',
+      'localeFrom',
+      'parseLocale',
+      'searchLanguages',
+      'suggestLanguages',
+    ]);
   });
 
   it('works through the alias', () => {

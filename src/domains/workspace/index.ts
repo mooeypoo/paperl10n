@@ -7,6 +7,7 @@ export {
   DEFAULT_SOURCE_LOCALE,
   parseProjectConfig,
   type ConfigProblem,
+  type ConfiguredLanguage,
   type InvalidConfig,
   type ParsedConfig,
   type ProjectConfig,

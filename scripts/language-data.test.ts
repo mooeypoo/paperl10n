@@ -72,8 +72,13 @@ describe('buildLanguageData', () => {
     expect(result.data.languages.map((l) => l.tag)).toEqual(['fil', 'prs', 'sh', 'tl']);
   });
 
-  it('rejects a malformed tag', () => {
-    expect(() => build({ bad: info('bad', { bcp47: 'not a tag!' }) })).toThrow(RangeError);
+  it("leaves out tags Paper Lion can't save: malformed, or with extensions", () => {
+    const result = build({
+      en: info('en'),
+      bad: info('bad', { bcp47: 'not a tag!' }),
+      'nl-u-sd-bebru': info('nl-u-sd-bebru', { bcp47: 'nl-u-SD-bebru' }),
+    });
+    expect(result.data.languages.map((l) => l.tag)).toEqual(['en']);
   });
 
   it('merges codes that share a tag; the code that is the tag wins, the others become aliases', () => {
