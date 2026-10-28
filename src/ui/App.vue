@@ -2,7 +2,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useClient } from './client';
+import AppMark from './components/AppMark.vue';
 import ProjectPanes from './components/ProjectPanes.vue';
+import ThemeSwitch from './components/ThemeSwitch.vue';
 import { useProject } from './composables/use-project';
 import { errorMessage } from './i18n/error-message';
 import { isUiLocale, uiLocales, useI18n } from './i18n/i18n';
@@ -22,7 +24,10 @@ function onLanguageChange(event: Event): void {
 <template>
   <div class="app">
     <header class="app-header">
-      <h1 class="app-title">{{ t('paperl10n-app-name') }}</h1>
+      <div class="app-brand">
+        <AppMark />
+        <h1 class="app-title">{{ t('paperl10n-app-name') }}</h1>
+      </div>
       <button
         type="button"
         class="pl-button"
@@ -41,6 +46,7 @@ function onLanguageChange(event: Event): void {
           </option>
         </select>
       </label>
+      <ThemeSwitch />
     </header>
 
     <main class="app-main">
@@ -72,6 +78,12 @@ function onLanguageChange(event: Event): void {
   padding-inline: var(--pl-space-5);
   border-block-end: 1px solid var(--pl-color-line);
   background: var(--pl-color-bar);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
 }
 
 .app-title {

@@ -31,7 +31,8 @@
     "#adapters/workspace/*": "./src/domains/workspace/adapters/*.ts",
     "#ipc-contract": "./src/shared/ipc-contract/index.ts",
     "#app/*": "./src/app/*.ts",
-    "#ui/mount": "./src/ui/mount.ts"
+    "#ui/mount": "./src/ui/mount.ts",
+    "#assets/*": "./assets/*"
   },
   "scripts": {
     "dev": "node scripts/run-electron.ts electron-vite dev",
@@ -75,6 +76,11 @@
     "vue-tsc": "^3.3.13"
   },
   "dependencies": {
+    "@fontsource-variable/frank-ruhl-libre": "^5.3.0",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/ibm-plex-sans-hebrew": "^5.3.0",
     "banana-i18n": "^2.4.0",
     "vue": "^3.5.44"
   }

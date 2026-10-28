@@ -231,6 +231,12 @@ describe('architecture rules report violations', () => {
       "import { startHarness } from '../ui-harness/harness.ts';\nexport const x = startHarness;\n",
       [RELATIVE, DEPENDENCIES],
     ],
+    [
+      'main importing artwork from assets/ (only the UI uses it so far)',
+      'src/main/sample.ts',
+      "import mark from '#assets/paperl10n-mark.svg';\nexport const x = mark;\n",
+      [DEPENDENCIES],
+    ],
   ])('%s', async (_description, filePath, code, expected) => {
     expect(await ruleIdsFor(filePath, code)).toEqual(expected);
   });
@@ -334,6 +340,11 @@ describe('architecture rules allow the intended dependencies (positive controls)
       'the UI harness wires the shared app/ code and in-memory adapters',
       'src/ui-harness/sample.ts',
       "import { createAppApi } from '#app/create-app-api';\nimport { InMemoryProjectFiles } from '#adapters/formats/in-memory-project-files';\nimport type { ProjectFilesOpener } from '#domains/workspace';\nimport { apiMethods } from '#ipc-contract';\nexport const x = [createAppApi, InMemoryProjectFiles, apiMethods];\nexport type Y = ProjectFilesOpener;\n",
+    ],
+    [
+      'ui imports the mark through #assets',
+      'src/ui/sample.ts',
+      "import mark from '#assets/paperl10n-mark.svg';\nexport const x = mark;\n",
     ],
   ])('%s', async (_description, filePath, code) => {
     expect(await ruleIdsFor(filePath, code)).toEqual([]);

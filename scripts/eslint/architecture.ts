@@ -22,6 +22,8 @@ const elements = [
   { type: 'preload', pattern: 'src/preload', partialMatch: false },
   { type: 'ui', pattern: 'src/ui', partialMatch: false },
   { type: 'ui-harness', pattern: 'src/ui-harness', partialMatch: false },
+  // The mark and other artwork (assets/README.md has their license). Only the UI uses them so far.
+  { type: 'assets', pattern: 'assets', partialMatch: false },
 ];
 
 const files = [
@@ -215,6 +217,7 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
           kernel,
           ipcContract,
           { element: { type: 'ui' } },
+          { element: { type: 'assets' } },
           { module: { origin: 'external', source: '!electron' } },
         ],
       },

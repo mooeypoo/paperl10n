@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/*
+ * The app's fonts, bundled (the CSP allows no remote fonts). All are OFL-1.1, from Fontsource.
+ * Static families import only the subsets and weights the UI uses; the variable families ship one
+ * stylesheet per axis, and the browser downloads only the subsets a page needs (unicode-range).
+ * See docs/adr/0016-fonts-and-themes.md.
+ */
+
+/* Interface: IBM Plex Sans (Latin) + IBM Plex Sans Hebrew, designed as one family. */
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-400.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-500.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-600.css';
+@import '@fontsource/ibm-plex-sans-hebrew/hebrew-400.css';
+@import '@fontsource/ibm-plex-sans-hebrew/hebrew-500.css';
+@import '@fontsource/ibm-plex-sans-hebrew/hebrew-600.css';
+
+/* Code and paths. */
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+
+/* Content (documents): Source Serif 4 (Latin) and Frank Ruhl Libre (Hebrew), both variable. */
+@import '@fontsource-variable/source-serif-4/wght.css';
+@import '@fontsource-variable/source-serif-4/wght-italic.css';
+@import '@fontsource-variable/frank-ruhl-libre/wght.css';

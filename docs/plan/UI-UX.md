@@ -1,7 +1,33 @@
 # After M0: UI and UX design discussion
 
-Status: **discussion seed, not a plan.** We brainstorm and experiment with this after M0 is done,
-and **only if M0 delivers a properly decoupled UI** (the gate below).
+Status: **in progress.** M0 delivered the decoupled UI (the gate below passed). The first pass
+(U1, U2) builds the foundation and direction A's shell with the data that exists today; the
+editor and section view follow when M1/M2 provide content, sections, and status.
+
+## First pass
+
+Decided with the maintainer (2026-10-28): fonts bundled from Fontsource, hand-written SVG icons,
+and this scope: foundation + app shell, with no mock data and no controls that don't work yet.
+
+| Step | What | Status |
+|---|---|---|
+| U1 | Foundation: the mockups' fonts, a system/light/dark theme switch, icons that know whether they mirror in RTL, the mark in the header, saved interface preferences ([ADR 0016](../adr/0016-fonts-and-themes.md)) | done |
+| U2 | Direction A's shell: header (mark, project chip, language pair, theme, interface language), a Pages sidebar with search, the selected document's header and its source/translation panes | next |
+| later | The section view, full page, status and progress, hints, editing (CodeMirror spike first), and the catalog view (C) | with M1–M4 |
+
+U1 done-notes:
+- Fonts: IBM Plex Sans + Plex Sans Hebrew (interface), Source Serif 4 + Frank Ruhl Libre
+  (content; Hebrew leads with Frank Ruhl), IBM Plex Mono. Verified in Chromium: all five load,
+  with no CSP or console errors, in the harness and (by the e2e suite) in the built app.
+- `ThemeSwitch` is a radio group (arrow keys, announced choice); `<html data-theme>` applies it.
+  Preferences live in `localStorage` behind a `PreferenceStore` that tolerates blocked storage.
+  The interface language defaults to the first supported system language.
+- The mark is unmodified; dark themes show it on a light disc. `assets/` became a lint element
+  only the UI may import (sample, control, and mutation check).
+- Found on the way: the e2e tests shared the developer's real profile. Main now honors
+  `--user-data-dir`, each test gets a temporary profile, and a test asserts it (mutation-checked).
+- Open for the maintainer: a real dark-surface variant of the mark (the disc is a stopgap), and
+  whether the content serif pairing reads well at length once real documents render.
 
 ## Decisions so far
 

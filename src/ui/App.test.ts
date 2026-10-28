@@ -3,6 +3,7 @@
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { mountApp } from './mount';
+import { memoryPreferences, type PreferenceStore } from './preferences';
 import { documents, error, fakeClient, summary } from './test-support';
 
 let unmount: (() => void) | undefined;
@@ -11,10 +12,19 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-function start(client: ReturnType<typeof fakeClient>['client'], uiLocale?: 'en' | 'he') {
+function start(
+  client: ReturnType<typeof fakeClient>['client'],
+  uiLocale?: 'en' | 'he',
+  preferences: PreferenceStore = memoryPreferences(),
+  systemLanguages: readonly string[] = ['en-US'],
+) {
   const element = document.createElement('div');
   document.body.append(element);
-  const app = mountApp(element, client, uiLocale === undefined ? {} : { uiLocale });
+  const app = mountApp(element, client, {
+    preferences,
+    systemLanguages,
+    ...(uiLocale === undefined ? {} : { uiLocale }),
+  });
   unmount = () => {
     app.unmount();
   };
@@ -81,6 +91,61 @@ describe('the app', () => {
     expect(document.documentElement.lang).toBe('he');
     expect(document.documentElement.dir).toBe('rtl');
     expect(button(element, 'פתיחת תיקייה…')).toBeDefined();
+  });
+
+  it('remembers the interface language', async () => {
+    const preferences = memoryPreferences();
+    const element = start(fakeClient().client, undefined, preferences);
+    const select = element.querySelector('select');
+    if (select === null) throw new Error('no language selector');
+    select.value = 'he';
+    select.dispatchEvent(new Event('change'));
+    await flushPromises();
+    unmount?.();
+    start(fakeClient().client, undefined, preferences);
+    expect(document.documentElement.lang).toBe('he');
+  });
+
+  it.each<[string, readonly string[], string]>([
+    ['a supported system language', ['he-IL', 'en-US'], 'he'],
+    ['the first supported one', ['fr-FR', 'he', 'en'], 'he'],
+    ['English when none is supported', ['fr-FR', 'de'], 'en'],
+  ])('starts in %s when nothing is saved', (_description, languages, expected) => {
+    start(fakeClient().client, undefined, memoryPreferences(), languages);
+    expect(document.documentElement.lang).toBe(expected);
+  });
+
+  it('ignores a saved language the app no longer has', () => {
+    start(fakeClient().client, undefined, memoryPreferences({ 'ui-locale': 'xx' }), ['en']);
+    expect(document.documentElement.lang).toBe('en');
+  });
+
+  it('switches the theme, and remembers it', async () => {
+    const preferences = memoryPreferences();
+    const element = start(fakeClient().client, undefined, preferences);
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    const dark = element.querySelector<HTMLInputElement>('input[value="dark"]');
+    if (dark === null) throw new Error('no dark theme option');
+    dark.click();
+    await flushPromises();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(preferences.get('theme')).toBe('dark');
+
+    unmount?.();
+    start(fakeClient().client, undefined, preferences);
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    const system = document.querySelector<HTMLInputElement>('input[value="system"]');
+    system?.click();
+    await flushPromises();
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it('labels every theme choice for screen readers', () => {
+    const element = start(fakeClient().client);
+    const labels = [...element.querySelectorAll('.theme-option')].map((label) =>
+      label.textContent.trim(),
+    );
+    expect(labels).toEqual(['Match the system', 'Light', 'Dark']);
   });
 
   it('can start in Hebrew', () => {

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The walking skeleton in the real, built Electron app: sandboxed renderer, preload, IPC, main,
 // the disk adapter, and format-stub. Only the native folder dialog is stubbed (in main).
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   _electron as electron,
@@ -33,11 +35,19 @@ const env = Object.fromEntries(
 );
 
 let app: ElectronApplication;
+let profile: string;
 let page: Page;
 let problems: Problems;
 
 test.beforeEach(async () => {
-  app = await electron.launch({ args: [repoRoot], cwd: repoRoot, env });
+  // A fresh profile per test: tests never read or write the developer's real app profile (and a
+  // running `pnpm dev` holding its storage lock can't slow them down).
+  profile = mkdtempSync(join(tmpdir(), 'paperl10n-e2e-'));
+  app = await electron.launch({
+    args: [`--user-data-dir=${profile}`, repoRoot],
+    cwd: repoRoot,
+    env,
+  });
   page = await app.firstWindow();
 
   // Watch for CSP violations and console errors from the very first script: register the
@@ -69,6 +79,7 @@ test.beforeEach(async () => {
 
 test.afterEach(async () => {
   await app.close();
+  rmSync(profile, { recursive: true, force: true });
 });
 
 /** Makes the next folder dialog in main answer `folder`, as if the user had picked it. */
@@ -115,6 +126,12 @@ test('the renderer has no Node, and the preload exposes exactly the IPC contract
     Object.keys((window as unknown as { paperl10n: object }).paperl10n).sort(),
   );
   expect(exposed).toEqual([...apiMethods].sort());
+});
+
+test('runs in its own profile, not the real one', async () => {
+  expect(await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'))).toBe(
+    profile,
+  );
 });
 
 test("the renderer process runs in Chromium's sandbox", async () => {

@@ -10,8 +10,11 @@ import { createWindowOptions, hardenContents, hardenSession, isAppUrl } from './
 
 const APP_ID = 'io.github.mooeypoo.paperl10n';
 
-// Identifiers use "paperl10n"; "Paper Lion" is only for display (AGENTS.md naming).
-app.setPath('userData', join(app.getPath('appData'), 'paperl10n'));
+// Identifiers use "paperl10n"; "Paper Lion" is only for display (AGENTS.md naming). Chromium's
+// --user-data-dir still wins, for a separate profile (each end-to-end test runs in its own).
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', join(app.getPath('appData'), 'paperl10n'));
+}
 app.setAppUserModelId(APP_ID);
 app.enableSandbox();
 

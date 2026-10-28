@@ -25,5 +25,9 @@
   "paperl10n-error-formats-file-access": "$1 couldn't read $2 ($3).",
   "paperl10n-error-formats-plugin-failed": "The $1 plugin failed unexpectedly: $2",
   "paperl10n-error-internal-unexpected": "Something went wrong inside Paper Lion. Please report it.",
-  "paperl10n-error-internal-invalid-request": "Paper Lion received a request it can't handle. Please report it."
+  "paperl10n-error-internal-invalid-request": "Paper Lion received a request it can't handle. Please report it.",
+  "paperl10n-theme": "Theme",
+  "paperl10n-theme-system": "Match the system",
+  "paperl10n-theme-light": "Light",
+  "paperl10n-theme-dark": "Dark"
 }

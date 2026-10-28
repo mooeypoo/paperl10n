@@ -21,11 +21,14 @@
   --pl-color-danger: #a12a2a;
   --pl-color-danger-surface: #fff0ee;
 
+  /* Bundled fonts first (fonts.css), then each platform's own, so text never goes missing. */
   --pl-font-ui:
-    system-ui, -apple-system, 'Segoe UI', 'Noto Sans', 'Noto Sans Hebrew', 'Noto Sans Arabic',
-    sans-serif;
-  --pl-font-text: ui-serif, 'Iowan Old Style', Georgia, 'Noto Serif', 'Noto Serif Hebrew', serif;
-  --pl-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Noto Sans Mono', monospace;
+    'IBM Plex Sans', 'IBM Plex Sans Hebrew', system-ui, -apple-system, 'Segoe UI', 'Noto Sans',
+    'Noto Sans Hebrew', 'Noto Sans Arabic', sans-serif;
+  --pl-font-text:
+    'Source Serif 4 Variable', 'Frank Ruhl Libre Variable', ui-serif, Georgia, 'Noto Serif',
+    'Noto Serif Hebrew', serif;
+  --pl-font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', monospace;
 
   --pl-text-sm: 0.8125rem;
   --pl-text-md: 0.9375rem;
@@ -44,6 +47,9 @@
   --pl-radius-lg: 0.875rem;
 
   --pl-shadow-sheet: 0 1px 2px rgb(20 33 61 / 6%), 0 8px 24px rgb(20 33 61 / 6%);
+  --pl-shadow-control: 0 1px 2px rgb(20 33 61 / 12%);
+  /* The mark's navy outline vanishes on dark surfaces; dark themes put it on a light disc. */
+  --pl-mark-backing: transparent;
   --pl-control-height: 2.5rem;
 }
 
@@ -64,6 +70,8 @@
     --pl-color-danger: #ff9c8f;
     --pl-color-danger-surface: #2e1a1c;
     --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+    --pl-shadow-control: 0 1px 2px rgb(0 0 0 / 40%);
+    --pl-mark-backing: #f4eee2;
   }
 }
 
@@ -83,4 +91,12 @@
   --pl-color-danger: #ff9c8f;
   --pl-color-danger-surface: #2e1a1c;
   --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+  --pl-shadow-control: 0 1px 2px rgb(0 0 0 / 40%);
+  --pl-mark-backing: #f4eee2;
+}
+
+/* Hebrew content leads with Frank Ruhl Libre, so Latin words inside Hebrew text match it. */
+:lang(he) {
+  --pl-font-text:
+    'Frank Ruhl Libre Variable', 'Source Serif 4 Variable', ui-serif, 'Noto Serif Hebrew', serif;
 }

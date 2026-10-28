@@ -25,5 +25,9 @@
   "paperl10n-error-formats-file-access": "Error. $1: the plugin id; $2: the file's path; $3: the problem code.",
   "paperl10n-error-formats-plugin-failed": "Error when a plugin crashed (a bug in the plugin). $1: the plugin id; $2: technical details.",
   "paperl10n-error-internal-unexpected": "Error for a bug in the app itself.",
-  "paperl10n-error-internal-invalid-request": "Error for a malformed request between the app's own parts (a bug)."
+  "paperl10n-error-internal-invalid-request": "Error for a malformed request between the app's own parts (a bug).",
+  "paperl10n-theme": "Accessible name of the group of theme choices (color scheme of the app).",
+  "paperl10n-theme-system": "Theme choice: follow the operating system's light or dark setting. Shown as a tooltip and read by screen readers.",
+  "paperl10n-theme-light": "Theme choice: always use the light color scheme.",
+  "paperl10n-theme-dark": "Theme choice: always use the dark color scheme."
 }

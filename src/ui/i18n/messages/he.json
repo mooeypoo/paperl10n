@@ -25,5 +25,9 @@
   "paperl10n-error-formats-file-access": "$1 לא הצליח לקרוא את $2 ($3).",
   "paperl10n-error-formats-plugin-failed": "התוסף $1 נכשל באופן לא צפוי: $2",
   "paperl10n-error-internal-unexpected": "משהו השתבש בתוך Paper Lion. נשמח לדיווח.",
-  "paperl10n-error-internal-invalid-request": "Paper Lion קיבל בקשה שאינו יודע לטפל בה. נשמח לדיווח."
+  "paperl10n-error-internal-invalid-request": "Paper Lion קיבל בקשה שאינו יודע לטפל בה. נשמח לדיווח.",
+  "paperl10n-theme": "ערכת צבעים",
+  "paperl10n-theme-system": "לפי המערכת",
+  "paperl10n-theme-light": "בהירה",
+  "paperl10n-theme-dark": "כהה"
 }
