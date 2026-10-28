@@ -129,7 +129,26 @@ check:
   (PRD §7.2): the default section view pairs sections at headings, with per-section status and
   progress; a full-page view is the secondary mode. Never mark a paragraph or line of a
   translation as "missing". Exact per-item status belongs to catalogs (direction C).
-- Raw ↔ preview toggle; how frontmatter fields are edited; placeholders for custom components.
+- Raw ↔ preview toggle; placeholders for custom components.
+
+### Frontmatter as fields (future, to brainstorm)
+
+Raised by the maintainer (2026-10-28). Frontmatter keys (`title`, `description`, `hero.tagline`)
+are always English, and only their values are translated. Editing them as raw YAML is error-prone,
+and worst in RTL: a Hebrew value after an English key reorders the line visually, and it's easy
+to break the YAML or translate a key by accident.
+
+- Show each field as a **read-only key** and an **editable value**: the key in the interface's
+  language and direction (or simply LTR, it's code), the value in the target language with its own
+  `dir`. Like a form, not a text file.
+- Fields that should stay as they are (`template: splash`, `slug`, dates, booleans) are visible but
+  not editable, following the plugin's per-field rules (PRD §7.2: "translatable or keep as-is").
+- The source value sits next to each field as the reference. Nested fields (`hero.tagline`,
+  `hero.actions[0].text`) need a readable shape, not raw paths.
+- Saving must keep the YAML byte-identical outside the edited values: key order, comments, quoting
+  (the CST-preserving YAML library planned for M2, `docs/domains/document.md`).
+- Open questions: how plugins declare the rules (Starlight's `title`, `description`, `sidebar.label`,
+  `hero.*`); what a missing field in the translation looks like; lists and multi-line values.
 
 ### Visual (rendered) editing
 
