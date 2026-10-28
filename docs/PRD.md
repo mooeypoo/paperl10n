@@ -130,7 +130,8 @@ Principles:
 
 ## 10. Milestones (rough)
 - **M0: Skeleton.** Electron + Vue + TS, domain folders, lint boundaries, CI, fixture projects.
-- **M1: Read-only longform.** Open a VitePress project, list pairs with status, and show a static
+- **M1: Read-only longform.** Open a VitePress project, choose source and target locales (design
+  discussion first: `docs/plan/M1-languages.md`), list pairs with status, and show a static
   split view.
 - **M2: Edit and save longform.** Seed from source, edit the target, and save with round-trip safety.
 - **M3: Sync.** Block alignment, synced scroll and selection, and misalignment hints.

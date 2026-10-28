@@ -22,10 +22,14 @@ src/
   domains/<domain>/
     domain/          # entities, value objects, domain services. Pure TS. No I/O.
     application/     # use cases + port interfaces (what the domain needs from outside)
-    adapters/        # implementations of ports (fs, IPC, parsers, site-format plugins)
+    adapters/        # implementations of ports (fs, Electron, parser libraries)
+    testing/         # optional: in-memory fakes and test kits, importable only by tests
     index.ts         # the ONLY public entry point of the domain
-  shared/kernel/     # tiny cross-domain primitives (Result, Locale id, ids). Keep minimal.
-  app/               # composition root: wires adapters into use cases
+  plugins/<name>/    # built-in format plugins, self-contained (see "Formats are plugins")
+  shared/
+    kernel/          # tiny cross-domain primitives (Result, Locale id, ids). Keep minimal.
+    ipc-contract.ts  # the typed renderer↔main API, defined once
+  app/               # composition root: wires adapters and plugins into use cases
   main/ preload/     # Electron processes, thin
   ui/                # Vue app. A replaceable adapter, nothing more.
 ```
@@ -45,12 +49,21 @@ Initial domains (add new ones only via ADR):
 4. `ui/` talks to use cases only (through composables). No business logic in components.
 5. Dependencies point inward. Nothing imports from `app/` except entry points.
 6. No circular dependencies between domains. If two domains need each other, the model is wrong.
+   Allowed domain → domain edges are declared in `scripts/domain-graph.js`; adding one is a reviewed change.
+7. Imports go through subpath aliases (`#domains/<domain>`, `#kernel/<module>`, `#plugin-api`),
+   which resolve only to entry points, so deep imports into another domain don't resolve.
+   Two narrow exceptions: `app/` may import adapter files directly (it's the composition root),
+   and `*.test.ts` files may import a domain's `testing/` entry.
 
-Enforcement: `eslint-plugin-boundaries` (or dependency-cruiser) runs in CI and pre-commit.
+Enforcement: `eslint-plugin-boundaries` (rules), a TypeScript project for pure code without Node or
+DOM types (purity), and architecture tests that lint known-bad samples (so rules can't silently rot).
+All run in CI and pre-commit.
 
 ## Electron boundary
 - `contextIsolation: true`, `nodeIntegration: false`, sandboxed renderer.
-- The renderer never touches Node. The preload exposes a **typed IPC contract** defined in one place.
+- The renderer never touches Node. The preload exposes a **typed IPC contract** defined in one place:
+  `src/shared/ipc-contract.ts`. It carries plain DTOs, not domain types.
+- The renderer never sends filesystem paths. Main picks folders and hands back opaque handles.
 - All file I/O happens in main, behind ports.
 
 ## Formats are plugins
@@ -64,6 +77,14 @@ with zero changes to domain code. Details: `docs/domains/formats.md`.
 Naming: plugins are `@paperl10n/format-<system>` (longform) and `@paperl10n/catalog-<system>` (strings).
 Use these names for built-in plugins too, so any of them can be extracted into its own package.
 
+Built-in plugins live in `src/plugins/<name>/` and are written as if they were already packages:
+- **Self-contained folder:** `paperl10n-plugin.json` (manifest), `index.ts`, source, tests,
+  `fixtures/`, `README.md`. Moving the folder out must not require touching anything else.
+- **Imports only `#plugin-api`** (the narrow plugin surface of `formats`) and the external
+  libraries its manifest declares. Never other plugins, never domain internals, never fs/Electron.
+- **Only `app/` imports a plugin**, through its `index.ts`. Core code never names a plugin.
+- The manifest is data and the single source of the plugin's id, kind, and API version.
+
 ## UI and design
 - The UI is swappable. Vue lives only in `ui/`, and its state comes from use cases.
 - Styling uses design tokens (CSS custom properties). No hard-coded colors or spacing.
@@ -73,14 +94,17 @@ Use these names for built-in plugins too, so any of them can be extracted into i
 
 ## Testing
 - Domain and application layers get unit tests with in-memory port fakes. No mocking libraries needed.
-- Every format adapter has fixture-based tests (a sample project in `tests/fixtures/<format>/`).
+- Every format plugin has fixture-based tests (sample projects in `src/plugins/<name>/fixtures/`)
+  and passes the shared plugin contract test kit. Other adapters keep fixtures in `tests/fixtures/`.
 - Round-trip rule: parse → serialize must not change a document that wasn't edited.
 
 ## Working style for agents
 - Make small, focused changes. Leave the build, lint, and tests green.
 - New domain, new layer, or a broken rule → write an ADR in `docs/adr/NNNN-title.md` first.
 - Update the relevant `docs/` file when behavior or contracts change.
-- Prefer explicit names over clever ones. No barrel re-exports except each domain's `index.ts`.
+- Prefer explicit names over clever ones. No barrel re-exports except each domain's `index.ts`,
+  its optional `testing/index.ts`, and `formats`' `plugin-api.ts`.
+- Source files start with `SPDX-License-Identifier: GPL-3.0-or-later` (fixtures and JSON exempt).
 
 ## More docs (create as they become relevant)
 - `docs/PRD.md`: product scope, glossary, milestones, open questions.
