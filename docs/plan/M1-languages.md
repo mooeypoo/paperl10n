@@ -1,7 +1,7 @@
 # M1 discussion: the language picker and language data
 
-Status: **round 1 decided (2026-10-28)**, see [Decided](#decided-round-1). The remaining open
-questions are at the end of that section. The original seed follows, for context.
+Status: **decided (2026-10-28), ready to build.** See [Decided](#decided-round-1),
+[Round 2](#decided-round-2), and the [steps](#steps). The original seed follows, for context.
 
 ## Decided (round 1)
 
@@ -44,17 +44,36 @@ Each row: the autonym in its own `lang`/`dir`, the name in the interface languag
 from `languageinfo` with `uselang`, so minority languages are named too (`Intl.DisplayNames`
 doesn't know many of them).
 
-### Still open (round 2)
+## Decided (round 2)
 
-- Where the picker lives and when it opens (the header's language pair as a button; on opening a
-  project without a target language).
-- Codes the catalog doesn't know (a project's own code, a constructed language): shown how, and can
-  the user set its direction and name (in the config)?
-- Browse by region (as ULS does) in addition to search, or search only.
-- Whether choosing a language ever creates anything in the project (a locale folder), or only
-  writes the config (M1) while files come with editing (M2).
-- Whether plugins get a code-mapping hook in the contract (`toLocaleId`/`fromLocaleId`), before
-  more plugins exist; fallback chains (`pt-BR` → `pt`) probably wait for catalogs (M4).
+| Topic | Decision |
+|---|---|
+| Placement | The header's language pair becomes a button: each side opens the picker (the target most often). The picker also opens by itself when a project's config has no target language, instead of today's error. |
+| Unknown codes | Allowed. Shown with the code and an "unknown language" note; the user can give it a name and direction, saved in `paperl10n.config.json` (shared with the team), so nothing is guessed silently. |
+| Browse by region | Not now: sections + search. The ULS region data will already be in the file for later. |
+| Creating things | Choosing a language writes only the config in M1, atomically (Paper Lion's first small write). Folders and files appear when you start translating a page (M2, "seed from source"). |
+| Plugin code mapping | **Deferred to M4** (decided by the agent, to revisit): `format-starlight` maps codes internally, and the first plugin that needs a contract hook is banana-i18n. Fallback chains (`pt-BR` → `pt`) also wait for catalogs. |
+
+## Steps
+
+Each is its own branch and PR, as in M0.
+
+- **L1, the data:** `scripts/update-language-data.ts` (both sources, names in each interface
+  language via `uselang`), the committed JSON in `src/domains/locale/data/`, and tests that
+  validate it (unique BCP 47 tags, a direction and an autonym for each, RTL agreeing with ULS's
+  RTL scripts, aliases pointing at real entries). Attribution for both sources.
+- **L2, the `locale` domain:** a `LanguageCatalog` (lookup by BCP 47 tag or alias, direction,
+  names); `localeFrom` uses it instead of M0's RTL table; custom languages from the config
+  (`languages: { "<code>": { "name", "dir" } }`); pure search ranking and suggestion rules
+  (project languages, recents, OS languages, region), with table tests.
+- **L3, the use cases and IPC:** list the project's languages (from the plugin: declared locales
+  and existing locale folders), search and suggestions, and choosing a target. Opening a project
+  without a target language returns a "needs a target" state instead of an error.
+- **L4, writing the config:** an atomic `ProjectWriter` port (temp file + rename) with its
+  contract suite, and a config update that changes only the language fields, keeping the rest
+  of the file byte for byte. Per-user recents live in the renderer's preferences (ADR 0016).
+- **L5, the picker:** the header button, the dialog (sections, search, keyboard and screen
+  reader support, each name with its own `lang`/`dir`), and the opened-without-target flow.
 
 ## Why it matters
 
