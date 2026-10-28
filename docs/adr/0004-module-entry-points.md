@@ -56,3 +56,17 @@ Imports should also be short, uniform, and impossible to aim at a domain's inter
   (a deep `#domains/…/domain/x` import fails with TS2307).
 - When a plugin is extracted, its `#plugin-api` imports change to `@paperl10n/plugin-api`, a
   one-line change per file.
+
+## Amendment (2026-10-28, M0 step 8)
+
+`app/` importing adapters "directly" needs an alias too: a relative path from `src/app/` into a
+domain is (rightly) rejected by the no-relative-cross-unit rule. So each domain that has
+adapters gets one `imports` entry:
+
+| Alias | Resolves to |
+|---|---|
+| `#adapters/<domain>/<file>` | `src/domains/<domain>/adapters/<file>.ts` |
+
+Node's subpath patterns allow a single `*`, so there's one line per domain
+(`"#adapters/formats/*": "./src/domains/formats/adapters/*.ts"`). Lint allows the alias only from
+`app/`, the domain's own adapters and `testing/`, and tests.

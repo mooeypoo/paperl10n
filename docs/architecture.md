@@ -73,7 +73,7 @@ import { createFormatRegistry } from '#domains/formats';
 ```
 
 Relative imports (`./`, `../`) stay inside one domain, plugin, or layer. `app/` is the only place
-that imports concrete adapters and plugins.
+that imports concrete adapters (`#adapters/<domain>/<file>`) and plugins.
 
 ## How the rules are enforced
 

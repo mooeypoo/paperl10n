@@ -24,7 +24,8 @@
     "#domains/*": "./src/domains/*/index.ts",
     "#domain-testing/*": "./src/domains/*/testing/index.ts",
     "#plugin-api": "./src/domains/formats/plugin-api.ts",
-    "#plugin-api/testing": "./src/domains/formats/plugin-api-testing.ts"
+    "#plugin-api/testing": "./src/domains/formats/plugin-api-testing.ts",
+    "#adapters/formats/*": "./src/domains/formats/adapters/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --build",

@@ -129,6 +129,18 @@ describe('architecture rules report violations', () => {
       [DEPENDENCIES],
     ],
     [
+      'index.ts exposing an adapter (adapters are for app/ only)',
+      'src/domains/formats/index.ts',
+      "export { openNodeProjectFiles } from './adapters/node-project-files.ts';\n",
+      [DEPENDENCIES],
+    ],
+    [
+      "another domain using formats' adapter",
+      'src/domains/workspace/application/sample.ts',
+      "import { openNodeProjectFiles } from '#adapters/formats/node-project-files';\nexport const x = openNodeProjectFiles;\n",
+      [DEPENDENCIES],
+    ],
+    [
       "production code importing a domain's test support",
       'src/domains/workspace/application/sample.ts',
       "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
@@ -187,6 +199,11 @@ describe('architecture rules allow the intended dependencies (positive controls)
       "a test imports another domain's test support",
       'src/domains/workspace/application/sample.test.ts',
       "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
+    ],
+    [
+      'app imports an adapter through #adapters',
+      'src/app/sample.ts',
+      "import { openNodeProjectFiles } from '#adapters/formats/node-project-files';\nexport const x = openNodeProjectFiles;\n",
     ],
     [
       'ui imports the kernel',

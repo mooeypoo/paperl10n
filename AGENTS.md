@@ -52,7 +52,8 @@ Initial domains (add new ones only via ADR):
    Allowed domain → domain edges are declared in `scripts/domain-graph.ts`; adding one is a reviewed change.
 7. Imports go through subpath aliases (`#domains/<domain>`, `#kernel/<module>`, `#plugin-api`),
    which resolve only to entry points, so deep imports into another domain don't resolve.
-   Two narrow exceptions: `app/` may import adapter files directly (it's the composition root),
+   Two narrow exceptions: `app/` may import adapter files directly, via `#adapters/<domain>/<file>`
+   (it's the composition root),
    and `*.test.ts` files may import a domain's `testing/` entry.
 
 Enforcement: `eslint-plugin-boundaries` (rules), a TypeScript project for pure code without Node or

@@ -96,6 +96,13 @@ project-relative listings; `.git` and `node_modules` skipped at any depth (other
 `.vitepress` are kept); text returned exactly as stored (BOM and CRLF kept); UTF-8 only. Errors:
 `files.not-found`, `not-a-directory`, `not-a-file`, `not-utf8`, `unreadable`, `outside-project`.
 
+The disk implementation is `openNodeProjectFiles(root)` (`#adapters/formats/node-project-files`,
+for `app/` only). It resolves symlinks. A link to a file inside the project is listed and readable;
+anything whose real location is outside the project is never listed, and reading it gives
+`files.outside-project`. Symlinked folders aren't followed when listing, which also rules out
+loops. Opening a missing or non-folder root fails with `files.root-not-found` or
+`files.root-not-a-directory`.
+
 ## The registry
 
 `createFormatRegistry(modules, host)` validates every manifest, creates every plugin, and fails
