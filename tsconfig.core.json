@@ -1,0 +1,14 @@
+{
+  // Pure code: no Node, no DOM. Importing node:* or using window/process here is a type error.
+  // See docs/plan/M0.md §3.1.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": [],
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsbuild/core",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuild/core.tsbuildinfo"
+  },
+  "include": ["src/shared/kernel/**/*.ts"],
+  "exclude": ["**/*.test.ts"]
+}

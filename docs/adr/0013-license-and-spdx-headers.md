@@ -26,7 +26,7 @@ later, so per-file and per-package license information should already be correct
   users' projects and must stay byte-exact for round-trip tests; JSON files, which have no comment
   syntax; Markdown documentation; and `LICENSE`.
 - No per-file copyright line. Authorship lives in the README, the package metadata, and git history.
-- A check script (`scripts/check-spdx.mjs`, added in M0 step 3) enforces headers as part of
+- A check script (`scripts/check-spdx.ts`, added in M0 step 3) enforces headers as part of
   `pnpm lint`, and adds missing ones with `--fix`.
 
 ## Alternatives considered

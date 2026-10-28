@@ -1,0 +1,35 @@
+{
+  "name": "@paperl10n/desktop",
+  "productName": "Paper Lion",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Side-by-side translation for Markdown docs sites and message catalogs, with first-class RTL support.",
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "Moriel",
+    "url": "https://moriel.tech"
+  },
+  "homepage": "https://github.com/mooeypoo/paperl10n",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mooeypoo/paperl10n.git"
+  },
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "imports": {
+    "#kernel/*": "./src/shared/kernel/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

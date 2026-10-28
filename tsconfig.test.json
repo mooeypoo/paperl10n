@@ -1,0 +1,13 @@
+{
+  // Tests and test support. Vitest's types bring Node globals, so tests live in their own project.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsbuild/test",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuild/test.tsbuildinfo"
+  },
+  "include": ["src/**/*.test.ts", "tests/**/*.ts", "vitest.config.ts"],
+  "references": [{ "path": "./tsconfig.core.json" }]
+}
