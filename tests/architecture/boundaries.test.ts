@@ -183,6 +183,54 @@ describe('architecture rules report violations', () => {
       "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
       [DEPENDENCIES],
     ],
+    [
+      'shared app/ code importing the Node composition root (app/ stays pure)',
+      'src/app/sample.ts',
+      "import { createElectronAppApi } from './node/composition-root.ts';\nexport const x = createElectronAppApi;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the UI harness importing Node (it runs in a browser)',
+      'src/ui-harness/sample.ts',
+      "import { readFile } from 'node:fs/promises';\nexport const x = readFile;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the UI harness importing electron',
+      'src/ui-harness/sample.ts',
+      "import { ipcRenderer } from 'electron';\nexport const x = ipcRenderer;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the UI harness importing the Electron composition root',
+      'src/ui-harness/sample.ts',
+      "import { createElectronAppApi } from '#app/node/composition-root';\nexport const x = createElectronAppApi;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the UI harness reaching past mountApp() into the UI',
+      'src/ui-harness/sample.ts',
+      "import { useClient } from '../ui/client.ts';\nexport const x = useClient;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
+    [
+      "the UI harness importing a domain's test support (it pulls in Vitest)",
+      'src/ui-harness/sample.ts',
+      "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the UI importing the UI harness (nothing may)',
+      'src/ui/sample.ts',
+      "import { startHarness } from '../ui-harness/harness.ts';\nexport const x = startHarness;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
+    [
+      'app/ importing the UI harness (nothing may)',
+      'src/app/sample.ts',
+      "import { startHarness } from '../ui-harness/harness.ts';\nexport const x = startHarness;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
   ])('%s', async (_description, filePath, code, expected) => {
     expect(await ruleIdsFor(filePath, code)).toEqual(expected);
   });
@@ -271,6 +319,21 @@ describe('architecture rules allow the intended dependencies (positive controls)
       'ui imports the kernel',
       'src/ui/sample.ts',
       "import { ok } from '#kernel/result';\nexport const x = ok;\n",
+    ],
+    [
+      'the Node composition root imports the shared app wiring',
+      'src/app/node/sample.ts',
+      "import { createAppApi } from '../create-app-api.ts';\nexport const x = createAppApi;\n",
+    ],
+    [
+      'the UI harness mounts the UI through #ui/mount',
+      'src/ui-harness/sample.ts',
+      "import { mountApp } from '#ui/mount';\nexport const x = mountApp;\n",
+    ],
+    [
+      'the UI harness wires the shared app/ code and in-memory adapters',
+      'src/ui-harness/sample.ts',
+      "import { createAppApi } from '#app/create-app-api';\nimport { InMemoryProjectFiles } from '#adapters/formats/in-memory-project-files';\nimport type { ProjectFilesOpener } from '#domains/workspace';\nimport { apiMethods } from '#ipc-contract';\nexport const x = [createAppApi, InMemoryProjectFiles, apiMethods];\nexport type Y = ProjectFilesOpener;\n",
     ],
   ])('%s', async (_description, filePath, code) => {
     expect(await ruleIdsFor(filePath, code)).toEqual([]);

@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+import type { PaperLionApi } from '#ipc-contract';
+
+async function crossing<T>(call: () => Promise<T>): Promise<T> {
+  return structuredClone(await call());
+}
+
+/**
+ * Stands in for IPC: requests and results are structured-cloned, as Electron does between
+ * processes. So the UI gets copies, never shared objects, and a result that couldn't cross IPC
+ * (a function, a class instance with private fields) rejects here too. Listing the methods
+ * explicitly means a new API method is a compile error here.
+ */
+export function cloningTransport(api: PaperLionApi): PaperLionApi {
+  return {
+    openProject: () => crossing(() => api.openProject()),
+    listSourceDocuments: (request) =>
+      crossing(() => api.listSourceDocuments(structuredClone(request))),
+  };
+}

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { localeId } from '#kernel/locale-id';
 import { createFormatRegistry } from '../application/format-registry.ts';
 import { detects, fakeDocumentPlugin } from './fake-plugins.ts';
-import { InMemoryProjectFiles } from './in-memory-project-files.ts';
+import { InMemoryProjectFiles } from '../adapters/in-memory-project-files.ts';
 import { fixtureChecks, type FixtureUnderTest } from './plugin-contract.ts';
 
 const tree = { 'en/a.md': '', 'en/guide/b.md': '', 'he/a.md': '' };

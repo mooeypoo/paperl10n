@@ -10,7 +10,7 @@ import { err, ok } from '#kernel/result';
 import type { Detection } from '../domain/detection.ts';
 import type { DocumentFormat, DocumentLayout } from '../application/ports/document-format.ts';
 import type { PluginModule } from '../application/ports/plugin-module.ts';
-import { InMemoryProjectFiles } from './in-memory-project-files.ts';
+import { InMemoryProjectFiles } from '../adapters/in-memory-project-files.ts';
 import {
   fixtureChecks,
   pluginChecks,

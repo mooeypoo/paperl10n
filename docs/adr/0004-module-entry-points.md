@@ -77,3 +77,15 @@ The IPC contract is a folder, `src/shared/ipc-contract/` (`#ipc-contract` →
 `src/shared/ipc-contract/index.ts`), not a single file. That way it's an architectural element
 like the kernel: it may import only kernel types, and lint checks who may import it (`app/`,
 `main/`, `preload/`, `ui/`).
+
+## Amendment (2026-10-28, M0 step 14)
+
+Two more aliases, for the browser UI harness (ADR 0015):
+
+| Alias | Resolves to |
+|---|---|
+| `#ui/mount` | `src/ui/mount.ts`, the UI's one entry point (`mountApp`) |
+| `#app/<file>` | `src/app/<file>.ts` (added in step 12, for `main/`; now also used by the harness) |
+
+Lint allows `#ui/mount` only from the harness. `app/node/` is now its own lint element
+(`app-node`): `main/` may import it, shared `app/` code and the harness may not.

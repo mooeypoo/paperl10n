@@ -16,6 +16,6 @@
     "tests/**/*.ts",
     "vitest.config.ts"
   ],
-  "exclude": ["tests/fixtures/**", "src/plugins/*/fixtures/**", "src/ui/**"],
+  "exclude": ["tests/fixtures/**", "src/plugins/*/fixtures/**", "src/ui/**", "src/ui-harness/**"],
   "references": [{ "path": "./tsconfig.core.json" }, { "path": "./tsconfig.node.json" }]
 }

@@ -7,12 +7,15 @@ import {
   type ProjectFiles,
 } from '../application/ports/project-files.ts';
 
-/** A file tree for tests: project-relative path → content (bytes for non-UTF-8 content). */
+/** A file tree: project-relative path → content (bytes for non-UTF-8 content). */
 export type FileTree = Readonly<Record<string, string | Uint8Array>>;
 
 const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
-/** `ProjectFiles` over an in-memory tree. Passes the same contract suite as the real adapter. */
+/**
+ * `ProjectFiles` over an in-memory tree. Passes the same contract suite as the Node adapter. Tests
+ * use it as a fake, and the browser UI harness uses it as its real file system (ADR 0015).
+ */
 export class InMemoryProjectFiles implements ProjectFiles {
   readonly #files = new Map<ProjectPath, string | Uint8Array>();
   readonly #directories = new Set<string>(['']);

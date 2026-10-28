@@ -17,7 +17,7 @@ import type { FormatError } from '../application/ports/plugin-error.ts';
 import type { PluginModule } from '../application/ports/plugin-module.ts';
 import type { ProjectFiles } from '../application/ports/project-files.ts';
 import { parsePluginManifest } from '../domain/plugin-manifest.ts';
-import { InMemoryProjectFiles } from './in-memory-project-files.ts';
+import { InMemoryProjectFiles } from '../adapters/in-memory-project-files.ts';
 
 export interface PluginFixture {
   /** A short name for test titles. */

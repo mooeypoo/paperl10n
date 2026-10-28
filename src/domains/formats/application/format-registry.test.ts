@@ -4,7 +4,7 @@ import { documentKey, type SourceDocument } from '#domains/document';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
 import { err, ok } from '#kernel/result';
-import { InMemoryProjectFiles } from '../testing/in-memory-project-files.ts';
+import { InMemoryProjectFiles } from '../adapters/in-memory-project-files.ts';
 import type { Detection } from '../domain/detection.ts';
 import type { CatalogFormat, CatalogLocation, ParsedCatalog } from './ports/catalog-format.ts';
 import type { DocumentFormat, DocumentLayout } from './ports/document-format.ts';

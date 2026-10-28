@@ -32,6 +32,7 @@ src/
   app/               # wiring: pure app API shared by every composition root; app/node/ for Electron
   main/ preload/     # Electron processes, thin
   ui/                # Vue app. A replaceable adapter, nothing more.
+  ui-harness/        # dev-only browser root for the UI over in-memory fixtures; never shipped (ADR 0015)
 ```
 
 Initial domains (add new ones only via ADR):

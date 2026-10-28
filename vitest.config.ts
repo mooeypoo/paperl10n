@@ -9,7 +9,7 @@ export default defineConfig({
         test: {
           name: 'node',
           include: ['src/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/**/*.test.ts'],
-          exclude: ['src/ui/**'],
+          exclude: ['src/ui/**', 'src/ui-harness/**'],
           environment: 'node',
         },
       },
@@ -17,7 +17,7 @@ export default defineConfig({
         plugins: [vue()],
         test: {
           name: 'ui',
-          include: ['src/ui/**/*.test.ts'],
+          include: ['src/ui/**/*.test.ts', 'src/ui-harness/**/*.test.ts'],
           environment: 'happy-dom',
         },
       },

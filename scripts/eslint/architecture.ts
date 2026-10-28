@@ -15,10 +15,13 @@ const elements = [
   { type: 'ipc-contract', pattern: 'src/shared/ipc-contract', partialMatch: false },
   { type: 'domain', pattern: 'src/domains/*', capture: ['domain'], partialMatch: false },
   { type: 'plugin', pattern: 'src/plugins/*', capture: ['plugin'], partialMatch: false },
+  // The Node composition root is its own element, so pure app/ code and the UI harness can't use it.
+  { type: 'app-node', pattern: 'src/app/node', partialMatch: false },
   { type: 'app', pattern: 'src/app', partialMatch: false },
   { type: 'main', pattern: 'src/main', partialMatch: false },
   { type: 'preload', pattern: 'src/preload', partialMatch: false },
   { type: 'ui', pattern: 'src/ui', partialMatch: false },
+  { type: 'ui-harness', pattern: 'src/ui-harness', partialMatch: false },
 ];
 
 const files = [
@@ -30,6 +33,7 @@ const files = [
   { category: 'plugin-entry', pattern: 'src/plugins/*/index.ts' },
   { category: 'plugin-api', pattern: 'src/domains/formats/plugin-api.ts' },
   { category: 'plugin-api-testing', pattern: 'src/domains/formats/plugin-api-testing.ts' },
+  { category: 'ui-mount', pattern: 'src/ui/mount.ts' },
   { category: 'test', pattern: '**/*.test.ts' },
 ];
 
@@ -163,6 +167,15 @@ export function pluginPolicies({
   ];
 }
 
+// What a composition root may wire: domains (index.ts and adapters), plugins (index.ts), libraries.
+const compositionRootTargets = [
+  kernel,
+  ipcContract,
+  inDomain('*', ['entry', 'adapters']),
+  { element: { type: 'plugin' }, file: { categories: 'plugin-entry' } },
+  anyExternal,
+];
+
 function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy[] {
   return [
     { from: kernel, allow: { to: kernel } },
@@ -172,23 +185,21 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
     ...pluginApiPolicies,
     ...plugins.flatMap(pluginPolicies),
     // The composition root wires domains (through their index.ts, plus adapters directly) and
-    // plugins (through their index.ts). Not the UI or the Electron entry points.
+    // plugins (through their index.ts). Not the UI or the Electron entry points. Shared app/ code
+    // stays pure; only app/node/ may use the Node wiring.
     {
       from: { element: { type: 'app' } },
-      allow: {
-        to: [
-          kernel,
-          ipcContract,
-          inDomain('*', ['entry', 'adapters']),
-          { element: { type: 'plugin' }, file: { categories: 'plugin-entry' } },
-          { element: { type: 'app' } },
-          anyExternal,
-        ],
-      },
+      allow: { to: [...compositionRootTargets, { element: { type: 'app' } }] },
+    },
+    {
+      from: { element: { type: 'app-node' } },
+      allow: { to: [...compositionRootTargets, { element: { type: ['app', 'app-node'] } }] },
     },
     {
       from: { element: { type: 'main' } },
-      allow: { to: [kernel, ipcContract, { element: { type: ['app', 'main'] } }, anyExternal] },
+      allow: {
+        to: [kernel, ipcContract, { element: { type: ['app', 'app-node', 'main'] } }, anyExternal],
+      },
     },
     {
       from: { element: { type: 'preload' } },
@@ -204,6 +215,23 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
           kernel,
           ipcContract,
           { element: { type: 'ui' } },
+          { module: { origin: 'external', source: '!electron' } },
+        ],
+      },
+    },
+    // The browser UI harness (a testing aid, ADR 0015) is a composition root for the browser:
+    // shared app/ code, in-memory adapters, and the UI through mountApp() only. Never Node or
+    // Electron, and nothing imports it.
+    {
+      from: { element: { type: 'ui-harness' } },
+      allow: {
+        to: [
+          kernel,
+          ipcContract,
+          inDomain('*', ['entry', 'adapters']),
+          { element: { type: 'app' } },
+          { element: { type: 'ui' }, file: { categories: 'ui-mount' } },
+          { element: { type: 'ui-harness' } },
           { module: { origin: 'external', source: '!electron' } },
         ],
       },

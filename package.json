@@ -30,11 +30,13 @@
     "#plugins/*": "./src/plugins/*/index.ts",
     "#adapters/workspace/*": "./src/domains/workspace/adapters/*.ts",
     "#ipc-contract": "./src/shared/ipc-contract/index.ts",
-    "#app/*": "./src/app/*.ts"
+    "#app/*": "./src/app/*.ts",
+    "#ui/mount": "./src/ui/mount.ts"
   },
   "scripts": {
     "dev": "node scripts/run-electron.ts electron-vite dev",
-    "build": "electron-vite build",
+    "build": "electron-vite build && node scripts/check-app-build.ts",
+    "dev:harness": "vite --config vite.harness.config.ts",
     "preview": "node scripts/run-electron.ts electron-vite preview",
     "typecheck": "vue-tsc --build",
     "lint": "node scripts/check-spdx.ts && eslint . --cache --cache-location node_modules/.cache/eslint/ && stylelint \"src/**/*.{css,vue}\" --cache --cache-location node_modules/.cache/stylelint/",

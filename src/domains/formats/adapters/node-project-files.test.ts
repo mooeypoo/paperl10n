@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
 import type { ProjectFiles } from '../application/ports/project-files.ts';
-import type { FileTree } from '../testing/in-memory-project-files.ts';
+import type { FileTree } from './in-memory-project-files.ts';
 import { describeProjectFilesContract } from '../testing/project-files-contract.ts';
 import { openNodeProjectFiles } from './node-project-files.ts';
 

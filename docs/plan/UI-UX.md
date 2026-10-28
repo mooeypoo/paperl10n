@@ -42,7 +42,7 @@ check:
       hard-coded values.
 - [x] Every string comes from the message files (`en.json` / `qqq.json`), so a new design can
       relabel anything without touching logic.
-- [ ] A **browser UI harness** (`pnpm dev:harness`, M0 step 14). It runs `src/ui/` in a normal
+- [x] A **browser UI harness** (`pnpm dev:harness`, M0 step 14, ADR 0015). It runs `src/ui/` in a normal
       browser on the *real* app wiring (use cases, registry, plugins) over in-memory fixture
       projects. It's a development and testing aid: the strongest proof of decoupling, and the
       fastest loop for design experiments. **Paper Lion stays a desktop app**: the harness is

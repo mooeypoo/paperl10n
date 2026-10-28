@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
 import type { ProjectFiles } from '../application/ports/project-files.ts';
-import type { FileTree } from './in-memory-project-files.ts';
+import type { FileTree } from '../adapters/in-memory-project-files.ts';
 
 function p(raw: string): ProjectPath {
   const path = projectPath(raw);

@@ -1,0 +1,19 @@
+{
+  // The browser UI harness (ADR 0015): browser code like the renderer (DOM, no Node), which also
+  // wires the shared app code and the in-memory adapters.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsbuild/harness",
+    "tsBuildInfoFile": "node_modules/.cache/tsbuild/harness.tsbuildinfo"
+  },
+  "include": ["src/ui-harness/**/*.ts"],
+  "exclude": ["**/*.test.ts"],
+  "references": [
+    { "path": "./tsconfig.core.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.web.json" }
+  ]
+}

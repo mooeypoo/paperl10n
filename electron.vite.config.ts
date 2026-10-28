@@ -2,25 +2,7 @@
 import { resolve } from 'node:path';
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'electron-vite';
-import type { Plugin } from 'vite';
-import { contentSecurityPolicy } from './scripts/csp.ts';
-
-function cspPlugin(): Plugin {
-  let mode: 'development' | 'production' = 'production';
-  return {
-    name: 'paperl10n-csp',
-    configResolved(config) {
-      mode = config.command === 'serve' ? 'development' : 'production';
-    },
-    transformIndexHtml: () => [
-      {
-        tag: 'meta',
-        attrs: { 'http-equiv': 'Content-Security-Policy', content: contentSecurityPolicy(mode) },
-        injectTo: 'head-prepend',
-      },
-    ],
-  };
-}
+import { cspPlugin } from './scripts/vite-csp-plugin.ts';
 
 export default defineConfig({
   main: {
