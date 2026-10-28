@@ -38,6 +38,10 @@ server, hot reload, and production builds, sharing Vite's config with Vitest.
   `rollupOptions`).
 - Electron 45 downloads its binary lazily on first use, not in an install script, so pnpm's
   build-script allowlist needs no entry for it.
-- On Ubuntu 24.04, Chromium's sandbox works on the maintainer's machine despite
-  `kernel.apparmor_restrict_unprivileged_userns=1`. CI's e2e job (step 15) will confirm the same on
-  GitHub's runners, and must never fall back to `--no-sandbox`.
+- **Correction (same day):** an earlier version of this ADR said Chromium's sandbox worked on the
+  maintainer's Ubuntu 24.04 machine despite `kernel.apparmor_restrict_unprivileged_userns=1`. It
+  only worked because the test launch ran inside VS Code, whose AppArmor profile allows user
+  namespaces and is inherited by its children. From a normal terminal, Electron aborts. The fix is
+  a one-time AppArmor profile for the project's Electron
+  ([`docs/development/linux-sandbox.md`](../development/linux-sandbox.md)), and `pnpm dev` warns
+  when it's missing. The renderer never runs with `--no-sandbox`, in development or CI.

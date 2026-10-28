@@ -38,6 +38,10 @@ pnpm test:watch     # tests, re-run on change
 pnpm build          # production build into out/
 ```
 
+**On Ubuntu 23.10+**, Electron's sandbox needs a one-time AppArmor profile:
+[docs/development/linux-sandbox.md](docs/development/linux-sandbox.md). `pnpm dev` tells you when
+it's missing.
+
 `pnpm dev` removes `ELECTRON_RUN_AS_NODE` from the environment before starting Electron. VS Code
 sets it for processes its extensions start, and it would make Electron run as plain Node.
 
