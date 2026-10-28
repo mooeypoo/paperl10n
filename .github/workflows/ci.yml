@@ -15,8 +15,14 @@ concurrency:
 
 jobs:
   check:
-    name: Check
-    runs-on: ubuntu-latest
+    # ubuntu-24.04 matches the maintainer's machine; ubuntu-latest (moving to 26) catches image
+    # changes early. Both must pass.
+    name: Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6 # version comes from "packageManager" in package.json
@@ -38,7 +44,7 @@ jobs:
     # Forward-compatibility check for TypeScript 7. Non-blocking by design: see
     # docs/adr/0014-typescript-version-policy.md. A failure here is still a bug to fix promptly.
     name: TypeScript 7 preview (non-blocking)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
