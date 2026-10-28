@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+version: 2
+updates:
+  - package-ecosystem: npm # also handles pnpm lockfiles
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript stays on 6.0 until ADR 0014's trigger is met.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # @types/node follows the Node major in .nvmrc, not the latest Node.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

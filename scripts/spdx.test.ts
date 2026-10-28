@@ -7,6 +7,7 @@ describe('headerFor', () => {
     ['src/shared/kernel/result.ts', '// SPDX-License-Identifier: GPL-3.0-or-later'],
     ['eslint.config.js', '// SPDX-License-Identifier: GPL-3.0-or-later'],
     ['scripts/tool.mjs', '// SPDX-License-Identifier: GPL-3.0-or-later'],
+    ['scripts/legacy.cjs', '// SPDX-License-Identifier: GPL-3.0-or-later'],
     ['src/ui/App.vue', '<!-- SPDX-License-Identifier: GPL-3.0-or-later -->'],
     ['src/ui/index.html', '<!-- SPDX-License-Identifier: GPL-3.0-or-later -->'],
     ['src/ui/styles/tokens.css', '/* SPDX-License-Identifier: GPL-3.0-or-later */'],

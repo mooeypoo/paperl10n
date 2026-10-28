@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v7 # also registers tsc and ESLint problem matchers (PR annotations)
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+      - name: Test (with coverage floor)
+        run: pnpm test:coverage
+
+  ts7-preview:
+    # Forward-compatibility check for TypeScript 7. Non-blocking by design: see
+    # docs/adr/0014-typescript-version-policy.md. A failure here is still a bug to fix promptly.
+    name: TypeScript 7 preview (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Type-check plain-TypeScript projects with TypeScript 7
+        run: pnpm dlx --package=typescript@7.0.2 tsc --build tsconfig.core.json tsconfig.node.json tsconfig.test.json
