@@ -104,6 +104,36 @@ describe('architecture rules report violations', () => {
       'export const x = 1;\n',
       [UNKNOWN_FILE],
     ],
+    [
+      "a deep import into another domain's internals",
+      'src/domains/workspace/application/sample.ts',
+      "import { formatId } from '../../formats/domain/format-id.ts';\nexport const x = formatId;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
+    [
+      "app/ reaching into a domain's internals (only index.ts and adapters)",
+      'src/app/sample.ts',
+      "import { parsePluginManifest } from '../domains/formats/domain/plugin-manifest.ts';\nexport const x = parsePluginManifest;\n",
+      [RELATIVE, DEPENDENCIES],
+    ],
+    [
+      'the plugin API re-exporting a domain formats does not depend on',
+      'src/domains/formats/plugin-api.ts',
+      "export { localeFrom } from '#domains/locale';\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the plugin API re-exporting Node',
+      'src/domains/formats/plugin-api.ts',
+      "export { readFile } from 'node:fs/promises';\n",
+      [DEPENDENCIES],
+    ],
+    [
+      "production code importing a domain's test support",
+      'src/domains/workspace/application/sample.ts',
+      "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
+      [DEPENDENCIES],
+    ],
   ])('%s', async (_description, filePath, code, expected) => {
     expect(await ruleIdsFor(filePath, code)).toEqual(expected);
   });
@@ -147,6 +177,16 @@ describe('architecture rules allow the intended dependencies (positive controls)
       'app imports a domain through its index.ts',
       'src/app/sample.ts',
       "import * as workspace from '#domains/workspace';\nexport const x = workspace;\n",
+    ],
+    [
+      'the plugin API re-exports formats, document, and the kernel',
+      'src/domains/formats/plugin-api.ts',
+      "export type { DocumentFormat } from './application/ports/document-format.ts';\nexport { documentKey } from '#domains/document';\nexport { ok } from '#kernel/result';\n",
+    ],
+    [
+      "a test imports another domain's test support",
+      'src/domains/workspace/application/sample.test.ts',
+      "import { InMemoryProjectFiles } from '#domain-testing/formats';\nexport const x = InMemoryProjectFiles;\n",
     ],
     [
       'ui imports the kernel',

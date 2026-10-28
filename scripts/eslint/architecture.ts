@@ -26,6 +26,8 @@ const files = [
   { category: 'testing', pattern: 'src/domains/*/testing/**' },
   { category: 'entry', pattern: 'src/domains/*/index.ts' },
   { category: 'plugin-entry', pattern: 'src/plugins/*/index.ts' },
+  { category: 'plugin-api', pattern: 'src/domains/formats/plugin-api.ts' },
+  { category: 'plugin-api-testing', pattern: 'src/domains/formats/plugin-api-testing.ts' },
   { category: 'test', pattern: '**/*.test.ts' },
 ];
 
@@ -63,9 +65,30 @@ function domainPolicies(domain: DomainName): DependenciesPolicy[] {
   ];
 }
 
+// The plugin API (`#plugin-api`) re-exports the contracts plugins need: `formats`' own layers, the
+// kernel, and the entry points of the domains `formats` depends on. Its testing sibling may also
+// use `formats`' test support and Vitest.
+const pluginApiPolicies: DependenciesPolicy[] = [
+  {
+    from: { file: { categories: 'plugin-api' } },
+    allow: {
+      to: [
+        inDomain('formats', ['domain', 'application']),
+        kernel,
+        ...domainGraph.formats.map((other) => inDomain(other, ['entry'])),
+      ],
+    },
+  },
+  {
+    from: { file: { categories: 'plugin-api-testing' } },
+    allow: { to: [inDomain('formats', ['testing']), kernel, anyExternal] },
+  },
+];
+
 const policies: DependenciesPolicy[] = [
   { from: kernel, allow: { to: kernel } },
   ...domainNames.flatMap(domainPolicies),
+  ...pluginApiPolicies,
   // The composition root wires domains (through their index.ts, plus adapters directly) and
   // plugins (through their index.ts). Not the UI or the Electron entry points.
   {

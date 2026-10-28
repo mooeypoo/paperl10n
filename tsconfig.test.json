@@ -11,6 +11,7 @@
   "include": [
     "src/**/*.test.ts",
     "src/domains/*/testing/**/*.ts",
+    "src/domains/formats/plugin-api-testing.ts",
     "scripts/**/*.test.ts",
     "tests/**/*.ts",
     "vitest.config.ts"

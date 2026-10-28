@@ -12,6 +12,7 @@
   "include": [
     "src/shared/kernel/**/*.ts",
     "src/domains/*/index.ts",
+    "src/domains/formats/plugin-api.ts",
     "src/domains/*/domain/**/*.ts",
     "src/domains/*/application/**/*.ts"
   ],
