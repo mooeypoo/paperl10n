@@ -5,7 +5,6 @@ import { createFormatRegistry } from '#domains/formats';
 import { detects, fakeDocumentPlugin } from '#domain-testing/formats';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
-import { createChooseTargetLocale } from './choose-target-locale.ts';
 import { createOpenProject } from './open-project.ts';
 import { createSearchTargetLanguages, createSuggestTargetLanguages } from './target-languages.ts';
 
@@ -32,7 +31,6 @@ async function opened(settings: Record<string, unknown> = { targetLocale: 'he' }
     sessions,
     suggest: createSuggestTargetLanguages({ sessions }),
     search: createSearchTargetLanguages({ sessions }),
-    choose: createChooseTargetLocale({ sessions }),
   };
 }
 
@@ -126,51 +124,6 @@ describe('searchTargetLanguages', () => {
   it('reports a project that is not open', async () => {
     const { search } = await opened();
     expect(search('nope', { query: 'he', uiLanguage: 'en' })).toEqual({
-      ok: false,
-      error: { code: 'workspace.unknown-project' },
-    });
-  });
-});
-
-describe('chooseTargetLocale', () => {
-  it("makes a language the project's target, by its catalog tag, with its direction", async () => {
-    const { projectId, choose, sessions } = await opened({});
-    expect(choose(projectId, 'PT-br')).toEqual({
-      ok: true,
-      value: { id: 'pt-BR', direction: 'ltr' },
-    });
-    expect(sessions.get(projectId)?.targetLocale).toEqual({ id: 'pt-BR', direction: 'ltr' });
-  });
-
-  it('accepts an alias and the project’s own codes', async () => {
-    const { projectId, choose } = await opened();
-    expect(choose(projectId, 'sr-el')).toEqual({
-      ok: true,
-      value: { id: 'sr-Latn', direction: 'ltr' },
-    });
-    expect(choose(projectId, 'qaa-x-folder')).toMatchObject({
-      ok: true,
-      value: { id: 'qaa-x-folder' },
-    });
-  });
-
-  it.each<[string, string, unknown]>([
-    [
-      'a code no catalog knows',
-      'xx-unknown',
-      { code: 'workspace.unknown-language', language: 'xx-unknown' },
-    ],
-    ['malformed input', 'pt_BR!', { code: 'workspace.unknown-language', language: 'pt_BR!' }],
-    ['the source language', 'EN', { code: 'workspace.target-is-source', language: 'en' }],
-  ])('refuses %s and keeps the previous target', async (_description, language, error) => {
-    const { projectId, choose, sessions } = await opened();
-    expect(choose(projectId, language)).toEqual({ ok: false, error });
-    expect(sessions.get(projectId)?.targetLocale?.id).toBe('he');
-  });
-
-  it('reports a project that is not open', async () => {
-    const { choose } = await opened();
-    expect(choose('nope', 'he')).toEqual({
       ok: false,
       error: { code: 'workspace.unknown-project' },
     });

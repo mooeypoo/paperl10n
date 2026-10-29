@@ -11,6 +11,7 @@ export const errorMessageParams: Readonly<Record<ErrorCode, readonly string[]>> 
   'workspace.folder-unavailable': ['reason'],
   'workspace.config-missing': [],
   'workspace.config-unreadable': ['file', 'problem'],
+  'workspace.config-unwritable': ['file', 'problem'],
   'workspace.config-invalid': [],
   'workspace.unknown-document-format': ['formatId'],
   'workspace.no-document-format': [],

@@ -69,4 +69,26 @@ export class InMemoryProjectFiles implements ProjectFiles {
   exists(path: ProjectPath): Promise<boolean> {
     return Promise.resolve(this.#files.has(path) || this.#directories.has(path));
   }
+
+  /**
+   * Replaces or creates a file; later reads see it. Not part of `ProjectFiles` (plugins only
+   * read): it lets this class stand in for the app's project writer in tests and the UI harness.
+   */
+  writeText(
+    path: ProjectPath,
+    text: string,
+  ): Promise<
+    Result<
+      void,
+      { readonly code: 'files.not-found' | 'files.not-a-file'; readonly path: ProjectPath }
+    >
+  > {
+    if (path === '' || this.#directories.has(path))
+      return Promise.resolve(err({ code: 'files.not-a-file', path }));
+    const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+    if (!this.#directories.has(parent))
+      return Promise.resolve(err({ code: 'files.not-found', path }));
+    this.#files.set(path, text);
+    return Promise.resolve(ok(undefined));
+  }
 }

@@ -33,6 +33,7 @@ export function toErrorDto(error: AppError): ErrorDto {
     case 'workspace.target-is-source':
       return dto({ language: error.language });
     case 'workspace.config-unreadable':
+    case 'workspace.config-unwritable':
       return dto({ file: error.cause.path, problem: error.cause.code });
     case 'workspace.config-invalid':
       return dto(

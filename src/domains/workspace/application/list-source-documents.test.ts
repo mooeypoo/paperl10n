@@ -79,7 +79,7 @@ describe('listSourceDocuments', () => {
   it('lists against a target chosen after opening', async () => {
     const plugin = fakeDocumentPlugin('format-fake', detects('likely'));
     const { listSourceDocuments, projectId, sessions } = await openWith(plugin, {});
-    expect(createChooseTargetLocale({ sessions })(projectId, 'ar').ok).toBe(true);
+    expect((await createChooseTargetLocale({ sessions })(projectId, 'ar')).ok).toBe(true);
     const listed = await listSourceDocuments(projectId);
     expect(listed.ok && listed.value.map((entry) => entry.targetPath)).toEqual([
       'ar/guide/intro.md',

@@ -51,7 +51,9 @@ export function fixtureOpener(fixtures: Fixtures): ProjectFilesOpener {
         return Promise.resolve(err({ code: 'workspace.folder-unavailable', reason: 'not-found' }));
       }
       const folderName = name.split('/').at(-1) ?? name;
-      return Promise.resolve(ok({ files: new InMemoryProjectFiles(tree), name: folderName }));
+      // Writes (choosing a target language) stay in memory, until the page reloads.
+      const files = new InMemoryProjectFiles(tree);
+      return Promise.resolve(ok({ files, writer: files, name: folderName }));
     },
   };
 }

@@ -39,6 +39,19 @@ export function describeProjectFilesOpenerContract(
       });
     });
 
+    it('writes into the opened folder, and its files see the change', async () => {
+      const { opener, folder } = await make(tree, 'my-docs');
+      const opened = await opener.open(folder);
+      if (!opened.ok) throw new Error(`expected the folder to open: ${JSON.stringify(opened)}`);
+      const config = projectPath('paperl10n.config.json');
+      if (!config.ok) throw new Error('test setup: invalid path');
+      expect((await opened.value.writer.writeText(config.value, '{ "a": 1 }')).ok).toBe(true);
+      expect(await opened.value.files.readText(config.value)).toEqual({
+        ok: true,
+        value: '{ "a": 1 }',
+      });
+    });
+
     it('reports a missing folder as unavailable (not found)', async () => {
       const { opener, missing } = await make(tree, 'my-docs');
       expect(await opener.open(missing)).toEqual({

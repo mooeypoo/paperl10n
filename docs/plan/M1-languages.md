@@ -126,6 +126,24 @@ Each is its own branch and PR, as in M0.
 - **L4, writing the config:** an atomic `ProjectWriter` port (temp file + rename) with its
   contract suite, and a config update that changes only the language fields, keeping the rest
   of the file byte for byte. Per-user recents live in the renderer's preferences (ADR 0016).
+  - *Done-notes:* `ProjectWriter` (workspace port): `nodeProjectWriter` writes a temporary
+    file next to the target, flushes it, and renames it over the target. It keeps permissions,
+    writes through symlinks only inside the project, and leaves nothing behind on failure.
+    `InMemoryProjectFiles` gained `writeText`, so it stands in for the writer in tests and the UI
+    harness (where writes last until reload). Both pass `describeProjectWriterContract`. The
+    opener now returns a writer with the files.
+  - `setConfigString` (pure) sets one top-level value byte-preservingly, with a parse-back safety
+    net. `chooseTargetLocale` now saves the choice: it re-reads the config from disk (keeping a
+    teammate's edits since opening), edits only `targetLocale`, writes it, then updates the
+    session. Already set: no write. New error `workspace.config-unwritable`.
+  - Found while testing: the IPC end-to-end test chose a target on the `format-stub` fixture on
+    disk and rewrote the committed fixture's config (only `"he"` → `"ar"`, nothing else). Tests
+    that write now use temporary copies, and CI fails if tests or the build change the checkout.
+  - Recents (per-user, in the renderer's preferences) move to L5, where the picker records them.
+  - Mutation checks, each of which fails tests: the scanner ignoring escapes, editing the first of
+    repeated keys, the writer following links outside the project, dropping permissions, or never
+    renaming into place, choosing without saving, and writing when nothing changed. The CI
+    clean-checkout step fails with a modified fixture and passes on a clean tree.
 - **L5, the picker:** the header button, the dialog (sections, search, keyboard and screen
   reader support, each name with its own `lang`/`dir`), and the opened-without-target flow.
 

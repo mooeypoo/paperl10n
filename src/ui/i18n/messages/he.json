@@ -47,5 +47,6 @@
   "paperl10n-error-workspace-no-target-locale": "קודם צריך לבחור את שפת התרגום.",
   "paperl10n-error-workspace-unknown-language": "Paper Lion לא מכיר את השפה \"$1\". כדי להשתמש בה, הגדירו אותה תחת \"languages\" בקובץ paperl10n.config.json.",
   "paperl10n-error-workspace-target-is-source": "\"$1\" היא שפת המקור של הפרויקט, ולכן התרגום לא יכול להיות בה.",
-  "paperl10n-needs-target": "לפרויקט הזה עדיין אין שפת תרגום. עד שבורר השפות יגיע, הוסיפו את \"targetLocale\" לקובץ paperl10n.config.json ופתחו את הפרויקט מחדש."
+  "paperl10n-needs-target": "לפרויקט הזה עדיין אין שפת תרגום. עד שבורר השפות יגיע, הוסיפו את \"targetLocale\" לקובץ paperl10n.config.json ופתחו את הפרויקט מחדש.",
+  "paperl10n-error-workspace-config-unwritable": "אי אפשר לשמור את קובץ ההגדרות $1 ($2)."
 }

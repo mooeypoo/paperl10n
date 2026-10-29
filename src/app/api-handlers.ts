@@ -118,11 +118,9 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
       );
     },
 
-    chooseTargetLocale({ projectId, language }) {
-      const result = useCases.chooseTargetLocale(projectId, language);
-      return Promise.resolve(
-        result.ok ? ok(toLocaleDto(result.value)) : err(toErrorDto(result.error)),
-      );
+    async chooseTargetLocale({ projectId, language }) {
+      const result = await useCases.chooseTargetLocale(projectId, language);
+      return result.ok ? ok(toLocaleDto(result.value)) : err(toErrorDto(result.error));
     },
   };
 }

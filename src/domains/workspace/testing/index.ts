@@ -7,3 +7,4 @@ export {
   type OpenerUnderTest,
 } from './project-files-opener-contract.ts';
 export { describeProjectSessionsContract } from './project-sessions-contract.ts';
+export { describeProjectWriterContract, type WriterUnderTest } from './project-writer-contract.ts';

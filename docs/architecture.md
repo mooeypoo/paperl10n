@@ -248,4 +248,6 @@ pnpm test:e2e       # build, then Playwright on the built Electron app
 ```
 
 The README has the setup. The pre-commit hook runs the fast checks; CI runs `pnpm check`, the
-build, and the end-to-end tests on `ubuntu-24.04` and `ubuntu-latest`.
+build, and the end-to-end tests on `ubuntu-24.04` and `ubuntu-latest`, and then checks that they
+left the checkout unchanged: tests that write (choosing a target saves the config) work on
+temporary copies, never on fixtures in the repository.

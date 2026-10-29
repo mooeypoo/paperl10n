@@ -90,10 +90,22 @@ What the language picker needs, all on the open project's catalog and never offe
 - `chooseTargetLocale(projectId, language)`: makes a language the target, by tag or alias,
   ignoring case, and returns its `Locale`. Errors: `workspace.unknown-language` (the catalog
   doesn't know it: define it in the config's `languages` first), `workspace.target-is-source`.
-  It changes the session only. Saving it to the config file is L4 of the
-  [languages plan](../plan/M1-languages.md).
+  It **saves the choice** as `targetLocale` in `paperl10n.config.json`, so the team shares it:
+  the file is read again as it is on disk now, only that value changes (`setConfigString`,
+  below), and it's written through the `ProjectWriter`. Nothing is written when the config
+  already says so. Save errors: `workspace.config-missing`, `workspace.config-unreadable`,
+  `workspace.config-invalid` (the file changed since opening), `workspace.config-unwritable`.
+  The session changes only after the file is saved.
 
 Errors common to all three: `workspace.unknown-project`.
+
+### Editing the config: `setConfigString(text, key, value, { after })`
+
+Pure (`domain/config-edit.ts`). Sets one top-level string value and keeps every other byte: the
+user's spacing, key order, line endings, a BOM, and keys Paper Lion doesn't know. An existing key
+keeps its place (the last one, if the key repeats, as JSON readers use the last). A new key goes
+right after `after` (`sourceLocale`), or first, copying the file's own spacing. As a safety net,
+the result is parsed and must equal the old content with only that value changed.
 
 Pairing *within* a page (sections, PRD §7.2) belongs to the `translation` domain from M3. Reading
 the two files is workspace's job: it holds the open project's files and layout.
@@ -103,11 +115,12 @@ the two files is workspace's job: it holds the open project's files and layout.
 | Port | Implemented by | Notes |
 |---|---|---|
 | `FolderPicker` | `createDialogFolderPicker` (`#adapters/workspace/dialog-folder-picker`, with Electron's dialog injected) | `pick(): Promise<string \| null>`; contract: `describeFolderPickerContract` |
-| `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files and the folder's display name; contract: `describeProjectFilesOpenerContract` |
+| `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files, a `ProjectWriter`, and the folder's display name; contract: `describeProjectFilesOpenerContract` |
+| `ProjectWriter` | `nodeProjectWriter` (`#adapters/workspace/node-project-writer`); `InMemoryProjectFiles` (tests, UI harness) | `writeText(path, text)`, atomic: a temporary file next to the target, flushed, then renamed over it. Writes through a symlink only to a file inside the project; keeps an existing file's permissions. Only the app writes; plugins only read. Contract: `describeProjectWriterContract` |
 | `ProjectSessions` | `InMemoryProjectSessions` (`#adapters/workspace/in-memory-project-sessions`) | random UUID ids; `update` replaces a stored project (choosing a target); contract: `describeProjectSessionsContract` |
 
 Test support (`#domain-testing/workspace`): `FakeFolderPicker`, `FakeProjectFilesOpener`, and the
-three contract suites, which run against the fakes and every real implementation. Use-case tests also use `fakeDocumentPlugin` from
+four contract suites, which run against the fakes and every real implementation. Use-case tests also use `fakeDocumentPlugin` from
 `#domain-testing/formats`.
 
 ## Invariants

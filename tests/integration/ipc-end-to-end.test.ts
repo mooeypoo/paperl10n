@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Every IPC method end to end, without Electron: the preload's API → structured cloning (as IPC
 // does) → main's sender and argument checks → the shared app wiring → use cases → the real disk
-// adapter and format-stub, over its "basic" fixture on disk. Only the folder dialog is faked.
+// adapter and format-stub, over a copy of its "basic" fixture on disk (choosing a target writes to
+// the config). Only the folder dialog is faked.
 import { randomUUID } from 'node:crypto';
+import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FakeFolderPicker } from '#domain-testing/workspace';
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
@@ -19,13 +23,30 @@ const appUrl = 'file:///app/index.html';
 const basicFixture = fileURLToPath(
   new URL('../../src/plugins/format-stub/fixtures/basic', import.meta.url),
 );
+const copies: string[] = [];
+afterAll(async () => {
+  await Promise.all(copies.map((copy) => rm(copy, { recursive: true, force: true })));
+});
+
+/** A fresh copy of the fixture, so writes never touch the repository. */
+async function copyOfBasic(): Promise<string> {
+  const copy = join(await mkdtemp(join(tmpdir(), 'paperl10n-ipc-')), 'basic');
+  copies.push(copy);
+  await cp(basicFixture, copy, { recursive: true, verbatimSymlinks: true });
+  return copy;
+}
+
+let project = '';
+beforeAll(async () => {
+  project = await copyOfBasic();
+});
 
 type Listener = (event: IpcEvent, ...args: unknown[]) => Promise<unknown>;
 
 /** The renderer's API, wired to main's handlers through a cloning "IPC". */
-function rendererApi(): { api: PaperLionApi; rejections: string[] } {
+function rendererApi(folder = project): { api: PaperLionApi; rejections: string[] } {
   const app = createAppApi({
-    folderPicker: new FakeFolderPicker(basicFixture),
+    folderPicker: new FakeFolderPicker(folder),
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(randomUUID),
     parser: createLezerMarkdownParser(),
@@ -139,7 +160,8 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     });
   },
   chooseTargetLocale: async () => {
-    const { api } = rendererApi();
+    const folder = await copyOfBasic();
+    const { api } = rendererApi(folder);
     const projectId = await openBasic(api);
     expect(await api.chooseTargetLocale({ projectId, language: 'AR' })).toEqual({
       ok: true,
@@ -150,6 +172,12 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       'ar/guide/getting-started.md',
       'ar/index.md',
     ]);
+    expect(await readFile(join(folder, 'paperl10n.config.json'), 'utf8')).toBe(
+      (await readFile(join(basicFixture, 'paperl10n.config.json'), 'utf8')).replace(
+        '"targetLocale": "he"',
+        '"targetLocale": "ar"',
+      ),
+    );
   },
 };
 

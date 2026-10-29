@@ -41,6 +41,9 @@ jobs:
         run: pnpm test:coverage
       - name: Build
         run: pnpm build
+      - name: Tests and build leave the checkout as it was
+        # A test that writes into the repository (say, into a fixture) fails here.
+        run: git status --porcelain && test -z "$(git status --porcelain)"
 
   e2e:
     # The built Electron app under Playwright (tests/e2e/). Chromium's sandbox stays on: the runner
@@ -67,6 +70,9 @@ jobs:
           sudo apparmor_parser -r /etc/apparmor.d/paperl10n-electron
       - name: End-to-end tests
         run: xvfb-run --auto-servernum pnpm test:e2e
+      - name: Tests and build leave the checkout as it was
+        # A test that writes into the repository (say, into a fixture) fails here.
+        run: git status --porcelain && test -z "$(git status --porcelain)"
       - name: Keep traces of failed tests
         if: failure()
         uses: actions/upload-artifact@v7

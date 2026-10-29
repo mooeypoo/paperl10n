@@ -309,6 +309,9 @@ describe('openProject', () => {
                   Promise.resolve({ ok: false, error: { code: 'files.unreadable', path } }),
                 exists: () => Promise.resolve(true),
               } satisfies ProjectFiles,
+              writer: {
+                writeText: (path) => Promise.resolve(err({ code: 'files.unwritable', path })),
+              },
             },
           }),
       };

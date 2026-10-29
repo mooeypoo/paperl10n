@@ -102,6 +102,17 @@ const cases: [AppError, ErrorDto][] = [
     },
   ],
   [
+    {
+      code: 'workspace.config-unwritable',
+      cause: { code: 'files.unwritable', path: 'paperl10n.config.json' as ProjectPath },
+    },
+    {
+      code: 'workspace.config-unwritable',
+      params: { file: 'paperl10n.config.json', problem: 'files.unwritable' },
+      details: [],
+    },
+  ],
+  [
     { code: 'workspace.no-target-locale' },
     { code: 'workspace.no-target-locale', params: {}, details: [] },
   ],

@@ -102,6 +102,7 @@ export const errorCodes = [
   'workspace.folder-unavailable',
   'workspace.config-missing',
   'workspace.config-unreadable',
+  'workspace.config-unwritable',
   'workspace.config-invalid',
   'workspace.unknown-document-format',
   'workspace.no-document-format',
@@ -158,7 +159,7 @@ export interface PaperLionApi {
     readonly query: string;
     readonly uiLanguage: string;
   }): Promise<Result<readonly LanguageDto[], ErrorDto>>;
-  /** Makes a language the project's target for this session, and returns it with its direction. */
+  /** Makes a language the project's target and saves it to the config; returns it with its direction. */
   chooseTargetLocale(request: {
     readonly projectId: string;
     readonly language: string;

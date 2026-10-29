@@ -7,11 +7,13 @@ import type {
 import type { LanguageCatalog, Locale } from '#domains/locale';
 import type { ProjectConfig } from '../../domain/project-config.ts';
 import type { ProjectId } from '../../domain/project-id.ts';
+import type { ProjectWriter } from './project-writer.ts';
 
 /** A project that's open in this app session. Lives in the main process only. */
 export interface OpenedProject {
   readonly name: string;
   readonly files: ProjectFiles;
+  readonly writer: ProjectWriter;
   readonly config: ProjectConfig;
   readonly sourceLocale: Locale;
   /** `null` until the user chooses a target language. */
