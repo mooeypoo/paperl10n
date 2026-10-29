@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0 (spike) and E1 (saving) done, E2 next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0 (spike), E1 (saving), and E2a (shared parser setup) done, E2b (the editor) next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -163,7 +163,18 @@ inline syntax. The spike confirms it.
     folder creation, folder creation following a link out of the project, the in-memory writer
     making a folder over a file, and main ignoring `base`: each fails tests.
 - **E2, the editor:** a target pane editor (CodeMirror behind a UI component, Markdown
-  decorations from the same Lezer parser, the bidi rules), and a read-only source pane.
+  decorations from the same Lezer parser, the bidi rules), and a read-only source pane. In two
+  PRs: E2a (the shared parser setup) and E2b (the editor).
+  - *E2a done-notes:* the Lezer configuration (GFM, `:::` container fences, MDX `import`/`export`)
+    moved from `document/adapters` to a new shared unit, `src/shared/markdown-syntax/`
+    (`#markdown-syntax`, [ADR 0017](../adr/0017-shared-markdown-syntax.md)), which only
+    `document`'s adapters and `ui/` may import, and which imports only Lezer. For the editor, which
+    parses whole files, it also has an optional `Frontmatter` block with `findFrontmatter`'s fence
+    rules (a test checks they agree), except that an unclosed fence runs to the end of the text.
+    The reading model is unchanged (its contract tests pass as before). Lint has an element and
+    unit for it, with failing samples and positive controls. Mutation checks: the UI not allowed,
+    every domain's adapters allowed, the unit allowed the kernel or any library, frontmatter found
+    past the first line, and the closing fence not consumed: each fails tests.
 - **E3, seed and save:** "Start translating", Save (button, Ctrl/Cmd+S), dirty state in the page
   list, and the unsaved-changes guard.
 - **E4, drafts:** a `DraftStore` port (in app data), autosave of drafts, and restore on reopen.

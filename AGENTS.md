@@ -29,6 +29,7 @@ src/
   shared/
     kernel/          # tiny cross-domain primitives (Result, Locale id, ids). Keep minimal.
     ipc-contract/    # the typed renderer↔main API, defined once
+    markdown-syntax/ # the Lezer Markdown dialect, shared by document/adapters and ui/ (ADR 0017)
   app/               # wiring: pure app API shared by every composition root; app/node/ for Electron
   main/ preload/     # Electron processes, thin
   ui/                # Vue app. A replaceable adapter, nothing more.

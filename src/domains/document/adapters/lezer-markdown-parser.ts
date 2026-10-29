@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The MarkdownParser port on @lezer/markdown, CodeMirror 6's own parser, so the reading view and a
-// CodeMirror editor see the same blocks. Lezer's tree is mapped to our model here and nowhere else.
-import { parser as commonMark, GFM, type Line, type MarkdownConfig } from '@lezer/markdown';
-import type { SyntaxNodeRef } from '@lezer/common';
+// The MarkdownParser port on @lezer/markdown, CodeMirror 6's own parser, configured once in
+// #markdown-syntax so the reading model and the editor see the same blocks (ADR 0017). Lezer's tree
+// is mapped to our model here and nowhere else.
+import type { SyntaxNodeRef, Tree } from '@lezer/common';
+import { markdownSyntax } from '#markdown-syntax';
 import { findFrontmatter } from '../domain/frontmatter.ts';
 import type {
   Block,
@@ -12,54 +13,6 @@ import type {
   ParsedDocument,
 } from '../domain/parsed-document.ts';
 import type { MarkdownParser } from '../application/ports/markdown-parser.ts';
-
-const isContainerFence = (line: Line) => line.text.slice(line.pos).startsWith(':::');
-
-/** `:::` lines (VitePress `::: tip`, Starlight `:::note`) are their own blocks; what's between
- * them parses as ordinary Markdown. */
-const containerFences: MarkdownConfig = {
-  defineNodes: [{ name: 'ContainerFence', block: true }],
-  parseBlock: [
-    {
-      name: 'ContainerFence',
-      before: 'FencedCode',
-      parse(cx, line) {
-        if (!isContainerFence(line)) return false;
-        cx.addElement(
-          cx.elt('ContainerFence', cx.lineStart + line.pos, cx.lineStart + line.text.length),
-        );
-        cx.nextLine();
-        return true;
-      },
-      endLeaf: (_cx, line) => isContainerFence(line),
-    },
-  ],
-};
-
-/** MDX tolerance: top-level `import`/`export` statements, up to the next blank line. */
-const mdxEsm: MarkdownConfig = {
-  defineNodes: [{ name: 'MdxEsm', block: true }],
-  parseBlock: [
-    {
-      name: 'MdxEsm',
-      before: 'IndentedCode',
-      parse(cx, line) {
-        const topLevel = cx.parentType().name === 'Document';
-        if (!topLevel || line.indent !== 0 || !/^(?:import|export)\s/.test(line.text)) {
-          return false;
-        }
-        const from = cx.lineStart;
-        let to = from + line.text.length;
-        while (cx.nextLine() && line.text.trim() !== '') to = cx.lineStart + line.text.length;
-        cx.addElement(cx.elt('MdxEsm', from, to));
-        return true;
-      },
-    },
-  ],
-};
-
-const markdownParser = commonMark.configure([GFM, containerFences]);
-const mdxParser = commonMark.configure([GFM, containerFences, mdxEsm]);
 
 const blockKindOf: Readonly<Record<string, BlockKind>> = {
   Paragraph: 'paragraph',
@@ -112,7 +65,7 @@ function blockFor(node: SyntaxNodeRef, text: string): Block | null {
   return kind === undefined ? { kind: 'html', range } : { kind, range };
 }
 
-function inlineSpans(tree: ReturnType<typeof markdownParser.parse>, text: string): InlineSpan[] {
+function inlineSpans(tree: Tree, text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
   const add = (kind: InlineKind, start: number, end: number) => {
     const trimmed = withoutLineEnding(text, start, end);
@@ -155,7 +108,7 @@ export function createLezerMarkdownParser(): MarkdownParser {
 
       // Lezer reports positions relative to what it parsed, so shift them into the whole text.
       const body = text.slice(bodyStart);
-      const tree = (options.mdx ? mdxParser : markdownParser).parse(body);
+      const tree = markdownSyntax({ mdx: options.mdx, frontmatter: false }).parse(body);
       const shift = (block: Block): Block => ({
         ...block,
         range: { start: block.range.start + bodyStart, end: block.range.end + bodyStart },

@@ -10,6 +10,7 @@ describe('unitOf', () => {
     ['src/plugins/format-stub/fixtures/basic/x.ts', 'plugins/format-stub'],
     ['src/shared/kernel/result.ts', 'shared/kernel'],
     ['src/shared/ipc-contract/index.ts', 'shared/ipc-contract'],
+    ['src/shared/markdown-syntax/index.ts', 'shared/markdown-syntax'],
     ['src/ui-harness/main.ts', 'ui-harness'],
     ['src/app/composition-root.ts', 'app'],
     ['src/main/index.ts', 'main'],
@@ -43,6 +44,7 @@ describe('aliasHint', () => {
     ['domains/formats', '#domains/formats'],
     ['shared/kernel', '#kernel/<module>'],
     ['shared/ipc-contract', '#ipc-contract'],
+    ['shared/markdown-syntax', '#markdown-syntax'],
     ['plugins/format-stub', '#plugins/format-stub (only from src/app/)'],
     ['ui', 'a # alias'],
   ])('%s → %s', (unit, hint) => {

@@ -94,6 +94,11 @@ The renderer and main share one typed contract, `#ipc-contract`: plain DTOs, err
 ([ADR 0006](adr/0006-process-model-and-ipc.md)). `src/app/` is pure and shared by every
 composition root. Electron's (`src/app/node/`) passes in the real disk and the native dialog.
 
+The renderer also parses Markdown, so the editor sees the same blocks as the reading model: both
+use the Lezer configuration in `#markdown-syntax`
+([ADR 0017](adr/0017-shared-markdown-syntax.md)), the one shared unit besides the kernel and the
+contract that the UI may import.
+
 A second, development-only root is the **browser UI harness** (`src/ui-harness/`,
 `pnpm dev:harness`, [ADR 0015](adr/0015-browser-ui-harness.md)): the same UI on the same
 `createAppApi`, over in-memory copies of the plugin fixtures, through a transport that
@@ -219,6 +224,7 @@ src/domains/document/domain/block.ts
 | A fake or a shared contract test for a port | `domains/<domain>/testing/` |
 | Support for a new translation system | `src/plugins/format-<system>/` or `catalog-<system>/` |
 | A small primitive needed by many domains | `shared/kernel/` (keep it tiny) |
+| Markdown syntax both the reading model and the editor must see (a new block kind) | `shared/markdown-syntax/` ([ADR 0017](adr/0017-shared-markdown-syntax.md)); map its node names to the model in `document/adapters/` |
 | A new renderer ↔ main call | one method in `shared/ipc-contract/` + its handler, `guardApi` entry, preload method, argument validator, and harness transport method (the compiler flags each missing one) |
 | A new UI string | `ui/i18n/messages/en.json` + `qqq.json` (+ `he.json`) |
 | A new domain | an ADR first, then a folder + an entry in `scripts/domain-graph.ts` |

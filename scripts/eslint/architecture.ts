@@ -13,6 +13,8 @@ type FileCategory = 'domain' | 'application' | 'adapters' | 'testing' | 'entry';
 const elements = [
   { type: 'kernel', pattern: 'src/shared/kernel', partialMatch: false },
   { type: 'ipc-contract', pattern: 'src/shared/ipc-contract', partialMatch: false },
+  // The Markdown dialect (Lezer config) shared by the reading model and the editor (ADR 0017).
+  { type: 'markdown-syntax', pattern: 'src/shared/markdown-syntax', partialMatch: false },
   { type: 'domain', pattern: 'src/domains/*', capture: ['domain'], partialMatch: false },
   { type: 'plugin', pattern: 'src/plugins/*', capture: ['plugin'], partialMatch: false },
   // The Node composition root is its own element, so pure app/ code and the UI harness can't use it.
@@ -41,6 +43,7 @@ const files = [
 
 const kernel = { element: { type: 'kernel' } };
 const ipcContract = { element: { type: 'ipc-contract' } };
+const markdownSyntax = { element: { type: 'markdown-syntax' } };
 const anyExternal = { module: { origin: ['external', 'core'] } };
 
 function inDomain(domain: DomainName | '*', categories?: readonly FileCategory[]) {
@@ -69,7 +72,16 @@ function domainPolicies(domain: DomainName): DependenciesPolicy[] {
     },
     {
       from: inDomain(domain, ['adapters']),
-      allow: { to: [inDomain(domain), kernel, ...otherDomains, anyExternal] },
+      allow: {
+        to: [
+          inDomain(domain),
+          kernel,
+          ...otherDomains,
+          anyExternal,
+          // Only document's adapters parse Markdown (ADR 0017).
+          ...(domain === 'document' ? [markdownSyntax] : []),
+        ],
+      },
     },
     // Test support may also compose the test support of domains it depends on (fakes built on
     // fakes). Production code never imports any testing/ folder.
@@ -183,6 +195,11 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
     { from: kernel, allow: { to: kernel } },
     // The IPC contract is plain data: it may only use kernel types (Result).
     { from: ipcContract, allow: { to: [kernel, ipcContract] } },
+    // The Markdown dialect is Lezer configuration only: no domains, no kernel, no I/O.
+    {
+      from: markdownSyntax,
+      allow: { to: [markdownSyntax, { module: { source: ['@lezer/markdown', '@lezer/common'] } }] },
+    },
     ...domainNames.flatMap(domainPolicies),
     ...pluginApiPolicies,
     ...plugins.flatMap(pluginPolicies),
@@ -216,6 +233,7 @@ function policiesFor(plugins: readonly PluginDependencies[]): DependenciesPolicy
         to: [
           kernel,
           ipcContract,
+          markdownSyntax,
           { element: { type: 'ui' } },
           { element: { type: 'assets' } },
           { module: { origin: 'external', source: '!electron' } },

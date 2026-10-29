@@ -154,6 +154,42 @@ describe('architecture rules report violations', () => {
       [DEPENDENCIES],
     ],
     [
+      'the Markdown syntax importing a domain (it is Lezer configuration only)',
+      'src/shared/markdown-syntax/sample.ts',
+      "import * as document from '#domains/document';\nexport const x = document;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the Markdown syntax importing the kernel',
+      'src/shared/markdown-syntax/sample.ts',
+      "import { ok } from '#kernel/result';\nexport const x = ok;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'the Markdown syntax importing a library other than Lezer',
+      'src/shared/markdown-syntax/sample.ts',
+      "import { ref } from 'vue';\nexport const x = ref;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'a pure layer parsing Markdown (only adapters may)',
+      'src/domains/document/application/sample.ts',
+      "import { markdownSyntax } from '#markdown-syntax';\nexport const x = markdownSyntax;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      "another domain's adapters parsing Markdown (only document's may)",
+      'src/domains/workspace/adapters/sample.ts',
+      "import { markdownSyntax } from '#markdown-syntax';\nexport const x = markdownSyntax;\n",
+      [DEPENDENCIES],
+    ],
+    [
+      'relative import into the Markdown syntax',
+      'src/ui/sample.ts',
+      "import { markdownSyntax } from '../shared/markdown-syntax/index.ts';\nexport const x = markdownSyntax;\n",
+      [RELATIVE],
+    ],
+    [
       'preload importing the app wiring',
       'src/preload/sample.ts',
       "import { createAppApi } from '../app/create-app-api.ts';\nexport const x = createAppApi;\n",
@@ -320,6 +356,21 @@ describe('architecture rules allow the intended dependencies (positive controls)
       'preload imports the IPC contract',
       'src/preload/sample.ts',
       "import { apiMethods } from '#ipc-contract';\nexport const x = apiMethods;\n",
+    ],
+    [
+      'ui imports the Markdown syntax (the editor parses as you type)',
+      'src/ui/sample.ts',
+      "import { markdownSyntax } from '#markdown-syntax';\nexport const x = markdownSyntax;\n",
+    ],
+    [
+      "document's adapters import the Markdown syntax",
+      'src/domains/document/adapters/sample.ts',
+      "import { markdownSyntax } from '#markdown-syntax';\nexport const x = markdownSyntax;\n",
+    ],
+    [
+      'the Markdown syntax imports Lezer',
+      'src/shared/markdown-syntax/sample.ts',
+      "import { parser } from '@lezer/markdown';\nexport const x = parser;\n",
     ],
     [
       'ui imports the kernel',

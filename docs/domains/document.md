@@ -39,6 +39,10 @@ CommonMark plus GFM tables, task lists, and strikethrough, and two additions:
 - **MDX tolerance** (`mdx: true`, for `.mdx` files): top-level `import`/`export` statements, up to
   the next blank line, are opaque `mdx-esm` blocks.
 
+The Lezer configuration for both additions lives in `#markdown-syntax` (`src/shared/markdown-syntax/`,
+[ADR 0017](../adr/0017-shared-markdown-syntax.md)), so the M2 editor in the renderer parses the
+same dialect. The adapter maps Lezer's node names to blocks and inline spans.
+
 **Known deviations from CommonMark** (lezer's), kept in the contract so a parser swap shows up:
 
 - A component or unknown tag alone on a line (`<Badge text="New" />`) is a paragraph holding an

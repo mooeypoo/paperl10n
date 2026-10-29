@@ -8,8 +8,9 @@ import { posix } from 'node:path';
  */
 export function unitOf(path: string): string | undefined {
   const match =
-    /^src\/(domains\/[^/]+|plugins\/[^/]+|shared\/kernel|shared\/ipc-contract)\//.exec(path) ??
-    /^src\/(app|main|preload|ui|ui-harness)\//.exec(path);
+    /^src\/(domains\/[^/]+|plugins\/[^/]+|shared\/kernel|shared\/ipc-contract|shared\/markdown-syntax)\//.exec(
+      path,
+    ) ?? /^src\/(app|main|preload|ui|ui-harness)\//.exec(path);
   return match?.[1];
 }
 
@@ -23,6 +24,7 @@ export function aliasHint(unit: string): string {
   if (unit.startsWith('domains/')) return `#${unit}`;
   if (unit === 'shared/kernel') return '#kernel/<module>';
   if (unit === 'shared/ipc-contract') return '#ipc-contract';
+  if (unit === 'shared/markdown-syntax') return '#markdown-syntax';
   if (unit.startsWith('plugins/')) return `#${unit} (only from src/app/)`;
   return 'a # alias';
 }
