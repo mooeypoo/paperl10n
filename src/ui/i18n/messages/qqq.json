@@ -73,5 +73,7 @@
   "paperl10n-unsaved-title": "Title of the dialog shown before leaving a page (switching pages, opening another project, changing the language, closing the window) whose translation has unsaved changes.",
   "paperl10n-unsaved-message": "Body of the unsaved-changes dialog. $1: the page key, like guide/getting-started (shown isolated).",
   "paperl10n-discard-changes": "Button in the unsaved-changes dialog: leave the page and drop the unsaved changes.",
-  "paperl10n-error-workspace-draft-unwritable": "Shown when Paper Lion can't write a draft (unsaved edits it keeps in its own data folder, to restore after a crash or restart). The edits are still in the editor."
+  "paperl10n-error-workspace-draft-unwritable": "Shown when Paper Lion can't write a draft (unsaved edits it keeps in its own data folder, to restore after a crash or restart). The edits are still in the editor.",
+  "paperl10n-draft-restored": "Note above the translation editor when a page opens with a draft: unsaved edits Paper Lion kept from an earlier session (or before a crash). Shown until they're saved or discarded.",
+  "paperl10n-discard-draft": "Button next to the restored-changes note: drops the restored unsaved changes, so the editor shows the file as it is."
 }

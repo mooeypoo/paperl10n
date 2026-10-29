@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The walking skeleton in the real, built Electron app: sandboxed renderer, preload, IPC, main,
 // the disk adapter, and format-stub. Only the native folder dialog is stubbed (in main).
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -234,6 +242,45 @@ test('asks before closing the window with unsaved changes, and closes on "Don\'t
   const closed = page.waitForEvent('close');
   await question.getByRole('button', { name: "Don't save" }).click();
   await closed;
+});
+
+test('keeps unsaved edits as a draft, and restores them after a crash', async () => {
+  const project = await openCopyOfBasic();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'עברית · translation' });
+  await editor.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('טיוטה');
+  // The draft lands in the app's data (this test's profile), never in the project.
+  const drafts = join(profile, 'drafts');
+  await expect.poll(() => (existsSync(drafts) ? readdirSync(drafts).length : 0)).toBe(1);
+  const translation = readFileSync(join(project, 'he/index.md'), 'utf8');
+
+  // A crash: the process dies without unload handlers or a goodbye.
+  app.process().kill('SIGKILL');
+  app = await electron.launch({
+    args: [`--user-data-dir=${profile}`, repoRoot],
+    cwd: repoRoot,
+    env,
+  });
+  page = await app.firstWindow();
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  await expect(
+    page.locator('nav').getByRole('button', { name: /index.*Unsaved changes/ }),
+  ).toBeVisible();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+  await expect(
+    page.getByText('Unsaved changes from your last session were restored.'),
+  ).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'עברית · translation' })).toContainText('טיוטה');
+  expect(readFileSync(join(project, 'he/index.md'), 'utf8')).toBe(translation);
+
+  // Saving writes it and forgets the draft.
+  await page.keyboard.press('Control+S');
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  expect(readFileSync(join(project, 'he/index.md'), 'utf8')).toContain('טיוטה');
+  await expect.poll(() => readdirSync(drafts).length).toBe(0);
 });
 
 test('the renderer has no Node, and the preload exposes exactly the IPC contract', async () => {

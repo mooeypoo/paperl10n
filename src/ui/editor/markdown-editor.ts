@@ -29,6 +29,8 @@ export interface MarkdownEditorOptions {
   readonly saved: boolean;
   /** Called when the document starts or stops having unsaved changes. */
   readonly onDirtyChange?: (dirty: boolean) => void;
+  /** Called after each edit (after `onDirtyChange`). */
+  readonly onChange?: () => void;
 }
 
 /** The text to save, and a way to record it as saved once the save succeeded. */
@@ -49,7 +51,7 @@ export interface MarkdownEditor {
 
 export function editorState(options: MarkdownEditorOptions): EditorState {
   const opened = openFileText(options.file);
-  const { onDirtyChange } = options;
+  const { onDirtyChange, onChange } = options;
   return EditorState.create({
     doc: opened.text,
     extensions: [
@@ -68,15 +70,12 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
         dir: options.dir,
         'aria-label': options.label,
       }),
-      ...(onDirtyChange === undefined
-        ? []
-        : [
-            EditorView.updateListener.of((update) => {
-              if (!update.docChanged && !update.transactions.some(savePointChanged)) return;
-              const dirty = isDirty(update.state);
-              if (dirty !== isDirty(update.startState)) onDirtyChange(dirty);
-            }),
-          ]),
+      EditorView.updateListener.of((update) => {
+        if (!update.docChanged && !update.transactions.some(savePointChanged)) return;
+        const dirty = isDirty(update.state);
+        if (dirty !== isDirty(update.startState)) onDirtyChange?.(dirty);
+        if (update.docChanged) onChange?.();
+      }),
     ],
   });
 }

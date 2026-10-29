@@ -29,12 +29,19 @@ const { pair, loading } = reading;
 const readError = reading.error;
 const errorText = computed(() => (error.value === null ? '' : errorMessage(error.value, t)));
 
-const saving = useTranslationSaving(client, projectId, pair, (key) => {
-  project.markTranslated(key);
-});
-const { started, dirty, isNew, status: saveStatus } = saving;
-const saveError = saving.error;
 const documentView = useTemplateRef<InstanceType<typeof DocumentView>>('documentView');
+const saving = useTranslationSaving(client, projectId, pair, {
+  currentSnapshot: () => documentView.value?.snapshot() ?? null,
+  onDraftChange: (key, hasDraft) => {
+    project.markDraft(key, hasDraft);
+  },
+  onSaved: (key) => {
+    project.markTranslated(key);
+  },
+});
+const { started, restored, restoredNotice, dirty, isNew, status: saveStatus } = saving;
+const saveError = saving.error;
+const draftError = saving.draftError;
 
 /** Saves the open page's translation; true when there's nothing left unsaved. */
 async function saveCurrent(): Promise<boolean> {
@@ -66,7 +73,10 @@ async function resolveLeave(choice: 'save' | 'discard' | 'cancel'): Promise<void
     return;
   }
   pendingLeave.value = null;
-  if (choice !== 'cancel') leave();
+  if (choice === 'cancel') return;
+  // Leaving without saving drops the edits, and their draft.
+  if (choice === 'discard') await saving.discardDraft();
+  leave();
 }
 
 function open(): void {
@@ -196,12 +206,17 @@ async function chooseTarget(tag: string): Promise<void> {
           :loading="loading"
           :error="readError"
           :started="started"
+          :restored="restored"
+          :restored-notice="restoredNotice"
+          :draft-error="draftError"
           :is-new="isNew"
           :save-status="saveStatus"
           :save-error="saveError"
           @start="saving.start()"
           @dirty="saving.setDirty"
+          @change="saving.noteEdit()"
           @save="saveCurrent"
+          @discard-restored="saving.discardRestored()"
         />
         <p v-else class="app-empty">{{ t('paperl10n-no-documents') }}</p>
       </main>

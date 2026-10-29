@@ -14,8 +14,10 @@ export interface ProjectState {
    * Returns the error when it fails; the project stays as it was.
    */
   chooseTarget(language: string): Promise<ErrorDto | null>;
-  /** A page's translation was saved, so its file exists now. */
+  /** A page's translation was saved: its file exists now, and it has no draft. */
   markTranslated(key: string): void;
+  /** A page gained or lost its draft. */
+  markDraft(key: string, hasDraft: boolean): void;
 }
 
 const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, details: [] };
@@ -89,12 +91,27 @@ export function useProject(client: PaperLionApi): ProjectState {
     }
   }
 
-  function markTranslated(key: string): void {
-    if (!documents.value.some((document) => document.key === key && !document.targetExists)) return;
-    documents.value = documents.value.map((document) =>
-      document.key === key ? { ...document, targetExists: true } : document,
-    );
+  /** Changes one page's entry; the list stays the same object when nothing changes. */
+  function update(key: string, change: Partial<SourceDocumentDto>): void {
+    const entry = documents.value.find((document) => document.key === key);
+    if (entry === undefined) return;
+    const changed = { ...entry, ...change };
+    if (changed.targetExists === entry.targetExists && changed.hasDraft === entry.hasDraft) return;
+    documents.value = documents.value.map((document) => (document === entry ? changed : document));
   }
 
-  return { summary, documents, error, busy, open, chooseTarget, markTranslated };
+  return {
+    summary,
+    documents,
+    error,
+    busy,
+    open,
+    chooseTarget,
+    markTranslated: (key) => {
+      update(key, { targetExists: true, hasDraft: false });
+    },
+    markDraft: (key, hasDraft) => {
+      update(key, { hasDraft });
+    },
+  };
 }

@@ -2,7 +2,7 @@
 import type { DocumentPairDto, ErrorDto, PaperLionApi } from '#ipc-contract';
 import type { Result } from '#kernel/result';
 import { flushPromises } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, ref, shallowRef } from 'vue';
 import { error, fakeClient, pairFor } from '../test-support';
 import { useTranslationSaving } from './use-translation-saving';
@@ -16,8 +16,16 @@ function snapshot(text: string) {
 function setup(client: PaperLionApi, pair: DocumentPairDto | null) {
   const current = shallowRef(pair);
   const saved: string[] = [];
-  const saving = useTranslationSaving(client, ref('p-1'), current, (key) => saved.push(key));
-  return { saving, current, saved };
+  const draftChanges: string[] = [];
+  // What the editor holds; `null` means there's no editor.
+  const editor = { text: null as string | null };
+  const saving = useTranslationSaving(client, ref('p-1'), current, {
+    currentSnapshot: () => (editor.text === null ? null : snapshot(editor.text)),
+    onDraftChange: (key, hasDraft) => draftChanges.push(`${key}:${String(hasDraft)}`),
+    onSaved: (key) => saved.push(key),
+    draftDelay: 500,
+  });
+  return { saving, current, saved, draftChanges, editor };
 }
 
 describe('useTranslationSaving', () => {
@@ -138,5 +146,161 @@ describe('useTranslationSaving', () => {
     await nextTick();
     expect(await saving.save(snapshot('c'))).toBe(false);
     expect(calls).toEqual(['saveDocument:p-1:index:"a":"בית\\n"']);
+  });
+});
+
+describe('useTranslationSaving: drafts', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Types: the editor's text changes and it reports unsaved. */
+  function typeInto(app: ReturnType<typeof setup>, text: string) {
+    app.editor.text = text;
+    app.saving.setDirty(true);
+    app.saving.noteEdit();
+  }
+
+  it('keeps the unsaved text as a draft once typing pauses, once per pause', async () => {
+    vi.useFakeTimers();
+    const { client, calls } = fakeClient();
+    const app = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    typeInto(app, 'ב');
+    await vi.advanceTimersByTimeAsync(300);
+    typeInto(app, 'בי');
+    await vi.advanceTimersByTimeAsync(499);
+    expect(calls).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(calls).toEqual(['saveDraft:p-1:index:"בי":"בית\\n"']);
+    expect(app.draftChanges).toEqual(['index:true']);
+    typeInto(app, 'בית!');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls.at(-1)).toBe('saveDraft:p-1:index:"בית!":"בית\\n"');
+    // The page was already marked as drafted.
+    expect(app.draftChanges).toEqual(['index:true']);
+  });
+
+  it('forgets the draft when edits are undone back to the file', async () => {
+    vi.useFakeTimers();
+    const { client, calls } = fakeClient();
+    const app = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    typeInto(app, 'x');
+    await vi.advanceTimersByTimeAsync(500);
+    app.editor.text = 'בית\n';
+    app.saving.setDirty(false);
+    app.saving.noteEdit();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls.at(-1)).toBe('discardDraft:p-1:index');
+    expect(app.draftChanges).toEqual(['index:true', 'index:false']);
+  });
+
+  it('sends nothing for clean edits when no draft was kept', async () => {
+    vi.useFakeTimers();
+    const { client, calls } = fakeClient();
+    const app = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    app.saving.noteEdit();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls).toEqual([]);
+  });
+
+  it('cancels a pending draft when another page opens', async () => {
+    vi.useFakeTimers();
+    const { client, calls } = fakeClient();
+    const app = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    typeInto(app, 'x');
+    app.current.value = pairFor('other', 'Other\n');
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls).toEqual([]);
+  });
+
+  it('keeps text typed during a save as a draft, against the saved text', async () => {
+    vi.useFakeTimers();
+    let finishSave: (value: Result<{ path: string; written: boolean }, ErrorDto>) => void = () =>
+      undefined;
+    const { client, calls } = fakeClient();
+    const app = setup(
+      {
+        ...client,
+        saveDocument: (request) => {
+          void client.saveDocument(request);
+          return new Promise((resolve) => (finishSave = resolve));
+        },
+      },
+      pairFor('index', 'Home\n', 'בית\n'),
+    );
+    typeInto(app, 'x');
+    const saved = app.saving.save(snapshot('x'));
+    typeInto(app, 'xy');
+    finishSave({ ok: true, value: { path: 'he/index.md', written: true } });
+    await saved;
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls.at(-1)).toBe('saveDraft:p-1:index:"xy":"x"');
+    expect(app.draftChanges).toEqual(['index:true']);
+  });
+
+  it('shows a failure to keep the draft, and clears it once keeping works', async () => {
+    vi.useFakeTimers();
+    const failure = error('workspace.draft-unwritable');
+    const { client } = fakeClient({ saveDraft: { ok: false, error: failure } });
+    let fail = true;
+    const app = setup(
+      {
+        ...client,
+        saveDraft: (request) =>
+          fail ? client.saveDraft(request) : Promise.resolve({ ok: true, value: null }),
+      },
+      pairFor('index', 'Home\n', 'בית\n'),
+    );
+    typeInto(app, 'x');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(app.saving.draftError.value).toEqual(failure);
+    expect(app.draftChanges).toEqual([]);
+    fail = false;
+    typeInto(app, 'xy');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(app.saving.draftError.value).toBeNull();
+    expect(app.draftChanges).toEqual(['index:true']);
+  });
+
+  it('restores a draft: its base is what saving checks, and saving clears the notice', async () => {
+    const { client, calls } = fakeClient();
+    const pair = {
+      ...pairFor('index', 'Home\n', 'בית חדש\n'),
+      draft: { text: 'טיוטה\n', base: 'בית\n' },
+    };
+    const app = setup(client, pair);
+    expect([app.saving.restored.value, app.saving.restoredNotice.value]).toEqual([true, true]);
+    await app.saving.save(snapshot('טיוטה\n'));
+    // The file changed since the draft's base: main would refuse (here the fake accepts).
+    expect(calls).toEqual(['saveDocument:p-1:index:"טיוטה\\n":"בית\\n"']);
+    expect([app.saving.restored.value, app.saving.restoredNotice.value]).toEqual([true, false]);
+  });
+
+  it('discards a restored draft: back to the file, as its base', async () => {
+    const { client, calls } = fakeClient();
+    const pair = { ...pairFor('index', 'Home\n', 'בית\n'), draft: { text: 'טיוטה', base: 'old' } };
+    const app = setup(client, pair);
+    app.saving.setDirty(true);
+    await app.saving.discardRestored();
+    expect(calls).toEqual(['discardDraft:p-1:index']);
+    expect([app.saving.restored.value, app.saving.dirty.value]).toEqual([false, false]);
+    expect(app.draftChanges).toEqual(['index:false']);
+    await app.saving.save(snapshot('x'));
+    expect(calls.at(-1)).toBe('saveDocument:p-1:index:"x":"בית\\n"');
+  });
+
+  it('drops the draft when leaving without saving, and only when one may exist', async () => {
+    vi.useFakeTimers();
+    const { client, calls } = fakeClient();
+    const app = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await app.saving.discardDraft();
+    expect(calls).toEqual([]);
+    typeInto(app, 'x');
+    await vi.advanceTimersByTimeAsync(500);
+    typeInto(app, 'xy');
+    await app.saving.discardDraft();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls).toEqual(['saveDraft:p-1:index:"x":"בית\\n"', 'discardDraft:p-1:index']);
   });
 });

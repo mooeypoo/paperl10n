@@ -18,20 +18,40 @@ const props = defineProps<{
   error: ErrorDto | null;
   /** A new translation was started from a copy of the source. */
   started: boolean;
+  /** The page opened with a draft from an earlier session: the editor shows the draft's text. */
+  restored: boolean;
+  /** Say that the draft was restored, offering to discard it. */
+  restoredNotice: boolean;
+  draftError: ErrorDto | null;
   /** The translation has no file yet. */
   isNew: boolean;
   saveStatus: SaveStatus;
   saveError: ErrorDto | null;
 }>();
-const emit = defineEmits<{ start: []; dirty: [dirty: boolean]; save: [] }>();
+const emit = defineEmits<{
+  start: [];
+  dirty: [dirty: boolean];
+  change: [];
+  save: [];
+  discardRestored: [];
+}>();
 const { t } = useI18n();
 // Only the pair for this page counts: while the next page loads, the previous one isn't shown.
 const current = computed(() => (props.pair?.key === props.document.key ? props.pair : null));
 const waiting = computed(() => props.loading || (current.value === null && props.error === null));
-// A new translation starts as a byte-for-byte copy of the source.
-const target = computed(
-  () => current.value?.target ?? (props.started ? (current.value?.source ?? null) : null),
-);
+// The translation as the editor starts: a restored draft's text, the file, or (for a new
+// translation) a byte-for-byte copy of the source.
+const target = computed(() => {
+  const pair = current.value;
+  if (pair === null) return null;
+  const file = pair.target ?? (props.started ? pair.source : null);
+  if (props.restored && pair.draft !== null) {
+    return { ...(pair.target ?? pair.source), text: pair.draft.text };
+  }
+  return file;
+});
+// The editor starts clean only on the file's own text.
+const targetSaved = computed(() => !props.restored && (current.value?.target ?? null) !== null);
 const statusText = computed(() =>
   props.saveStatus === 'clean' ? '' : t(`paperl10n-save-status-${props.saveStatus}`),
 );
@@ -70,10 +90,11 @@ defineExpose({
         :document="target"
         :loading="waiting"
         :read-only="false"
-        :saved="(current?.target ?? null) !== null"
+        :saved="targetSaved"
         startable
         @start="emit('start')"
         @dirty="(dirty) => emit('dirty', dirty)"
+        @change="emit('change')"
       >
         <template v-if="target !== null && !waiting" #actions>
           <div class="document-save">
@@ -90,10 +111,25 @@ defineExpose({
             </button>
           </div>
         </template>
-        <template v-if="(saveError !== null || (started && isNew)) && !waiting" #notice>
+        <template
+          v-if="
+            (saveError !== null || draftError !== null || restoredNotice || (started && isNew)) &&
+            !waiting
+          "
+          #notice
+        >
           <p v-if="saveError !== null" class="document-error" role="alert">
             {{ errorMessage(saveError, t) }}
           </p>
+          <p v-if="draftError !== null" class="document-error" role="alert">
+            {{ errorMessage(draftError, t) }}
+          </p>
+          <div v-if="restoredNotice" class="document-restored">
+            <p class="document-note">{{ t('paperl10n-draft-restored') }}</p>
+            <button type="button" class="pl-button" @click="emit('discardRestored')">
+              {{ t('paperl10n-discard-draft') }}
+            </button>
+          </div>
           <p v-if="started && isNew" class="document-note">
             {{ t('paperl10n-new-translation', isolated(document.targetPath)) }}
           </p>
@@ -133,6 +169,13 @@ defineExpose({
 .document-save-status {
   color: var(--pl-color-muted);
   font-size: var(--pl-text-sm);
+}
+
+.document-restored {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2) var(--pl-space-3);
 }
 
 .document-note {

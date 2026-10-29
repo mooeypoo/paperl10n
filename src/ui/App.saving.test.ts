@@ -3,7 +3,7 @@
 // (mountApp) with a fake client.
 import { EditorView } from '@codemirror/view';
 import { flushPromises } from '@vue/test-utils';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountApp } from './mount';
 import { memoryPreferences } from './preferences';
 import { documents, error, fakeClient, pairFor, summary } from './test-support';
@@ -248,5 +248,80 @@ describe('leaving a page with unsaved changes', () => {
     const clean = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(clean);
     expect(clean.defaultPrevented).toBe(false);
+  });
+});
+
+describe('drafts', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const withDraft = {
+    ...pairFor('index', 'Home\r\n', 'בית\r\n'),
+    draft: { text: 'בית ועוד\r\n', base: 'בית\r\n' },
+  };
+
+  it('opens a page with its draft, unsaved, and offers to discard it', async () => {
+    const { element, calls } = await opened({
+      list: [
+        {
+          ok: true,
+          value: documents.map((document) => ({ ...document, hasDraft: document.key === 'index' })),
+        },
+      ],
+      read: { index: { ok: true, value: withDraft } },
+    });
+    // The page list shows which pages have unsaved changes kept from before.
+    expect(pageStatus(element, 'index')).toBe('unsaved');
+    page(element, 'index').click();
+    await flushPromises();
+    expect(targetEditor(element).state.doc.toString()).toBe('בית ועוד\n');
+    expect(status(element)).toBe('Unsaved changes');
+    expect(targetPane(element)?.textContent).toContain(
+      'Unsaved changes from your last session were restored.',
+    );
+
+    button(targetPane(element) ?? element, 'Discard them').click();
+    await flushPromises();
+    expect(calls.at(-1)).toBe('discardDraft:p-1:index');
+    expect(targetEditor(element).state.doc.toString()).toBe('בית\n');
+    expect(status(element)).toBe('');
+    expect(pageStatus(element, 'index')).toBe('started');
+  });
+
+  it("saves a restored draft against the draft's base, and the page's marker goes", async () => {
+    const { element, calls } = await opened({
+      list: [
+        {
+          ok: true,
+          value: documents.map((document) => ({ ...document, hasDraft: document.key === 'index' })),
+        },
+      ],
+      read: { index: { ok: true, value: withDraft } },
+    });
+    page(element, 'index').click();
+    await flushPromises();
+    saveButton(element).click();
+    await flushPromises();
+    expect(calls.at(-1)).toBe('saveDocument:p-1:index:"בית ועוד\\r\\n":"בית\\r\\n"');
+    expect(targetPane(element)?.textContent).not.toContain('were restored');
+    expect(pageStatus(element, 'index')).toBe('started');
+  });
+
+  it('keeps edits as a draft while typing, and drops it on "Don\'t save"', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { element, calls } = await opened();
+    page(element, 'index').click();
+    await flushPromises();
+    await type(element, '!');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(calls.at(-1)).toBe('saveDraft:p-1:index:"בית\\r\\n!":"בית\\r\\n"');
+
+    page(element, 'guide/getting-started').click();
+    await flushPromises();
+    button(element, "Don't save").click();
+    await flushPromises();
+    expect(calls.at(-2)).toBe('discardDraft:p-1:index');
+    expect(pageStatus(element, 'index')).toBe('started');
   });
 });

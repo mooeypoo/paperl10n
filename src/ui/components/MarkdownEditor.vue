@@ -23,8 +23,9 @@ const props = defineProps<{
    * with each new file, so marking a save doesn't restart the editor. */
   saved: boolean;
 }>();
-/** `dirty`: the text has unsaved changes (sent on mount, and whenever that changes). */
-const emit = defineEmits<{ dirty: [dirty: boolean] }>();
+/** `dirty`: the text has unsaved changes (sent on mount, and whenever that changes). `change`:
+ * after each edit. */
+const emit = defineEmits<{ dirty: [dirty: boolean]; change: [] }>();
 
 const host = useTemplateRef('host');
 let editor: MarkdownEditor | null = null;
@@ -39,6 +40,9 @@ const options = (): MarkdownEditorOptions => ({
   saved: props.saved,
   onDirtyChange: (dirty) => {
     emit('dirty', dirty);
+  },
+  onChange: () => {
+    emit('change');
   },
 });
 

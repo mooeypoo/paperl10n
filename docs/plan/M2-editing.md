@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0–E3 and E4a (the draft store) done, E4b (drafts in the UI) next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0–E4 done, E5 (external changes) next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -266,6 +266,32 @@ inline syntax. The spike confirms it.
       save, the draft dropped on a conflict, drafts not listed, drafts keyed by the folder's name,
       the key not validated, a hash collision not checked, stray copies listed, and main not
       checking `discardDraft`'s key.
+  - *E4b done-notes:*
+    - **Autosave:** each edit (a new `change` event from the editor) schedules a draft about 0.8 s
+      after typing pauses. Edits undone back to the saved text forget the draft instead. A failure
+      shows `workspace.draft-unwritable` in the pane (the edits are still in the editor) and clears
+      once keeping works again.
+    - **Restore:** a page that comes with a draft opens on the draft's text, unsaved, with its
+      `base` (so saving checks the file against what the draft started from, and a file changed
+      since is refused: E5's case). A note says the changes were restored, with "Discard them",
+      which forgets the draft and returns the editor to the file. The note goes once the page is
+      saved.
+    - **Leaving:** "Don't save" in the unsaved-changes question (pages, projects, language, closing
+      the window) forgets the draft. Saving forgets it in main (E4a).
+    - **Page list:** pages with drafts get the unsaved marker (and its screen-reader label), so
+      after a restart it's clear which pages to come back to. A save or a discard clears it.
+    - **A race the mutation checks found:** cancelling the pending draft when a save succeeds would
+      also have dropped the draft for text typed *during* the save. Now a save only marks the draft
+      as forgotten. The pending draft then keeps the newer text, or does nothing if all is saved.
+      This has its own test.
+    - **E2E:** type, wait for the draft file in the profile's `drafts/`, kill the app with
+      SIGKILL (a real crash), relaunch with the same profile: the page is marked, opens with the
+      draft and the note, the project file is untouched, and Ctrl+S writes it and removes the
+      draft file.
+    - Mutation checks, each failing tests: no autosave, the draft's base ignored, a save cancelling
+      the pending draft, discarding a restored draft keeping its base, "Don't save" keeping the
+      draft, a restored draft starting clean, drafts not marked in the list, and a saved page
+      keeping its draft marker.
 - **E5, external changes:** the conflict flow on save.
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

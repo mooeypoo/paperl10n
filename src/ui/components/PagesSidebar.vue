@@ -49,7 +49,7 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
           <span
             class="pages-status"
             :data-status="
-              document.key === unsavedKey
+              document.key === unsavedKey || document.hasDraft
                 ? 'unsaved'
                 : document.targetExists
                   ? 'started'
@@ -64,7 +64,7 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
               document.targetExists ? t('paperl10n-status-started') : t('paperl10n-status-missing')
             }}
           </span>
-          <span v-if="document.key === unsavedKey" class="visually-hidden">
+          <span v-if="document.key === unsavedKey || document.hasDraft" class="visually-hidden">
             {{ t('paperl10n-status-unsaved') }}
           </span>
         </button>
@@ -78,7 +78,7 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
       <li>
         <span class="pages-status" data-status="missing"></span>{{ t('paperl10n-status-missing') }}
       </li>
-      <li v-if="unsavedKey !== null">
+      <li v-if="unsavedKey !== null || documents.some((document) => document.hasDraft)">
         <span class="pages-status" data-status="unsaved"></span>{{ t('paperl10n-status-unsaved') }}
       </li>
     </ul>

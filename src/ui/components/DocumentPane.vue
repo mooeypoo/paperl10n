@@ -23,7 +23,7 @@ withDefaults(
   }>(),
   { saved: true, startable: false },
 );
-const emit = defineEmits<{ start: []; dirty: [dirty: boolean] }>();
+const emit = defineEmits<{ start: []; dirty: [dirty: boolean]; change: [] }>();
 const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 const headingId = useId();
 const editor = useTemplateRef<InstanceType<typeof MarkdownEditor>>('editor');
@@ -83,6 +83,7 @@ defineExpose({
         :label="heading"
         :saved="saved"
         @dirty="(dirty) => emit('dirty', dirty)"
+        @change="emit('change')"
       />
     </div>
   </section>
