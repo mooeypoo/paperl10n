@@ -17,14 +17,21 @@ function matchesQuery(document: SourceDocumentDto, words: readonly string[]): bo
 }
 
 /**
- * The Pages sidebar: searching and selecting documents. When the document list changes (a project
- * opens), the search clears and the first document is selected.
+ * The Pages sidebar: searching and selecting documents. When another project opens, the search
+ * clears and the first document is selected. When the same project's list changes (a page gets its
+ * first translation, the target language changes), the search and the selection stay, if the
+ * selected page is still listed.
  */
-export function usePages(documents: Readonly<Ref<readonly SourceDocumentDto[]>>): Pages {
+export function usePages(
+  documents: Readonly<Ref<readonly SourceDocumentDto[]>>,
+  projectId: Readonly<Ref<string | null>>,
+): Pages {
   const query = ref('');
   const selectedKey = ref<string | null>(documents.value[0]?.key ?? null);
-  watch(documents, (list) => {
-    query.value = '';
+  watch([documents, projectId], ([list, project], [, previousProject]) => {
+    const sameProject = project === previousProject;
+    if (sameProject && list.some((document) => document.key === selectedKey.value)) return;
+    if (!sameProject) query.value = '';
     selectedKey.value = list[0]?.key ?? null;
   });
   const matches = computed(() => {

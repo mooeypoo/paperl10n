@@ -1,16 +1,18 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { ErrorDto } from '#ipc-contract';
-import { computed, ref, shallowRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import { useClient } from './client';
 import AppHeader from './components/AppHeader.vue';
 import DocumentView from './components/DocumentView.vue';
 import LanguagePicker from './components/LanguagePicker.vue';
 import PagesSidebar from './components/PagesSidebar.vue';
+import UnsavedChangesDialog from './components/UnsavedChangesDialog.vue';
 import WelcomeState from './components/WelcomeState.vue';
 import { useDocumentPair } from './composables/use-document-pair';
 import { usePages } from './composables/use-pages';
 import { useProject } from './composables/use-project';
+import { useTranslationSaving } from './composables/use-translation-saving';
 import { useEnvironment } from './environment';
 import { errorMessage } from './i18n/error-message';
 import { useI18n } from './i18n/i18n';
@@ -20,16 +22,89 @@ const { t } = useI18n();
 const client = useClient();
 const project = useProject(client);
 const { summary, documents, error, busy } = project;
-const { query, matches, selectedKey, selected } = usePages(documents);
 const projectId = computed(() => summary.value?.projectId ?? null);
+const { query, matches, selectedKey, selected } = usePages(documents, projectId);
 const reading = useDocumentPair(client, projectId, selectedKey);
 const { pair, loading } = reading;
 const readError = reading.error;
 const errorText = computed(() => (error.value === null ? '' : errorMessage(error.value, t)));
 
-function open(): void {
-  void project.open();
+const saving = useTranslationSaving(client, projectId, pair, (key) => {
+  project.markTranslated(key);
+});
+const { started, dirty, isNew, status: saveStatus } = saving;
+const saveError = saving.error;
+const documentView = useTemplateRef<InstanceType<typeof DocumentView>>('documentView');
+
+/** Saves the open page's translation; true when there's nothing left unsaved. */
+async function saveCurrent(): Promise<boolean> {
+  if (!dirty.value) return true;
+  const snapshot = documentView.value?.snapshot() ?? null;
+  return snapshot === null ? false : saving.save(snapshot);
 }
+
+// Leaving a page with unsaved changes (another page, another project, another language, closing
+// the window) asks first: save, don't save, or stay.
+const pendingLeave = shallowRef<(() => void) | null>(null);
+const leavingKey = ref('');
+
+function guard(leave: () => void): void {
+  if (!dirty.value) {
+    leave();
+    return;
+  }
+  leavingKey.value = selectedKey.value ?? '';
+  pendingLeave.value = leave;
+}
+
+async function resolveLeave(choice: 'save' | 'discard' | 'cancel'): Promise<void> {
+  const leave = pendingLeave.value;
+  if (leave === null) return;
+  // A failed save keeps the page open, with the error showing.
+  if (choice === 'save' && !(await saveCurrent())) {
+    pendingLeave.value = null;
+    return;
+  }
+  pendingLeave.value = null;
+  if (choice !== 'cancel') leave();
+}
+
+function open(): void {
+  guard(() => void project.open());
+}
+
+function selectPage(key: string): void {
+  if (key !== selectedKey.value) guard(() => (selectedKey.value = key));
+}
+
+// Ctrl+S (Cmd+S on macOS) saves, wherever the focus is. `code` matches the key's place, so it
+// works with any keyboard layout (on a Hebrew layout, `key` is "ד").
+function onKeydown(event: KeyboardEvent): void {
+  const save = event.code === 'KeyS' || event.key.toLowerCase() === 's';
+  if (!save || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+  event.preventDefault();
+  if (pendingLeave.value === null) void saveCurrent();
+}
+
+// Closing the window: cancel it, ask, and close for real once the user decides.
+let closing = false;
+function onBeforeUnload(event: BeforeUnloadEvent): void {
+  if (closing || !dirty.value) return;
+  event.preventDefault();
+  guard(() => {
+    closing = true;
+    window.close();
+  });
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown);
+  window.addEventListener('beforeunload', onBeforeUnload);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown);
+  window.removeEventListener('beforeunload', onBeforeUnload);
+});
 
 const { preferences } = useEnvironment();
 const pickerOpen = ref(false);
@@ -61,7 +136,15 @@ async function chooseTarget(tag: string): Promise<void> {
 
 <template>
   <div class="app">
-    <AppHeader :summary="summary" :busy="busy" @open="open" @choose-language="openPicker" />
+    <AppHeader :summary="summary" :busy="busy" @open="open" @choose-language="guard(openPicker)" />
+    <UnsavedChangesDialog
+      :open="pendingLeave !== null"
+      :page-key="leavingKey"
+      :busy="saveStatus === 'saving'"
+      @save="resolveLeave('save')"
+      @discard="resolveLeave('discard')"
+      @cancel="resolveLeave('cancel')"
+    />
     <LanguagePicker
       :open="pickerOpen"
       :project-id="projectId"
@@ -79,7 +162,8 @@ async function chooseTarget(tag: string): Promise<void> {
         :documents="documents"
         :matches="matches"
         :selected-key="selectedKey"
-        @select="(key) => (selectedKey = key)"
+        :unsaved-key="dirty ? selectedKey : null"
+        @select="selectPage"
       />
       <main class="app-main">
         <div v-if="error !== null" class="app-error" role="alert">
@@ -104,12 +188,20 @@ async function chooseTarget(tag: string): Promise<void> {
         </div>
         <DocumentView
           v-else-if="selected !== null"
+          ref="documentView"
           :source-locale="summary.sourceLocale"
           :target-locale="summary.targetLocale"
           :document="selected"
           :pair="pair"
           :loading="loading"
           :error="readError"
+          :started="started"
+          :is-new="isNew"
+          :save-status="saveStatus"
+          :save-error="saveError"
+          @start="saving.start()"
+          @dirty="saving.setDirty"
+          @save="saveCurrent"
         />
         <p v-else class="app-empty">{{ t('paperl10n-no-documents') }}</p>
       </main>

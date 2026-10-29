@@ -34,6 +34,10 @@ it came from. When one is picked up, it moves into that milestone's plan and is 
 
 ## From M2: editing ([plan](M2-editing.md))
 
+- **Message parameters aren't isolated in older messages.** E3's new messages wrap paths and
+  page keys in FSI/PDI (`isolated()` in `ui/i18n/i18n.ts`); error messages and older strings
+  don't yet, so a path in a Hebrew sentence can misplace trailing punctuation. Apply it in
+  `errorMessage` and the remaining call sites.
 - **Manual checks on a real keyboard** (E2b): IME composition, a screen reader (Orca on Linux),
   and how typing and selecting feel at direction boundaries. Not testable offscreen.
 - **The parsed blocks and inline spans in `DocumentTextDto` are unused by the UI** since the

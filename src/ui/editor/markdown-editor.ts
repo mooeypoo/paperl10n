@@ -13,6 +13,7 @@ import editorStyles from './markdown-editor.css?inline';
 import { fileText, openFileText } from './file-text.ts';
 import { markdownDecorations } from './markdown-decorations.ts';
 import { markdownLanguage } from './markdown-language.ts';
+import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
 
 export interface MarkdownEditorOptions {
   /** The file's exact text. */
@@ -24,24 +25,36 @@ export interface MarkdownEditorOptions {
   readonly dir: 'ltr' | 'rtl';
   /** The accessible name of the editable area. */
   readonly label: string;
-  /** Called after each edit. */
-  readonly onEdit?: () => void;
+  /** The text is what the file holds (false for a new translation, unsaved until saved). */
+  readonly saved: boolean;
+  /** Called when the document starts or stops having unsaved changes. */
+  readonly onDirtyChange?: (dirty: boolean) => void;
+}
+
+/** The text to save, and a way to record it as saved once the save succeeded. */
+export interface EditorSnapshot {
+  readonly text: string;
+  /** Edits made after the snapshot stay unsaved. */
+  markSaved(): void;
 }
 
 export interface MarkdownEditor {
   readonly view: EditorView;
   /** The document as file text, ready to save. */
   text(): string;
+  snapshot(): EditorSnapshot;
+  dirty(): boolean;
   destroy(): void;
 }
 
 export function editorState(options: MarkdownEditorOptions): EditorState {
   const opened = openFileText(options.file);
-  const { onEdit } = options;
+  const { onDirtyChange } = options;
   return EditorState.create({
     doc: opened.text,
     extensions: [
       opened.extension,
+      savePointExtension(options.saved),
       markdownLanguage(options.mdx),
       markdownDecorations,
       history(),
@@ -55,11 +68,13 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
         dir: options.dir,
         'aria-label': options.label,
       }),
-      ...(onEdit === undefined
+      ...(onDirtyChange === undefined
         ? []
         : [
             EditorView.updateListener.of((update) => {
-              if (update.docChanged) onEdit();
+              if (!update.docChanged && !update.transactions.some(savePointChanged)) return;
+              const dirty = isDirty(update.state);
+              if (dirty !== isDirty(update.startState)) onDirtyChange(dirty);
             }),
           ]),
     ],
@@ -79,6 +94,16 @@ export function createMarkdownEditor(
   return {
     view,
     text: () => fileText(view.state),
+    snapshot: () => {
+      const { doc } = view.state;
+      return {
+        text: fileText(view.state),
+        markSaved: () => {
+          view.dispatch({ effects: markSaved(doc) });
+        },
+      };
+    },
+    dirty: () => isDirty(view.state),
     destroy: () => {
       view.destroy();
     },

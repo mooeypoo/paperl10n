@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0 (spike), E1 (saving), and E2 (the editor) done, E3 (seed and save) next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0 (spike), E1 (saving), E2 (the editor), and E3 (seed and save) done, E4 (drafts) next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -215,6 +215,33 @@ inline syntax. The spike confirms it.
       ([follow-ups](follow-ups.md)).
 - **E3, seed and save:** "Start translating", Save (button, Ctrl/Cmd+S), dirty state in the page
   list, and the unsaved-changes guard.
+  - *E3 done-notes:*
+    - **Start translating:** a page without a translation offers "Start translating", which
+      opens the editor on a byte-for-byte copy of the source, unsaved, with a note that saving
+      creates the file. Nothing is written until Save. (The copy's prose takes the pane's direction,
+      so English sits right-aligned in a Hebrew pane until it's translated.)
+    - **Save:** a button in the translation pane's header and Ctrl+S / Cmd+S from anywhere in the
+      window. The shortcut matches the physical key (`code`), so it works on a Hebrew layout,
+      where `key` is "ד". The save sends `base`: the file as read, the last save, or `null` for a
+      new translation (E1's conflict check). A status (`role="status"`) says unsaved, saving, or
+      saved. A failure shows its message in the pane and keeps the changes unsaved.
+    - **Dirty state** lives in the editor (`save-point.ts`): the document differs from the last
+      saved one, so undoing back to the saved text is clean again. A save marks the snapshot it
+      sent, so typing during a save stays unsaved. The page list marks the page (an accent dot,
+      a screen-reader label, and a legend entry while it applies). After a first save, the page
+      counts as translated and stays selected (`usePages` keeps the selection when the same
+      project's list changes).
+    - **The guard:** switching pages, opening another project, changing the target language,
+      or closing the window with unsaved changes asks "Save your changes?" (Save, Don't save,
+      Cancel; Escape cancels). If Save fails, the page stays open with the error. Closing uses
+      the renderer only: `beforeunload` cancels the close and asks, and "Don't save" closes the
+      window with `window.close()`. No main-process dialog, so the question is in the interface
+      language. The e2e tests check it in a real window. They now destroy windows in `afterEach`, so
+      a test that leaves unsaved changes can't hold the app open.
+    - Mutation checks, each failing tests: the close not held back, Ctrl+S matched by `key` only,
+      the guard never asking, Cancel leaving anyway, no `base` sent, the snapshot not marked
+      saved, the page not marked translated, the selection reset by the save, a new translation
+      starting clean, and dirty checked by identity (so undo would stay dirty).
 - **E4, drafts:** a `DraftStore` port (in app data), autosave of drafts, and restore on reopen.
 - **E5, external changes:** the conflict flow on save.
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).

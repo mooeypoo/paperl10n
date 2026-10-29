@@ -417,7 +417,7 @@ describe('the app', () => {
 
 describe('the target-language picker', () => {
   const noTarget = { ...summary, targetLocale: null };
-  const dialog = () => document.querySelector('dialog');
+  const dialog = () => document.querySelector<HTMLDialogElement>('dialog.picker');
   const search = () => dialog()?.querySelector<HTMLInputElement>('input[role="combobox"]');
   const options = () => [...(dialog()?.querySelectorAll('[role="option"]') ?? [])];
   const optionTags = () => options().map((o) => o.querySelector('.picker-tag')?.textContent);

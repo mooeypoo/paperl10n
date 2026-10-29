@@ -1,22 +1,37 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { DocumentTextDto, LocaleDto } from '#ipc-contract';
-import { useId } from 'vue';
+import { useId, useTemplateRef } from 'vue';
+import type { EditorSnapshot } from '../editor/markdown-editor';
 import { useI18n } from '../i18n/i18n';
 import MarkdownEditor from './MarkdownEditor.vue';
 
-defineProps<{
-  heading: string;
-  locale: LocaleDto;
-  path: string;
-  /** `null` once loaded means the file doesn't exist yet. */
-  document: DocumentTextDto | null;
-  loading: boolean;
-  /** The source pane: its text can be read, selected, and copied, but not changed. */
-  readOnly: boolean;
-}>();
+withDefaults(
+  defineProps<{
+    heading: string;
+    locale: LocaleDto;
+    path: string;
+    /** `null` once loaded means the file doesn't exist yet. */
+    document: DocumentTextDto | null;
+    loading: boolean;
+    /** The source pane: its text can be read, selected, and copied, but not changed. */
+    readOnly: boolean;
+    /** The document is the file's text (false for a new translation seeded from the source). */
+    saved?: boolean;
+    /** Offer "Start translating" when there's no document. */
+    startable?: boolean;
+  }>(),
+  { saved: true, startable: false },
+);
+const emit = defineEmits<{ start: []; dirty: [dirty: boolean] }>();
 const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 const headingId = useId();
+const editor = useTemplateRef<InstanceType<typeof MarkdownEditor>>('editor');
+
+defineExpose({
+  /** The editor's text to save, or `null` when no editor is shown. */
+  snapshot: (): EditorSnapshot | null => editor.value?.snapshot() ?? null,
+});
 </script>
 
 <template>
@@ -30,26 +45,44 @@ const headingId = useId();
     :aria-busy="loading"
   >
     <header class="pane-header" :lang="uiLocale" :dir="uiDirection">
-      <h3 :id="headingId" class="pane-heading">{{ heading }}</h3>
-      <!-- A file path isn't prose in any language: isolate it (bdi). -->
-      <p class="pane-path">
-        <bdi>{{ path }}</bdi>
-      </p>
+      <div class="pane-title">
+        <h3 :id="headingId" class="pane-heading">{{ heading }}</h3>
+        <!-- A file path isn't prose in any language: isolate it (bdi). -->
+        <p class="pane-path">
+          <bdi>{{ path }}</bdi>
+        </p>
+      </div>
+      <slot name="actions" />
     </header>
     <div class="pane-body">
+      <div v-if="$slots.notice" class="pane-notices" :lang="uiLocale" :dir="uiDirection">
+        <slot name="notice" />
+      </div>
       <p v-if="loading" class="pane-note" :lang="uiLocale" :dir="uiDirection">
         {{ t('paperl10n-reading') }}
       </p>
-      <p v-else-if="document === null" class="pane-note" :lang="uiLocale" :dir="uiDirection">
-        {{ t('paperl10n-translation-missing') }}
-      </p>
+      <div v-else-if="document === null" class="pane-missing" :lang="uiLocale" :dir="uiDirection">
+        <p class="pane-note">{{ t('paperl10n-translation-missing') }}</p>
+        <button
+          v-if="startable"
+          type="button"
+          class="pl-button"
+          data-variant="primary"
+          @click="emit('start')"
+        >
+          {{ t('paperl10n-start-translating') }}
+        </button>
+      </div>
       <MarkdownEditor
         v-else
+        ref="editor"
         :file="document.text"
         :mdx="document.mdx"
         :read-only="readOnly"
         :locale="locale"
         :label="heading"
+        :saved="saved"
+        @dirty="(dirty) => emit('dirty', dirty)"
       />
     </div>
   </section>
@@ -67,12 +100,36 @@ const headingId = useId();
 .pane-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--pl-space-1) var(--pl-space-3);
   padding-block: var(--pl-space-3);
   padding-inline: var(--pl-space-5);
   border-block-end: 1px solid var(--pl-color-line);
+}
+
+.pane-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--pl-space-1) var(--pl-space-3);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.pane-notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  margin-block-end: var(--pl-space-3);
+}
+
+.pane-missing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-3);
 }
 
 .pane-heading {

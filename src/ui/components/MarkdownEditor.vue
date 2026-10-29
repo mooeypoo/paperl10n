@@ -5,6 +5,7 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
 import {
   createMarkdownEditor,
   editorState,
+  type EditorSnapshot,
   type MarkdownEditor,
   type MarkdownEditorOptions,
 } from '../editor/markdown-editor';
@@ -18,8 +19,12 @@ const props = defineProps<{
   locale: LocaleDto;
   /** The accessible name of the text area. */
   label: string;
+  /** The text is what the file holds (false for a new translation: unsaved until saved). Read
+   * with each new file, so marking a save doesn't restart the editor. */
+  saved: boolean;
 }>();
-const emit = defineEmits<{ edit: [] }>();
+/** `dirty`: the text has unsaved changes (sent on mount, and whenever that changes). */
+const emit = defineEmits<{ dirty: [dirty: boolean] }>();
 
 const host = useTemplateRef('host');
 let editor: MarkdownEditor | null = null;
@@ -31,13 +36,16 @@ const options = (): MarkdownEditorOptions => ({
   lang: props.locale.id,
   dir: props.locale.direction,
   label: props.label,
-  onEdit: () => {
-    emit('edit');
+  saved: props.saved,
+  onDirtyChange: (dirty) => {
+    emit('dirty', dirty);
   },
 });
 
 onMounted(() => {
-  if (host.value !== null) editor = createMarkdownEditor(host.value, options());
+  if (host.value === null) return;
+  editor = createMarkdownEditor(host.value, options());
+  emit('dirty', editor.dirty());
 });
 // A different file (or a different way to read it) starts over: new text, new undo history.
 watch(
@@ -49,7 +57,11 @@ watch(
     props.locale.direction,
     props.label,
   ],
-  () => editor?.view.setState(editorState(options())),
+  () => {
+    if (editor === null) return;
+    editor.view.setState(editorState(options()));
+    emit('dirty', editor.dirty());
+  },
 );
 onBeforeUnmount(() => {
   editor?.destroy();
@@ -59,6 +71,9 @@ onBeforeUnmount(() => {
 defineExpose({
   /** The document as file text, ready to save. */
   text: (): string => editor?.text() ?? props.file,
+  /** The text to save, and a way to mark it saved once saving succeeded. */
+  snapshot: (): EditorSnapshot =>
+    editor?.snapshot() ?? { text: props.file, markSaved: () => undefined },
 });
 </script>
 

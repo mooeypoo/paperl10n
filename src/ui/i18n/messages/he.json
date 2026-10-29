@@ -62,5 +62,15 @@
   "paperl10n-language-current": "(נוכחית)",
   "paperl10n-cancel": "ביטול",
   "paperl10n-error-workspace-document-changed": "הקובץ $1 השתנה בדיסק מאז שהתחלתם לערוך אותו, ולכן הוא לא נדרס.",
-  "paperl10n-error-workspace-document-unwritable": "אי אפשר לשמור את הקובץ $1 ($2)."
+  "paperl10n-error-workspace-document-unwritable": "אי אפשר לשמור את הקובץ $1 ($2).",
+  "paperl10n-start-translating": "להתחיל לתרגם",
+  "paperl10n-new-translation": "עותק של המקור. תרגמו אותו ושמרו כדי ליצור את $1.",
+  "paperl10n-save": "שמירה",
+  "paperl10n-save-status-unsaved": "יש שינויים שלא נשמרו",
+  "paperl10n-save-status-saving": "שומר…",
+  "paperl10n-save-status-saved": "נשמר",
+  "paperl10n-status-unsaved": "יש שינויים שלא נשמרו",
+  "paperl10n-unsaved-title": "לשמור את השינויים?",
+  "paperl10n-unsaved-message": "השינויים בתרגום של $1 עדיין לא נשמרו.",
+  "paperl10n-discard-changes": "לא לשמור"
 }

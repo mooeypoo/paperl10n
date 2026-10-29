@@ -35,6 +35,14 @@ export function createI18n(initial: UiLocale = 'en'): I18n {
   };
 }
 
+/**
+ * A message parameter that isn't prose in the interface language (a path, a page key), isolated
+ * (FSI … PDI) so the sentence around it can't reorder it, and vice versa.
+ */
+export function isolated(text: string): string {
+  return `\u2068${text}\u2069`;
+}
+
 export const i18nKey: InjectionKey<I18n> = Symbol('paperl10n-i18n');
 
 export function useI18n(): I18n {

@@ -78,6 +78,13 @@ test.beforeEach(async () => {
 });
 
 test.afterEach(async () => {
+  // Destroying the windows skips their unload handlers, so a test that leaves unsaved changes
+  // can't hold the app open with the unsaved-changes question. (A window may be closed already.)
+  await app
+    .evaluate(({ BrowserWindow }) => {
+      for (const window of BrowserWindow.getAllWindows()) window.destroy();
+    })
+    .catch(() => undefined);
   await app.close();
   rmSync(profile, { recursive: true, force: true });
 });
@@ -172,6 +179,61 @@ test('asks for a target language when the project has none, and saves the choice
   );
   expect(await problems.violations()).toEqual([]);
   expect(problems.console).toEqual([]);
+});
+
+/** A copy of the basic fixture in the test's profile folder, so saving never touches the fixture. */
+async function openCopyOfBasic(): Promise<string> {
+  const project = join(profile, 'basic');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  return project;
+}
+
+test('starts a translation from the source and saves it with Ctrl+S, creating the file', async () => {
+  const project = await openCopyOfBasic();
+  const target = join(project, 'he/guide/getting-started.md');
+  await page.getByRole('button', { name: 'Start translating' }).click();
+  const editor = page.getByRole('textbox', { name: 'עברית · translation' });
+  await expect(page.getByRole('status')).toHaveText('Unsaved changes');
+
+  await editor.click();
+  await page.keyboard.press('Control+Home');
+  await page.keyboard.type('מתחילים ');
+  await page.keyboard.press('Control+S');
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  const source = readFileSync(join(project, 'en/guide/getting-started.md'), 'utf8');
+  expect(readFileSync(target, 'utf8')).toBe(`מתחילים ${source}`);
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
+test('asks before closing the window with unsaved changes, and closes on "Don\'t save"', async () => {
+  await openCopyOfBasic();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'עברית · translation' });
+  await editor.click();
+  await page.keyboard.type('!');
+  await expect(page.getByRole('status')).toHaveText('Unsaved changes');
+
+  // Closing from outside the page (the window's close button) is held back, and the app asks.
+  await app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.close();
+  });
+  const question = page.getByRole('alertdialog', { name: 'Save your changes?' });
+  await expect(question).toBeVisible();
+  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
+
+  await question.getByRole('button', { name: 'Cancel' }).click();
+  await expect(question).toBeHidden();
+
+  await app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.close();
+  });
+  const closed = page.waitForEvent('close');
+  await question.getByRole('button', { name: "Don't save" }).click();
+  await closed;
 });
 
 test('the renderer has no Node, and the preload exposes exactly the IPC contract', async () => {

@@ -1,9 +1,11 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { DocumentPairDto, ErrorDto, LocaleDto, SourceDocumentDto } from '#ipc-contract';
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
+import type { SaveStatus } from '../composables/use-translation-saving';
+import type { EditorSnapshot } from '../editor/markdown-editor';
 import { errorMessage } from '../i18n/error-message';
-import { useI18n } from '../i18n/i18n';
+import { isolated, useI18n } from '../i18n/i18n';
 import { autonym } from '../i18n/language-name';
 import DocumentPane from './DocumentPane.vue';
 
@@ -14,11 +16,31 @@ const props = defineProps<{
   pair: DocumentPairDto | null;
   loading: boolean;
   error: ErrorDto | null;
+  /** A new translation was started from a copy of the source. */
+  started: boolean;
+  /** The translation has no file yet. */
+  isNew: boolean;
+  saveStatus: SaveStatus;
+  saveError: ErrorDto | null;
 }>();
+const emit = defineEmits<{ start: []; dirty: [dirty: boolean]; save: [] }>();
 const { t } = useI18n();
 // Only the pair for this page counts: while the next page loads, the previous one isn't shown.
 const current = computed(() => (props.pair?.key === props.document.key ? props.pair : null));
 const waiting = computed(() => props.loading || (current.value === null && props.error === null));
+// A new translation starts as a byte-for-byte copy of the source.
+const target = computed(
+  () => current.value?.target ?? (props.started ? (current.value?.source ?? null) : null),
+);
+const statusText = computed(() =>
+  props.saveStatus === 'clean' ? '' : t(`paperl10n-save-status-${props.saveStatus}`),
+);
+const targetPane = useTemplateRef<InstanceType<typeof DocumentPane>>('targetPane');
+
+defineExpose({
+  /** The translation editor's text to save, or `null` when there's no editor. */
+  snapshot: (): EditorSnapshot | null => targetPane.value?.snapshot() ?? null,
+});
 </script>
 
 <template>
@@ -41,13 +63,42 @@ const waiting = computed(() => props.loading || (current.value === null && props
         read-only
       />
       <DocumentPane
+        ref="targetPane"
         :heading="t('paperl10n-target-pane', autonym(targetLocale.id))"
         :locale="targetLocale"
         :path="document.targetPath"
-        :document="current?.target ?? null"
+        :document="target"
         :loading="waiting"
         :read-only="false"
-      />
+        :saved="(current?.target ?? null) !== null"
+        startable
+        @start="emit('start')"
+        @dirty="(dirty) => emit('dirty', dirty)"
+      >
+        <template v-if="target !== null && !waiting" #actions>
+          <div class="document-save">
+            <span class="document-save-status" role="status">{{ statusText }}</span>
+            <button
+              type="button"
+              class="pl-button"
+              data-variant="primary"
+              aria-keyshortcuts="Control+S Meta+S"
+              :disabled="saveStatus !== 'unsaved'"
+              @click="emit('save')"
+            >
+              {{ t('paperl10n-save') }}
+            </button>
+          </div>
+        </template>
+        <template v-if="(saveError !== null || (started && isNew)) && !waiting" #notice>
+          <p v-if="saveError !== null" class="document-error" role="alert">
+            {{ errorMessage(saveError, t) }}
+          </p>
+          <p v-if="started && isNew" class="document-note">
+            {{ t('paperl10n-new-translation', isolated(document.targetPath)) }}
+          </p>
+        </template>
+      </DocumentPane>
     </div>
   </article>
 </template>
@@ -73,7 +124,25 @@ const waiting = computed(() => props.loading || (current.value === null && props
   align-items: start;
 }
 
+.document-save {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-3);
+}
+
+.document-save-status {
+  color: var(--pl-color-muted);
+  font-size: var(--pl-text-sm);
+}
+
+.document-note {
+  margin: 0;
+  color: var(--pl-color-muted);
+  font-size: var(--pl-text-sm);
+}
+
 .document-error {
+  margin: 0;
   padding: var(--pl-space-3) var(--pl-space-4);
   border: 1px solid var(--pl-color-danger);
   border-radius: var(--pl-radius-md);

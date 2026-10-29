@@ -197,4 +197,24 @@ describe('useProject', () => {
       expect(project.busy.value).toBe(false);
     });
   });
+
+  it('marks a page translated once its first save created the file', async () => {
+    const untranslated = documents.map((document) => ({ ...document, targetExists: false }));
+    const { client } = fakeClient({
+      open: [{ ok: true, value: summary }],
+      list: [{ ok: true, value: untranslated }],
+    });
+    const project = useProject(client);
+    await project.open();
+    const key = untranslated[0]?.key ?? '';
+    project.markTranslated(key);
+    expect(
+      project.documents.value.map((document) => [document.key, document.targetExists]),
+    ).toEqual(untranslated.map((document) => [document.key, document.key === key]));
+    // Already translated (or unknown): the list stays the same object.
+    const before = project.documents.value;
+    project.markTranslated(key);
+    project.markTranslated('nope');
+    expect(project.documents.value).toBe(before);
+  });
 });

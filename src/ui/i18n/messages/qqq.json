@@ -62,5 +62,15 @@
   "paperl10n-language-current": "Read by screen readers after the language that is the current translation language.",
   "paperl10n-cancel": "Button that closes a dialog without changing anything.",
   "paperl10n-error-workspace-document-changed": "Error when saving a translation that someone or something else (git, another editor) changed on disk after editing started. $1: the file's path.",
-  "paperl10n-error-workspace-document-unwritable": "Error when writing a translation file fails. $1: the file's path; $2: a technical problem code, e.g. \"files.unwritable\"."
+  "paperl10n-error-workspace-document-unwritable": "Error when writing a translation file fails. $1: the file's path; $2: a technical problem code, e.g. \"files.unwritable\".",
+  "paperl10n-start-translating": "Button in the translation pane of a page with no translation file. It opens an editor with a copy of the source text; the file is created when the user saves.",
+  "paperl10n-new-translation": "Note above the editor of a new translation, before its first save. $1: the file path that saving creates (shown isolated, left to right).",
+  "paperl10n-save": "Button that saves the translation to its file (also Ctrl+S, or Cmd+S on macOS).",
+  "paperl10n-save-status-unsaved": "Status next to the Save button: the translation has changes that aren't in the file yet.",
+  "paperl10n-save-status-saving": "Status next to the Save button while the file is being written.",
+  "paperl10n-save-status-saved": "Status next to the Save button right after a successful save, until the next edit.",
+  "paperl10n-status-unsaved": "Status of the open page in the page list when its translation has unsaved changes. Read by screen readers, and shown in the legend while some page has them.",
+  "paperl10n-unsaved-title": "Title of the dialog shown before leaving a page (switching pages, opening another project, changing the language, closing the window) whose translation has unsaved changes.",
+  "paperl10n-unsaved-message": "Body of the unsaved-changes dialog. $1: the page key, like guide/getting-started (shown isolated).",
+  "paperl10n-discard-changes": "Button in the unsaved-changes dialog: leave the page and drop the unsaved changes."
 }

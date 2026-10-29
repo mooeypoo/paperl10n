@@ -9,6 +9,8 @@ const props = defineProps<{
   documents: readonly SourceDocumentDto[];
   matches: readonly SourceDocumentDto[];
   selectedKey: string | null;
+  /** The page whose translation has unsaved changes, if any. */
+  unsavedKey: string | null;
 }>();
 const query = defineModel<string>('query', { required: true });
 const emit = defineEmits<{ select: [key: string] }>();
@@ -46,7 +48,13 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
         >
           <span
             class="pages-status"
-            :data-status="document.targetExists ? 'started' : 'missing'"
+            :data-status="
+              document.key === unsavedKey
+                ? 'unsaved'
+                : document.targetExists
+                  ? 'started'
+                  : 'missing'
+            "
             aria-hidden="true"
           ></span>
           <!-- A key is a path, not prose in the interface language: isolate it. -->
@@ -55,6 +63,9 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
             {{
               document.targetExists ? t('paperl10n-status-started') : t('paperl10n-status-missing')
             }}
+          </span>
+          <span v-if="document.key === unsavedKey" class="visually-hidden">
+            {{ t('paperl10n-status-unsaved') }}
           </span>
         </button>
       </li>
@@ -66,6 +77,9 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
       </li>
       <li>
         <span class="pages-status" data-status="missing"></span>{{ t('paperl10n-status-missing') }}
+      </li>
+      <li v-if="unsavedKey !== null">
+        <span class="pages-status" data-status="unsaved"></span>{{ t('paperl10n-status-unsaved') }}
       </li>
     </ul>
   </nav>
@@ -172,6 +186,12 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
 
 .pages-status[data-status='started'] {
   background: var(--pl-color-muted);
+}
+
+/* Unsaved changes: the accent, filled, so it stands out from both statuses. */
+.pages-status[data-status='unsaved'] {
+  border-color: var(--pl-color-accent);
+  background: var(--pl-color-accent);
 }
 
 .pages-legend {

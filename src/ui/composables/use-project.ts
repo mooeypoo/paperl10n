@@ -14,6 +14,8 @@ export interface ProjectState {
    * Returns the error when it fails; the project stays as it was.
    */
   chooseTarget(language: string): Promise<ErrorDto | null>;
+  /** A page's translation was saved, so its file exists now. */
+  markTranslated(key: string): void;
 }
 
 const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, details: [] };
@@ -87,5 +89,12 @@ export function useProject(client: PaperLionApi): ProjectState {
     }
   }
 
-  return { summary, documents, error, busy, open, chooseTarget };
+  function markTranslated(key: string): void {
+    if (!documents.value.some((document) => document.key === key && !document.targetExists)) return;
+    documents.value = documents.value.map((document) =>
+      document.key === key ? { ...document, targetExists: true } : document,
+    );
+  }
+
+  return { summary, documents, error, busy, open, chooseTarget, markTranslated };
 }

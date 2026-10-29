@@ -143,8 +143,11 @@ export function fakeClient(
         ),
       });
     },
-    saveDocument: ({ projectId, key, text }) => {
-      calls.push(`saveDocument:${projectId}:${key}:${String(text.length)}`);
+    // Logs the text and the base (or "new"), JSON-quoted so line endings are visible.
+    saveDocument: ({ projectId, key, text, base }) => {
+      calls.push(
+        `saveDocument:${projectId}:${key}:${JSON.stringify(text)}:${base === null ? 'new' : JSON.stringify(base)}`,
+      );
       return Promise.resolve(
         answers.save ?? { ok: true, value: { path: `he/${key}.md`, written: true } },
       );

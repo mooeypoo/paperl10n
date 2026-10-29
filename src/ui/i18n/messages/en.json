@@ -62,5 +62,15 @@
   "paperl10n-language-current": "(current)",
   "paperl10n-cancel": "Cancel",
   "paperl10n-error-workspace-document-changed": "$1 changed on disk since you started editing it, so it wasn't overwritten.",
-  "paperl10n-error-workspace-document-unwritable": "The file $1 can't be saved ($2)."
+  "paperl10n-error-workspace-document-unwritable": "The file $1 can't be saved ($2).",
+  "paperl10n-start-translating": "Start translating",
+  "paperl10n-new-translation": "A copy of the source. Translate it, then save to create $1.",
+  "paperl10n-save": "Save",
+  "paperl10n-save-status-unsaved": "Unsaved changes",
+  "paperl10n-save-status-saving": "Saving…",
+  "paperl10n-save-status-saved": "Saved",
+  "paperl10n-status-unsaved": "Unsaved changes",
+  "paperl10n-unsaved-title": "Save your changes?",
+  "paperl10n-unsaved-message": "Your changes to the translation of $1 aren't saved yet.",
+  "paperl10n-discard-changes": "Don't save"
 }
