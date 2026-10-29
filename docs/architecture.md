@@ -175,9 +175,13 @@ Selecting a page in the sidebar:
    (`#domains/document`, implemented by the lezer adapter, injected by the composition root).
 4. A `ParsedDocument` is the exact text plus positions: blocks and inline spans, in UTF-16
    offsets ([`domains/document.md`](domains/document.md)). The handler maps it to plain DTOs.
-5. **UI** (`MarkdownView`) shows each pane's text as written, block by block, always as text
-   (never as HTML): syntax dimmed, code in mono, inline code and link destinations isolated as
-   left-to-right runs, and code, data, and HTML blocks taking direction line by line.
+5. **UI** shows each pane's text in a CodeMirror 6 editor (`ui/editor/`, from M2): read-only for
+   the source, editable for the translation, always as text (never as HTML). The editor parses
+   with the same dialect (`#markdown-syntax`) and styles the visible lines: syntax dimmed, code in
+   mono, inline code, link destinations, and tags isolated as left-to-right runs, and code, data,
+   HTML blocks, and `:::` fences taking direction line by line. It keeps the file's BOM and line
+   endings for saving. The blocks and inline spans in the DTO are no longer used by the UI; they're
+   the model for M3's sections ([follow-ups](plan/follow-ups.md)).
 
 ## How it's tested
 

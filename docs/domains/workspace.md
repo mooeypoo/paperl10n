@@ -69,8 +69,8 @@ chosen yet), or a `FormatError` from the layout.
 
 `createReadDocumentPair({ sessions, parser })`. It finds the page by key among the layout's source
 documents, reads the source and the translation, and parses both with the `MarkdownParser` port
-(`#domains/document`; `.mdx` files with MDX tolerance). A translation that doesn't exist yet is
-`null`, not an error. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+(`#domains/document`; `.mdx` files with MDX tolerance, and each read document says `mdx` so the
+editor parses it the same way). A translation that doesn't exist yet is `null`, not an error. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 `workspace.unknown-document` (the key
 isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
 file that vanished), or a `FormatError`.

@@ -34,9 +34,10 @@ function toLanguageDto(entry: LanguageEntry): LanguageDto {
   return { tag: entry.tag, name: entry.name, autonym: entry.autonym, direction: entry.direction };
 }
 
-function toDocumentDto({ path, document }: ReadDocument): DocumentTextDto {
+function toDocumentDto({ path, mdx, document }: ReadDocument): DocumentTextDto {
   return {
     path,
+    mdx,
     text: document.text,
     blocks: document.blocks.map(({ kind, range, depth }) =>
       depth === undefined

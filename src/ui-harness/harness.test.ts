@@ -6,6 +6,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { DEFAULT_FIXTURE, HARNESS_MARKER, startHarness } from './harness';
 import { fixtureProjects } from './fixture-projects';
 
+/** A pane's editor text: the editors live in shadow roots (ui/editor/markdown-editor.ts). */
+const textWithEditors = (pane: Element | undefined) =>
+  pane?.querySelector('.markdown-editor')?.shadowRoot?.querySelector('.cm-content')?.textContent;
+
 let unmount: (() => void) | undefined;
 afterEach(() => {
   unmount?.();
@@ -60,7 +64,7 @@ describe('the UI harness', () => {
     const [source, target] = [...element.querySelectorAll('section[lang]')];
     expect(target?.textContent).toContain('docs/he/about.md');
     // The first page (about) is read and parsed for real: its English text, and no translation yet.
-    expect(source?.textContent).toContain('Lantern is free software');
+    expect(textWithEditors(source)).toContain('Lantern is free software');
     expect(target?.textContent).toContain("This page isn't translated yet.");
   });
 

@@ -25,7 +25,7 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
         ok: true,
         value: {
           key,
-          source: { path: 'en/a.md', text: 'a', blocks: [], inline: [] },
+          source: { path: 'en/a.md', mdx: false, text: 'a', blocks: [], inline: [] },
           target: null,
         },
       }),

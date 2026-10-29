@@ -62,7 +62,7 @@ function skipValue(text: string, i: number): number {
 }
 
 function scanTopLevel(text: string): TopLevelObject | null {
-  let i = skipWhitespace(text, text.startsWith('﻿') ? 1 : 0);
+  let i = skipWhitespace(text, text.startsWith('\uFEFF') ? 1 : 0);
   if (text.charAt(i) !== '{') return null;
   const open = i;
   const members: Member[] = [];
@@ -104,7 +104,7 @@ function sameJson(a: unknown, b: unknown): boolean {
 
 function parse(text: string): unknown {
   try {
-    return JSON.parse(text.startsWith('﻿') ? text.slice(1) : text);
+    return JSON.parse(text.startsWith('\uFEFF') ? text.slice(1) : text);
   } catch {
     return undefined;
   }

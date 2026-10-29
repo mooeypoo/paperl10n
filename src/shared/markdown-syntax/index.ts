@@ -73,7 +73,7 @@ const frontmatter: MarkdownConfig = {
       before: 'HorizontalRule',
       parse(cx, line) {
         if (cx.lineStart !== 0 || cx.parentType().name !== 'Document') return false;
-        const bom = line.text.startsWith('﻿') ? 1 : 0;
+        const bom = line.text.startsWith('\uFEFF') ? 1 : 0;
         const fence = withoutCarriageReturn(line.text.slice(bom));
         if (fence !== '---' && fence !== '+++') return false;
         let to = bom + fence.length;

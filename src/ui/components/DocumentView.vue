@@ -38,6 +38,7 @@ const waiting = computed(() => props.loading || (current.value === null && props
         :path="document.sourcePath"
         :document="current?.source ?? null"
         :loading="waiting"
+        read-only
       />
       <DocumentPane
         :heading="t('paperl10n-target-pane', autonym(targetLocale.id))"
@@ -45,6 +46,7 @@ const waiting = computed(() => props.loading || (current.value === null && props
         :path="document.targetPath"
         :document="current?.target ?? null"
         :loading="waiting"
+        :read-only="false"
       />
     </div>
   </article>

@@ -24,7 +24,11 @@ describe('guardApi', () => {
           ),
         readDocumentPair: ({ key }) =>
           Promise.resolve(
-            ok({ key, source: { path: 'a', text: '', blocks: [], inline: [] }, target: null }),
+            ok({
+              key,
+              source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
+              target: null,
+            }),
           ),
         suggestTargetLanguages: () =>
           Promise.resolve(ok({ inProject: [], recent: [], suggested: [] })),
@@ -43,7 +47,11 @@ describe('guardApi', () => {
     });
     expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual({
       ok: true,
-      value: { key: 'k', source: { path: 'a', text: '', blocks: [], inline: [] }, target: null },
+      value: {
+        key: 'k',
+        source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
+        target: null,
+      },
     });
     expect(
       await api.suggestTargetLanguages({

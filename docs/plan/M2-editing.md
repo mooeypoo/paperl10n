@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0 (spike), E1 (saving), and E2a (shared parser setup) done, E2b (the editor) next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0 (spike), E1 (saving), and E2 (the editor) done, E3 (seed and save) next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -175,6 +175,44 @@ inline syntax. The spike confirms it.
     unit for it, with failing samples and positive controls. Mutation checks: the UI not allowed,
     every domain's adapters allowed, the unit allowed the kernel or any library, frontmatter found
     past the first line, and the closing fence not consumed: each fails tests.
+  - *E2b done-notes:* both panes are CodeMirror 6 editors (`ui/editor/`, mounted by
+    `MarkdownEditor.vue`): the source read-only (focusable and selectable, `aria-readonly`), the
+    translation editable, each with the pane's `lang`/`dir` and the pane heading as its accessible
+    name. The M1 reading view (`MarkdownView`, `segments.ts`) is gone; its rules carry over:
+    - **Language:** built from `#markdown-syntax` with frontmatter (no `lang-markdown`). The IPC
+      `DocumentTextDto` gained `mdx`, so `.mdx` files parse the same way in both processes.
+    - **Bidi (`markdown-decorations.ts`, visible range only):** code, frontmatter, MDX
+      `import`/`export`, HTML blocks, tables, and `:::` container fences read line by line
+      (`dir="auto"` per line plus `perLineTextDirection`). **The fence-line question from E0 is
+      settled this way:** `:::tip[טיפ]` reads as written, marker first. In prose, inline code,
+      URLs, and markup with letters (tags, components, `[x]`) are isolated LTR runs; bare
+      punctuation isn't.
+    - **The file's bytes (`file-text.ts`):** the editor never shows a BOM, so it can't be deleted
+      by accident. A state field remembers the BOM, the file's usual line ending, and each line
+      that ends differently (as points that follow edits). Lines added in the editor take the usual
+      ending. Undoing an edit that deleted an unusual ending brings it back (history's
+      `invertedEffects`). Tested: untouched files (CRLF, CR, mixed, BOM, no final newline) come back
+      byte for byte, and a seeded random test compares edits with the same edits made to the raw
+      file.
+    - **The strict CSP holds:** CodeMirror's injected base theme would be a `<style>` element,
+      which `style-src 'self'` blocks (the first e2e run caught it). The editor lives in a shadow
+      root, where CodeMirror uses a constructed stylesheet instead; the editor's own styles
+      (`markdown-editor.css`) join it there. No `'unsafe-inline'`, no nonce (ADR 0010 amendment). A
+      new e2e test types Hebrew into the translation, checks the source can't change, and checks
+      CodeMirror's styles applied, with no CSP violations or console errors.
+    - **A new lint check:** `no-irregular-whitespace` now covers strings, templates, regular
+      expressions, and comments. Literal BOMs had slipped into source twice (fixed here, in
+      `config-edit` and `markdown-syntax` too). Samples in
+      `tests/architecture/invisible-characters.test.ts`; turning off each of the four options
+      fails them.
+    - Mutation checks, each failing tests: unusual endings ignored, BOM dropped, the ending placed
+      before typed text, undo losing endings, punctuation isolated, isolation inside code blocks,
+      no per-line direction, and the source editable. One mutation survived and taught something:
+      removing our `aria-readonly` changed nothing, because CodeMirror sets it for read-only
+      states; the redundant line was removed.
+    - Edits live only in the editor until E3 adds saving. Still for the maintainer, on a real
+      keyboard: IME, Orca, and how typing at direction boundaries feels
+      ([follow-ups](follow-ups.md)).
 - **E3, seed and save:** "Start translating", Save (button, Ctrl/Cmd+S), dirty state in the page
   list, and the unsaved-changes guard.
 - **E4, drafts:** a `DraftStore` port (in app data), autosave of drafts, and restore on reopen.

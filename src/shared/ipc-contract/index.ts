@@ -84,6 +84,8 @@ export interface InlineSpanDto {
 export interface DocumentTextDto {
   /** Project-relative. */
   readonly path: string;
+  /** An MDX file: parse it with MDX tolerance (top-level `import`/`export` lines). */
+  readonly mdx: boolean;
   /** The file's exact text. */
   readonly text: string;
   readonly blocks: readonly BlockDto[];

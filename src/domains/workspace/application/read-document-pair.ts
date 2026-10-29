@@ -7,6 +7,8 @@ import type { ProjectSessions } from './ports/project-sessions.ts';
 
 export interface ReadDocument {
   readonly path: ProjectPath;
+  /** Parsed with MDX tolerance (an `.mdx` file); an editor should parse it the same way. */
+  readonly mdx: boolean;
   readonly document: ParsedDocument;
 }
 
@@ -43,7 +45,8 @@ async function read(
       ? ok(null)
       : err({ code: 'workspace.document-unreadable', cause: text.error });
   }
-  return ok({ path, document: parser.parse(text.value, parseOptions(path)) });
+  const options = parseOptions(path);
+  return ok({ path, mdx: options.mdx, document: parser.parse(text.value, options) });
 }
 
 /**

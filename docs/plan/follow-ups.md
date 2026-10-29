@@ -26,11 +26,24 @@ it came from. When one is picked up, it moves into that milestone's plan and is 
 
 ## From M1: reading ([plan](M1-reading.md))
 
-- **Adjacent RTL runs in JSX/HTML blocks can still merge visually.** Those blocks use
-  `unicode-bidi: plaintext` per line, which fixes most cases, not all. Revisit with the editor
-  (M2), where the same text becomes editable.
+- **Adjacent RTL runs in JSX/HTML blocks can still merge visually.** Those blocks read line by
+  line (`dir="auto"` per line in the M2 editor, as `unicode-bidi: plaintext` did in the reading
+  view), which fixes most cases, not all.
 - **A rendered preview toggle per pane** (PRD §7.2). The panes show Markdown as written, lightly
   styled.
+
+## From M2: editing ([plan](M2-editing.md))
+
+- **Manual checks on a real keyboard** (E2b): IME composition, a screen reader (Orca on Linux),
+  and how typing and selecting feel at direction boundaries. Not testable offscreen.
+- **The parsed blocks and inline spans in `DocumentTextDto` are unused by the UI** since the
+  panes became editors (the editor parses in the renderer). Keep them for M3's sections and
+  pairing, or drop them from the DTO if M3 doesn't need them in the renderer.
+- **Code lines wrap in the editor** (the reading view scrolled them sideways). Decide whether
+  long code lines should scroll instead.
+- **The renderer bundle isn't minified** (an existing build choice), so CodeMirror and Lezer add
+  about 650 KB raw (about 175 KB gzipped) to it. Fine when loading from disk; revisit if startup
+  time matters.
 
 ## From the UI/UX work ([plan](UI-UX.md))
 

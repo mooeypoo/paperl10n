@@ -76,6 +76,7 @@ describe('readDocumentPair', () => {
         key: 'guide/intro',
         source: {
           path: 'en/guide/intro.md',
+          mdx: false,
           document: {
             text: '# Intro\n',
             blocks: [{ kind: 'paragraph', range: { start: 0, end: 7 } }],
@@ -84,6 +85,7 @@ describe('readDocumentPair', () => {
         },
         target: {
           path: 'he/guide/intro.md',
+          mdx: false,
           document: {
             text: '# מבוא\n',
             blocks: [{ kind: 'paragraph', range: { start: 0, end: 6 } }],
@@ -109,8 +111,10 @@ describe('readDocumentPair', () => {
       { [path]: 'x', [`he/${path}`]: 'y' },
       pluginWithDocumentAt(path),
     );
-    await read(projectId, 'page');
+    const pair = await read(projectId, 'page');
     expect(parser.calls.map((call) => call.options.mdx)).toEqual([mdx, mdx]);
+    // And says so, so an editor parses the file the same way.
+    expect(pair.ok && [pair.value.source.mdx, pair.value.target?.mdx]).toEqual([mdx, mdx]);
   });
 
   it('reports an unknown project', async () => {

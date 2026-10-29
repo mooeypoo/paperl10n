@@ -42,7 +42,7 @@ function setup() {
       return Promise.resolve(
         ok({
           key: request.key,
-          source: { path: 'a', text: '', blocks: [], inline: [] },
+          source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
           target: null,
         }),
       );

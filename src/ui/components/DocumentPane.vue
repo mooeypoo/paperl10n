@@ -3,7 +3,7 @@
 import type { DocumentTextDto, LocaleDto } from '#ipc-contract';
 import { useId } from 'vue';
 import { useI18n } from '../i18n/i18n';
-import MarkdownView from './MarkdownView.vue';
+import MarkdownEditor from './MarkdownEditor.vue';
 
 defineProps<{
   heading: string;
@@ -12,6 +12,8 @@ defineProps<{
   /** `null` once loaded means the file doesn't exist yet. */
   document: DocumentTextDto | null;
   loading: boolean;
+  /** The source pane: its text can be read, selected, and copied, but not changed. */
+  readOnly: boolean;
 }>();
 const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 const headingId = useId();
@@ -41,7 +43,14 @@ const headingId = useId();
       <p v-else-if="document === null" class="pane-note" :lang="uiLocale" :dir="uiDirection">
         {{ t('paperl10n-translation-missing') }}
       </p>
-      <MarkdownView v-else :document="document" />
+      <MarkdownEditor
+        v-else
+        :file="document.text"
+        :mdx="document.mdx"
+        :read-only="readOnly"
+        :locale="locale"
+        :label="heading"
+      />
     </div>
   </section>
 </template>

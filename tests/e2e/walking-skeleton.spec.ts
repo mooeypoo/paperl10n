@@ -107,6 +107,43 @@ test('opens a project and shows both panes with their own lang and dir', async (
   expect(problems.console).toEqual([]);
 });
 
+test('edits the translation in its own direction, with CodeMirror styled under the strict CSP', async () => {
+  await stubFolderDialog(basicFixture);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  // The page with a translation.
+  await page.locator('nav').getByText('index', { exact: true }).click();
+
+  // Playwright's role locators reach into the editors' shadow roots.
+  const source = page.getByRole('textbox', { name: 'English · source' });
+  const target = page.getByRole('textbox', { name: 'עברית · translation' });
+  await expect(source).toHaveAttribute('aria-readonly', 'true');
+  await expect(target).toHaveAttribute('dir', 'rtl');
+  await expect(target).toHaveAttribute('lang', 'he');
+
+  // CodeMirror's base theme applied (a constructed sheet in the shadow root): .cm-editor is flex.
+  expect(
+    await target.evaluate((element) => {
+      const editor = element.closest('.cm-editor');
+      return editor === null ? null : getComputedStyle(editor).display;
+    }),
+  ).toBe('flex');
+
+  // Typing at the end of the first line lands in the text.
+  await target.click();
+  await page.keyboard.press('Control+Home');
+  await page.keyboard.press('End');
+  await page.keyboard.type(' נוסף');
+  await expect(target.locator('.cm-line').first()).toContainText('נוסף');
+  // The source can't be changed.
+  const before = await source.textContent();
+  await source.click();
+  await page.keyboard.type('x');
+  expect(await source.textContent()).toBe(before);
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
 test('asks for a target language when the project has none, and saves the choice', async () => {
   // A copy without a target: choosing one writes to the config, never to the fixture.
   const project = join(profile, 'no-target');

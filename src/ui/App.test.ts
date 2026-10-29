@@ -4,7 +4,15 @@ import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { mountApp } from './mount';
 import { memoryPreferences, type PreferenceStore } from './preferences';
-import { documents, error, fakeClient, languages, pairFor, summary } from './test-support';
+import {
+  documents,
+  error,
+  fakeClient,
+  languages,
+  pairFor,
+  summary,
+  textWithEditors,
+} from './test-support';
 
 let unmount: (() => void) | undefined;
 afterEach(() => {
@@ -103,7 +111,7 @@ describe('the app shell', () => {
     expect(target?.textContent).toContain('he/guide/getting-started.md');
   });
 
-  it("shows each page's source and translation as written, block by block", async () => {
+  it("shows each page's source and translation as written, in editors", async () => {
     const { client } = fakeClient({
       open: [{ ok: true, value: summary }],
       list: [{ ok: true, value: documents }],
@@ -114,6 +122,7 @@ describe('the app shell', () => {
             key: 'guide/getting-started',
             source: {
               path: 'en/guide/getting-started.md',
+              mdx: false,
               text: '# Start\n\nRun `x`.\n',
               blocks: [
                 { kind: 'heading', start: 0, end: 7, depth: 1 },
@@ -128,6 +137,7 @@ describe('the app shell', () => {
             },
             target: {
               path: 'he/guide/getting-started.md',
+              mdx: false,
               text: '```sh\nnpm i\n```\n',
               blocks: [{ kind: 'code', start: 0, end: 15 }],
               inline: [],
@@ -139,18 +149,39 @@ describe('the app shell', () => {
     const element = start(client);
     button(element, 'Open folder…').click();
     await flushPromises();
-    const [source, target] = panes(element);
-    const blocks = [...(source?.querySelectorAll('.markdown-block') ?? [])];
-    expect(blocks.map((b) => b.textContent)).toEqual(['# Start', 'Run `x`.']);
-    expect(blocks[0]?.classList.contains('markdown-h1')).toBe(true);
-    expect(blocks[1]?.querySelector('.markdown-span-code')?.textContent).toBe('x');
+    const [sourcePane, targetPane] = panes(element);
+    // The editors live in shadow roots (markdown-editor.ts explains why).
+    const source = sourcePane?.querySelector('.markdown-editor')?.shadowRoot;
+    const target = targetPane?.querySelector('.markdown-editor')?.shadowRoot;
+    // Each pane is an editor over the file's text, named after the pane, in the pane's language.
+    const sourceText = source?.querySelector('.cm-content');
+    expect(sourceText?.getAttribute('aria-label')).toBe('English · source');
+    expect(sourceText?.getAttribute('aria-readonly')).toBe('true');
+    expect([sourceText?.getAttribute('lang'), sourceText?.getAttribute('dir')]).toEqual([
+      'en',
+      'ltr',
+    ]);
+    const lines = [...(source?.querySelectorAll('.cm-line') ?? [])];
+    expect(lines.map((line) => line.textContent)).toEqual(['# Start', '', 'Run `x`.', '']);
+    expect(lines[0]?.classList.contains('cm-md-h1')).toBe(true);
     // Inline code is an isolated left-to-right run; punctuation-only markup isn't.
-    expect(blocks[1]?.querySelector('.markdown-span-code')?.getAttribute('dir')).toBe('ltr');
-    expect(blocks[1]?.querySelector('.markdown-span-markup')?.hasAttribute('dir')).toBe(false);
-    // A code block reads left to right even in the right-to-left pane, line by line: its contents
-    // aren't one isolated run (that would force Hebrew lines in a code sample left to right too).
-    expect(target?.querySelector('.markdown-code')?.getAttribute('dir')).toBe('ltr');
-    expect(target?.querySelector('.markdown-code span[dir]')).toBeNull();
+    expect(lines[2]?.querySelector('[dir="ltr"]')?.textContent).toBe('`x`');
+    // The translation can be edited, in its own language and direction.
+    const targetText = target?.querySelector('.cm-content');
+    expect(targetText?.hasAttribute('aria-readonly')).toBe(false);
+    expect([targetText?.getAttribute('lang'), targetText?.getAttribute('dir')]).toEqual([
+      'he',
+      'rtl',
+    ]);
+    // A code block reads line by line (each line by its first strong character) even in the
+    // right-to-left pane; its contents aren't isolated runs.
+    const code = [...(target?.querySelectorAll('.cm-md-code') ?? [])];
+    expect(code.map((line) => [line.textContent, line.getAttribute('dir')])).toEqual([
+      ['```sh', 'auto'],
+      ['npm i', 'auto'],
+      ['```', 'auto'],
+    ]);
+    expect(target?.querySelector('.cm-md-code [dir]')).toBeNull();
   });
 
   it('says so when a page has no translation yet', async () => {
@@ -165,7 +196,7 @@ describe('the app shell', () => {
     button(element, 'Open folder…').click();
     await flushPromises();
     const [source, target] = panes(element);
-    expect(source?.textContent).toContain('Hi');
+    expect(textWithEditors(source)).toContain('Hi');
     expect(target?.textContent).toContain("This page isn't translated yet.");
   });
 

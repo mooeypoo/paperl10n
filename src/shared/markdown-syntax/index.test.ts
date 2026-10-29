@@ -21,7 +21,7 @@ describe('markdownSyntax', () => {
   it.each([
     ['YAML', '---\na: 1\n---\nBody\n'],
     ['TOML', '+++\na = 1\n+++\nBody'],
-    ['after a BOM', '﻿---\na: 1\n---\n'],
+    ['after a BOM', '\uFEFF---\na: 1\n---\n'],
     ['with CRLF', '---\r\na: 1\r\n---\r\nBody'],
     ['empty', '---\n---\n'],
     ['at the very end', '---\na: 1\n---'],

@@ -69,6 +69,7 @@ export function pairFor(
 ): DocumentPairDto {
   const doc = (path: string, text: string) => ({
     path,
+    mdx: path.endsWith('.mdx'),
     text,
     blocks:
       text.trim() === ''
@@ -157,4 +158,13 @@ export function fakeClient(
     },
   };
   return { client, calls };
+}
+
+/** An element's text including what's inside the editors' shadow roots (markdown-editor.ts). */
+export function textWithEditors(element: Element | undefined): string {
+  if (element === undefined) return '';
+  const editors = [...element.querySelectorAll('.markdown-editor')].map(
+    (editor) => editor.shadowRoot?.querySelector('.cm-content')?.textContent ?? '',
+  );
+  return [element.textContent, ...editors].join('\n');
 }

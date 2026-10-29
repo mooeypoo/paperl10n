@@ -30,6 +30,12 @@ export default defineConfig(
       eqeqeq: 'error',
       // Error codes are string-literal unions (ADR 0007); every switch over them must be exhaustive.
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      // Invisible characters (a BOM, a zero-width or no-break space) slip into strings unnoticed
+      // and can't be seen in review: write them as escapes ('\uFEFF'), in strings too.
+      'no-irregular-whitespace': [
+        'error',
+        { skipStrings: false, skipTemplates: false, skipRegExps: false, skipComments: false },
+      ],
     },
   },
 

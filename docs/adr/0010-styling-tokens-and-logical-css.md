@@ -37,3 +37,14 @@ changing the look should mean changing tokens, not hunting values.
 
 - `top`/`bottom` and `margin-block-*` are allowed: the block axis doesn't flip in RTL.
 - Raw color values appear in exactly one file, so a theme or design change has one place to start.
+
+## Amendment (2026-10-29, M2 E2b)
+
+The editor (CodeMirror 6) lives in a shadow root. CodeMirror injects its base theme at run time:
+as a `<style>` element in a document, which the production CSP (`style-src 'self'`) blocks, but as
+a constructed stylesheet in a shadow root, which CSP doesn't govern. So the CSP stays strict, with
+no `'unsafe-inline'` and no nonce. The editor's own styles (`src/ui/editor/markdown-editor.css`,
+imported as a string) join it as a second constructed sheet. They follow this ADR like any other
+stylesheet (tokens, logical properties, checked by stylelint), and tokens and fonts inherit into
+the shadow root. The e2e tests check for CSP violations while editing.
+

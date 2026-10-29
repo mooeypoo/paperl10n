@@ -105,6 +105,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
         key: 'guide/getting-started',
         source: {
           path: 'en/guide/getting-started.md',
+          mdx: false,
           text: '# Getting started\n\nInstall, then run.\n',
           blocks: [
             { kind: 'heading', start: 0, end: 17, depth: 1 },

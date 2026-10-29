@@ -54,7 +54,7 @@ describe('setConfigString', () => {
     ],
     ['fills an empty object', '{}', '{ "targetLocale": "he" }'],
     ['fills an empty multi-line object', '{\r\n}\r\n', '{\r\n  "targetLocale": "he"\r\n}\r\n'],
-    ['keeps a BOM', '﻿{"targetLocale": "fr"}', '﻿{"targetLocale": "he"}'],
+    ['keeps a BOM', '\uFEFF{"targetLocale": "fr"}', '\uFEFF{"targetLocale": "he"}'],
     [
       'handles escapes in strings',
       '{"a": "say \\"}\\"", "sourceLocale": "en"}',
