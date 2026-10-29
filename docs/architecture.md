@@ -44,6 +44,7 @@ graph TD
   workspace --> formats
   workspace --> locale
   workspace --> document
+  workspace --> translation
   formats --> document
   formats --> catalog
   translation --> document

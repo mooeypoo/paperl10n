@@ -45,6 +45,7 @@ function setup() {
           source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
           target: null,
           draft: null,
+          sections: { paired: true, pairs: [] },
         }),
       );
     },

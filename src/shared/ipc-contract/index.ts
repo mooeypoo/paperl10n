@@ -101,7 +101,44 @@ export interface DocumentPairDto {
   readonly target: DocumentTextDto | null;
   /** Unsaved edits kept from an earlier session (or before a crash), to restore. */
   readonly draft: DraftDto | null;
+  /**
+   * The source's sections paired with those of the text the translation opens with (the draft,
+   * else the file, else a copy of the source). Decided when the page opens, not as it's edited.
+   */
+  readonly sections: SectionPairingDto;
 }
+
+/** Offsets are UTF-16 code units into the document's `text`; `end` is exclusive. */
+export interface TextRangeDto {
+  readonly start: number;
+  readonly end: number;
+}
+
+export interface SectionPairDto {
+  /** The frontmatter, the intro (the text before the first heading it splits at), or a heading's. */
+  readonly kind: 'frontmatter' | 'intro' | 'heading';
+  /** Where it is in the source (`null`: only the translation has it). */
+  readonly source: TextRangeDto | null;
+  /** Where it is in the translation (`null`: the translation doesn't have it). */
+  readonly target: TextRangeDto | null;
+}
+
+export type SectionPairingDto =
+  | {
+      readonly paired: true;
+      /** Every section in order: frontmatter, intro, then the heading sections. */
+      readonly pairs: readonly SectionPairDto[];
+    }
+  | {
+      readonly paired: false;
+      /**
+       * `count`: a different number of headings at the source's split level; `level`: the
+       * translation's headings sit at another level, or it has none.
+       */
+      readonly reason: 'count' | 'level';
+      readonly sourceCount: number;
+      readonly targetCount: number;
+    };
 
 export interface DraftDto {
   /** The editor's text, exactly. */

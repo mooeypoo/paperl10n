@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type { FileAccessError, FormatError, ProjectFiles } from '#domains/formats';
 import type { DocumentKey, MarkdownParser, ParsedDocument } from '#domains/document';
+import { pairDocumentSections, type SectionPairing } from '#domains/translation';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import { draftKey } from './drafts.ts';
@@ -21,6 +22,12 @@ export interface DocumentPair {
   readonly target: ReadDocument | null;
   /** Unsaved edits to the translation, kept from an earlier session (or before a crash). */
   readonly draft: Draft | null;
+  /**
+   * The source's sections paired with those of the text the translation opens with: the draft,
+   * else the file, else a copy of the source (what starting a translation makes). Decided once,
+   * when the page opens; edits don't re-pair it (docs/plan/M3-sections.md).
+   */
+  readonly sections: SectionPairing;
 }
 
 export type ReadDocumentPairError =
@@ -97,6 +104,11 @@ export function createReadDocumentPair(deps: {
       if (kept.value.text === target.value?.document.text) await deps.drafts.remove(keyOfDraft);
       else draft = kept.value;
     }
-    return ok({ key: document.key, source: source.value, target: target.value, draft });
+    const opened =
+      draft === null
+        ? (target.value?.document ?? source.value.document)
+        : deps.parser.parse(draft.text, parseOptions(targetPath.value));
+    const sections = pairDocumentSections(source.value.document, opened);
+    return ok({ key: document.key, source: source.value, target: target.value, draft, sections });
   };
 }

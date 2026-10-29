@@ -73,7 +73,10 @@ documents, reads the source and the translation, and parses both with the `Markd
 (`#domains/document`; `.mdx` files with MDX tolerance, and each read document says `mdx` so the
 editor parses it the same way). A translation that doesn't exist yet is `null`, not an error. The
 page's draft comes along as `draft` (`{ text, base }`), unless it holds what the file already says
-(then it's forgotten); a draft that can't be read counts as none, so the page still opens. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+(then it's forgotten); a draft that can't be read counts as none, so the page still opens. The
+pair's `sections` pairs the source's sections with those of the text the translation opens with
+(the draft, else the file, else a copy of the source: what starting a translation makes), through
+`#domains/translation`; it's decided when the page opens. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 `workspace.unknown-document` (the key
 isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
 file that vanished), or a `FormatError`.

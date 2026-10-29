@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { documentKey, type SourceDocument } from '#domains/document';
+import {
+  documentKey,
+  type Block,
+  type ParsedDocument,
+  type SourceDocument,
+} from '#domains/document';
 import { createFormatRegistry, type PluginModule } from '#domains/formats';
 import { FakeMarkdownParser } from '#domain-testing/document';
 import { detects, fakeDocumentPlugin, type FileTree } from '#domain-testing/formats';
@@ -25,6 +30,7 @@ async function openWith(
   tree: FileTree,
   plugin = fakeDocumentPlugin('format-fake', detects('likely')),
   drafts: DraftStore = new InMemoryDraftStore(),
+  parser = new FakeMarkdownParser(),
 ) {
   const registry = createFormatRegistry([plugin], { apiVersion: 2 });
   if (!registry.ok) throw new Error('test setup');
@@ -36,7 +42,6 @@ async function openWith(
     sessions,
   })();
   if (!opened.ok || opened.value === null) throw new Error(`test setup: ${JSON.stringify(opened)}`);
-  const parser = new FakeMarkdownParser();
   return {
     read: createReadDocumentPair({ sessions, parser, drafts }),
     drafts,
@@ -101,6 +106,7 @@ describe('readDocumentPair', () => {
           },
         },
         draft: null,
+        sections: expect.objectContaining({ paired: true }) as unknown,
       },
     });
   });
@@ -211,6 +217,79 @@ describe('readDocumentPair', () => {
     expect(await target.read(target.projectId, 'index')).toEqual({
       ok: false,
       error: { code: 'formats.unsupported-project', reason: 'no target', formatId: 'format-fake' },
+    });
+  });
+
+  describe('pairs sections with the text the translation opens with', () => {
+    /** Each line is a block; lines starting with `#`s and a space are headings. */
+    class HeadingParser extends FakeMarkdownParser {
+      override parse(text: string): ParsedDocument {
+        const blocks: Block[] = [];
+        let start = 0;
+        for (const line of text.split('\n')) {
+          const depth = /^(#+) /.exec(line)?.[1]?.length;
+          const range = { start, end: start + line.length };
+          if (line !== '') {
+            blocks.push(
+              depth === undefined
+                ? { kind: 'paragraph', range }
+                : { kind: 'heading', range, depth },
+            );
+          }
+          start += line.length + 1;
+        }
+        return { text, blocks, inline: [] };
+      }
+    }
+    const headingParser = new HeadingParser();
+    const source = '## A\na\n## B\nb\n';
+    const counts = async (tree: FileTree, draft?: string) => {
+      const drafts = new InMemoryDraftStore();
+      const { read, projectId } = await openWith(tree, undefined, drafts, headingParser);
+      if (draft !== undefined) {
+        await drafts.put(
+          { project: '/p', locale: 'he', document: 'index' },
+          { text: draft, base: null },
+        );
+      }
+      const pair = await read(projectId, 'index');
+      if (!pair.ok) throw new Error('test setup');
+      const { sections } = pair.value;
+      return sections.paired
+        ? sections.pairs.map((p) => [p.source?.range.start ?? null, p.target?.range.start ?? null])
+        : {
+            reason: sections.reason,
+            sourceCount: sections.sourceCount,
+            targetCount: sections.targetCount,
+          };
+    };
+
+    it('the file', async () => {
+      expect(await counts({ 'en/index.md': source, 'he/index.md': '## א\n## ב\n' })).toEqual([
+        [0, 0],
+        [7, 5],
+      ]);
+    });
+
+    it('the draft, over the file', async () => {
+      expect(
+        await counts({ 'en/index.md': source, 'he/index.md': '## א\n## ב\n' }, '## א\n'),
+      ).toEqual({ reason: 'count', sourceCount: 2, targetCount: 1 });
+    });
+
+    it('a copy of the source, for a translation not started yet', async () => {
+      expect(await counts({ 'en/index.md': source })).toEqual([
+        [0, 0],
+        [7, 7],
+      ]);
+    });
+
+    it('says when the file’s sections don’t pair', async () => {
+      expect(await counts({ 'en/index.md': source, 'he/index.md': 'רק טקסט\n' })).toEqual({
+        reason: 'level',
+        sourceCount: 2,
+        targetCount: 0,
+      });
     });
   });
 

@@ -34,6 +34,7 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
           source: { path: 'en/a.md', mdx: false, text: 'a', blocks: [], inline: [] },
           target: null,
           draft: null,
+          sections: { paired: true, pairs: [] },
         },
       }),
     suggestTargetLanguages: () =>

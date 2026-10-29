@@ -15,13 +15,15 @@ comparison, and loose scroll sync." PRD §11 leaves two questions that M3 has to
 | Outdated detection (PRD §11) | **A status file in the project, one per target language**, committed with the translations: a fingerprint of each source block from when the translation was marked up to date. Never a published file. Shows which blocks changed, not their old wording. |
 | Statuses and marking | **The four statuses as in question 2. "Mark up to date" per section and per page**, explicit, never on save. Existing translations start as `draft`, with a one-time "Mark all existing translations up to date". |
 | The section view | **One editor per pane, as in M2, aligned at paired headings with spacers.** The full-page view is the same editors without spacers. No new dependency. |
+| When the view is chosen | **Once, when the page opens.** Sections that pair open the section view; a page that opens with text whose sections don't pair opens in the full-page view, with a note saying why. A new translation starts as a copy of the source, so it pairs section by section. **While editing, the view stays as it opened:** if the sections stop matching, a short note says so, and the page is paired again only when it's opened again. |
 | Link targets in hints | **An optional `DocumentFormat` method** that maps a translation's link target to the source's form (a deliberate plugin API change). Without it, links compare as written. |
 
 Taken as recommended unless the maintainer says otherwise: the split rules in question 3 (the
 per-document level last, only if needed); source changes shown in the source pane only; the
 length note per page, by rendered characters; loose scroll sync in the full-page view only, last;
-the `workspace → translation` edge and a status-store port with a contract suite; and a pure
-section function shared with the renderer through a small shared unit (with an ADR, in S2).
+and the `workspace → translation` edge and a status-store port with a contract suite. (A pure
+section function shared with the renderer isn't needed: the pairing is decided when the page
+opens, in main, and comes with the page.)
 
 ## Where M2 left us
 
@@ -225,7 +227,19 @@ the last step.
       first, the intro merged into the frontmatter, the reason always `count`, pairing ignoring
       counts, and sections leaving gaps.
 - **S2, the section view:** aligned editors (4A), per-section rows marked at their headings, the
-  mismatch message, and the toggle to the full-page view. No status yet.
+  mismatch message, and the toggle to the full-page view. No status yet. In two PRs:
+  - **S2a, the pairing with the page:** `readDocumentPair` pairs the source's sections with the
+    text the translation opens with (the draft, else the file, else a copy of the source), and
+    the IPC `DocumentPairDto` carries it as `sections`.
+    - *Done-notes:* the new domain edge `workspace → translation` (`scripts/domain-graph.ts`,
+      `docs/architecture.md`). `SectionPairingDto`: when paired, each pair's kind and its range on
+      each side (`null` where a side lacks it); when not, the reason and both counts. The pairing
+      parses a draft with the translation's MDX setting. Tests: the file, the draft over the file,
+      a copy of the source for a new translation, an unpaired file, and the end-to-end IPC test
+      with the real parser. Mutation checks, each failing tests: the draft ignored, and a new
+      translation paired with nothing.
+  - **S2b, the view:** the aligned editors, the section markers, the full-page fallback and its
+    note, the toggle, and the "sections changed" note while editing.
 - **S3, status:** the status file and its port, fingerprints, "Mark up to date" (section, page,
   all existing), the four statuses in the page list, and section progress in the page header.
 - **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.

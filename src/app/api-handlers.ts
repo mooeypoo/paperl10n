@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type { ParsedDocument } from '#domains/document';
 import type { Locale } from '#domains/locale';
+import type { Section, SectionPairing } from '#domains/translation';
 import type {
   ChooseTargetLocale,
   DiscardDraft,
@@ -14,7 +15,13 @@ import type {
   SearchTargetLanguages,
   SuggestTargetLanguages,
 } from '#domains/workspace';
-import type { DocumentTextDto, LanguageDto, LocaleDto, PaperLionApi } from '#ipc-contract';
+import type {
+  DocumentTextDto,
+  LanguageDto,
+  LocaleDto,
+  PaperLionApi,
+  SectionPairingDto,
+} from '#ipc-contract';
 import { err, ok } from '#kernel/result';
 import { toErrorDto } from './error-dto.ts';
 
@@ -52,6 +59,24 @@ function toDocumentDto({ path, mdx, document }: ReadDocument): DocumentTextDto {
       kind,
       start: range.start,
       end: range.end,
+    })),
+  };
+}
+
+function toSectionPairingDto(pairing: SectionPairing): SectionPairingDto {
+  if (!pairing.paired) {
+    const { reason, sourceCount, targetCount } = pairing;
+    return { paired: false, reason, sourceCount, targetCount };
+  }
+  const range = (section: Section | null) =>
+    section === null ? null : { start: section.range.start, end: section.range.end };
+  return {
+    paired: true,
+    pairs: pairing.pairs.map(({ source, target }) => ({
+      // A pair always has at least one side.
+      kind: (source ?? target)?.kind ?? 'intro',
+      source: range(source),
+      target: range(target),
     })),
   };
 }
@@ -100,6 +125,7 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         source: toDocumentDto(pair.source),
         target: pair.target === null ? null : toDocumentDto(pair.target),
         draft: pair.draft === null ? null : { text: pair.draft.text, base: pair.draft.base },
+        sections: toSectionPairingDto(pair.sections),
       });
     },
 
