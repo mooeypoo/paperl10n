@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0–E5 done, E6 (the decisions into the PRD) next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0–E5 done, E6 (the decisions into the PRD) awaiting approval.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -379,6 +379,13 @@ inline syntax. The spike confirms it.
     preview of an unfocused editor, and the E2E (heading mark shown on its line and hidden again,
     bold's look, code order).
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
+    - §6: a glossary entry for a **draft** (unsaved edits), told apart from the `draft` status.
+    - §7.2: both panes are CodeMirror editors; seeding is a copy written on first save;
+      frontmatter is edited as text for now; the bidi rules; visual editing as decorations.
+    - §7.4: explicit save and Ctrl/Cmd+S, drafts in app data, the leave question, no-op saves,
+      and external changes checked on save (watching later).
+    - §10: M2 marked done. §11: the visual-editing question marked decided; sidecar state
+      narrowed to status.
 
 Round-trip tests throughout: open, edit nothing, save → the file is unchanged byte for byte; an
 edit changes only the edited characters.

@@ -64,6 +64,7 @@ adding a plugin, not rewriting the app.
 | Section | The part of a longform document from one heading to the next heading of the same or a higher level. Sections are the unit Paper Lion **pairs** between source and translation; within a section the translation is free-form. |
 | Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document** and to **each section**; for catalogs, to **each message**. |
 | Source change | A change in the source document since its translation was last marked up to date. Shown on the source side, as a reference. |
+| Draft (unsaved edits) | A page's edits that aren't saved to its file yet, kept in Paper Lion's own data folder (never in the project) so a crash or a restart doesn't lose them. Not the `draft` status below. |
 | Preservation hint | A neutral note that something usually kept as is (code blocks, link targets, images, components, frontmatter keys) appears a different number of times in the translation. A hint, never an error. |
 
 ## 7. Core experiences
@@ -77,9 +78,12 @@ adding a plugin, not rewriting the app.
 
 ### 7.2 Longform parallel editor
 - Split view: source pane (read-only by default) and target pane (editable). Each pane sets its own
-  `dir`/`lang`.
-- **Seed from source:** create a missing target by copying the source. Code blocks, images, links,
-  and components are kept, and the prose is ready to overwrite.
+  `dir`/`lang`. Both panes are Markdown editors (CodeMirror 6, decided in M2): the file's text is
+  the document, so what's saved is exactly what was typed.
+- **Seed from source:** "Start translating" opens a byte-for-byte copy of the source as unsaved
+  changes. Code blocks, images, links, and components are kept, and the prose is ready to
+  overwrite. The file (and any missing folders) is written on the first save, so starting and
+  walking away leaves nothing behind.
 - **Section view (default):** the document is split into **sections at its headings**, and source
   and translation sections are paired in order. Each pair is shown side by side, headings on their
   own row, so the translator always sees which part of the source they're working on. Progress
@@ -106,17 +110,21 @@ adding a plugin, not rewriting the app.
   languages.
 - **Loose scroll sync (full-page view, optional):** scrolling follows paired section headings,
   and otherwise relative position. It's a navigation aid, not a correctness check.
-- Frontmatter is edited as fields, with per-field "translatable or keep as-is" rules set by the plugin.
+- Frontmatter is part of the editable text today (M2: the whole file is edited as text). Later,
+  it's edited as fields, with per-field "translatable or keep as-is" rules set by the plugin.
 - Toggle between raw Markdown and a rendered preview per pane. Custom components get a placeholder
   render.
-- RTL editing: correct caret movement with mixed-direction text, and Markdown syntax that stays legible.
+- RTL editing: correct caret movement with mixed-direction text, and Markdown syntax that stays
+  legible. Prose lines take the pane's direction (or their own, per line), code and frontmatter
+  lines are LTR, and inline syntax is isolated so it can't reorder the sentence around it.
 - **Visual (rendered) editing (planned, soon after M2):** translators edit sections, or the full
   page, as formatted text instead of writing Markdown by hand. Formatting and especially **links
   are inserted with controls**, not typed syntax. This matters most in RTL: a raw
   `[text](url)` in the middle of a Hebrew or Arabic sentence can visually reorder the sentence,
   because of the bidi algorithm. The editor isolates link targets and inline syntax from the
   surrounding text so that can't happen. Markdown stays the file format: visual edits become
-  minimal Markdown changes, under the same round-trip guarantee.
+  minimal Markdown changes, under the same round-trip guarantee. It grows as live-preview
+  decorations on the M2 Markdown editor, not as a separate rich-text editor.
 
 ### 7.3 Message catalog editor (banana-i18n first)
 - A list or table of messages: key · source · target · status, with search and filters.
@@ -127,10 +135,20 @@ adding a plugin, not rewriting the app.
 - Shows keys that are missing in the target and orphaned keys that no longer exist in the source.
 
 ### 7.4 Saving
-- Explicit save plus autosave of drafts. Writes are atomic.
+- **Explicit save:** Save, or Ctrl/Cmd+S from anywhere in the window (on any keyboard layout).
+  Writes are atomic.
+- **Drafts:** unsaved edits are kept automatically, shortly after typing pauses, as a draft in
+  Paper Lion's own data folder, never in the project. After a crash or a restart, the page opens
+  with them, says they were restored, and offers to discard them. Pages with drafts are marked in
+  the page list. Saving, undoing back to the file, or leaving without saving forgets the draft.
+- **Leaving with unsaved changes** (another page, project, or target language, or closing the
+  window) asks first: save, don't save, or stay.
 - Round-trip guarantee: a file that wasn't edited is never rewritten. An edited file changes only
-  where it was edited.
-- External changes (git pull, another editor) are detected and offered for reload.
+  where it was edited. Saving text identical to the file writes nothing.
+- **External changes** (git pull, another editor) are checked on save: a file that changed on disk
+  since editing started is never overwritten silently. Paper Lion asks: keep editing, reload the
+  file (dropping the edits), or overwrite it with the edits. Watching files for changes while
+  editing comes later.
 
 ## 8. Format plugin system
 Two plugin families share one registration mechanism:
@@ -169,6 +187,7 @@ Principles:
   discussion first: `docs/plan/M1-languages.md`), list pairs with status, and show a static
   split view.
 - **M2: Edit and save longform.** Seed from source, edit the target, and save with round-trip safety.
+  Done; decisions and step notes in `docs/plan/M2-editing.md`.
 - **M3: Sections, changes, and hints.** Section view with per-section status and progress, the
   full-page view, source-change highlighting (needs the outdated-detection decision below),
   preservation hints, the length comparison, and loose scroll sync.
@@ -176,11 +195,9 @@ Principles:
 - **M5: Second plugins.** VitePress + gettext `.po`, to prove the plugin contracts hold.
 
 ## 11. Open questions
-- **Visual editing approach:** live-preview decorations on a Markdown source editor (for example
-  CodeMirror, where Markdown stays the single source of truth) versus a rich-text editor that
-  serializes to Markdown (for example ProseMirror/Tiptap). Compare round-trip safety, bidi
-  behavior around links and inline code, and custom components. Decide before M2's editor
-  choice.
+- ~~**Visual editing approach**~~ **Decided in M2:** live-preview decorations on a CodeMirror 6
+  Markdown editor, so Markdown stays the single source of truth and round-trip safety holds by
+  construction. A spike over bidi samples confirmed it; ProseMirror/Tiptap was the fallback.
 - **Outdated detection:** how do we know the source changed after translating? Options include git
   history, a stored source hash in a sidecar file, or a frontmatter field. Which is least intrusive?
 - **Finer-grained pairing (revisit later):** pairing below the section level (paragraphs or
@@ -194,4 +211,5 @@ Principles:
 - **More than one target:** a three-pane view (source + two targets) someday?
 - **Assistive translation:** an optional, pluggable MT or LLM suggestion provider behind a port, off
   by default?
-- **Sidecar state:** where do drafts and status live: next to the project, or in app data?
+- **Sidecar state:** where does status live: next to the project, or in app data? (Drafts were
+  decided in M2: in app data, never in the project.)
