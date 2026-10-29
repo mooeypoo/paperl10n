@@ -75,5 +75,11 @@
   "paperl10n-discard-changes": "Don't save",
   "paperl10n-error-workspace-draft-unwritable": "Your unsaved changes couldn't be kept as a draft. They're still here: save them to keep them.",
   "paperl10n-draft-restored": "Unsaved changes from your last session were restored.",
-  "paperl10n-discard-draft": "Discard them"
+  "paperl10n-discard-draft": "Discard them",
+  "paperl10n-draft-restored-changed": "Unsaved changes from your last session were restored. The file has changed on disk since, so saving will ask which version to keep.",
+  "paperl10n-conflict-title": "The translation changed on disk",
+  "paperl10n-conflict-message": "$1 was changed outside Paper Lion (by git or another editor, for example) since you started editing it. Your changes aren't saved yet. Reload the file to drop them, or overwrite the file with your version.",
+  "paperl10n-conflict-keep-editing": "Keep editing",
+  "paperl10n-conflict-reload": "Reload from disk",
+  "paperl10n-conflict-overwrite": "Overwrite with mine"
 }

@@ -149,6 +149,121 @@ describe('useTranslationSaving', () => {
   });
 });
 
+describe('useTranslationSaving: external changes', () => {
+  const changed = error('workspace.document-changed', { file: 'he/index.md' });
+
+  it('asks on a conflict; keeping on editing keeps the error and the base', async () => {
+    const { client, calls } = fakeClient({ save: { ok: false, error: changed } });
+    const { saving } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    expect(await saving.save(snapshot('x'))).toBe(false);
+    expect([saving.conflict.value, saving.error.value]).toEqual([true, changed]);
+    saving.keepEditing();
+    expect([saving.conflict.value, saving.error.value]).toEqual([false, changed]);
+    await saving.save(snapshot('y'));
+    expect(calls.at(-1)).toBe('saveDocument:p-1:index:"y":"בית\\n"');
+  });
+
+  it.each([
+    ['unwritable', error('workspace.document-unwritable', { file: 'he/index.md', problem: 'x' })],
+    ['a broken page', error('workspace.unknown-document', { key: 'index' })],
+  ])('does not ask for other failures (%s)', async (_what, failure) => {
+    const { client } = fakeClient({ save: { ok: false, error: failure } });
+    const { saving } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await saving.save(snapshot('x'));
+    expect(saving.conflict.value).toBe(false);
+  });
+
+  it('overwrites against the file as it is now, read again', async () => {
+    const { client, calls } = fakeClient({
+      save: [{ ok: false, error: changed }],
+      read: { index: { ok: true, value: pairFor('index', 'Home\n', 'שלהם\n') } },
+    });
+    const { saving, saved } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await saving.save(snapshot('שלי\n'));
+    const mine = snapshot('שלי\n');
+    expect(await saving.overwrite(mine)).toBe(true);
+    expect(calls).toEqual([
+      'saveDocument:p-1:index:"שלי\\n":"בית\\n"',
+      'readDocumentPair:p-1:index',
+      'saveDocument:p-1:index:"שלי\\n":"שלהם\\n"',
+    ]);
+    expect([saving.conflict.value, saving.error.value]).toEqual([false, null]);
+    expect(mine.marks).toEqual(['שלי\n']);
+    expect(saved).toEqual(['index']);
+  });
+
+  it('overwrites a file deleted meanwhile as new, and asks again if it changes once more', async () => {
+    const { client, calls } = fakeClient({
+      save: [
+        { ok: false, error: changed },
+        { ok: false, error: changed },
+      ],
+      read: { index: { ok: true, value: pairFor('index', 'Home\n') } },
+    });
+    const { saving } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await saving.save(snapshot('x'));
+    expect(await saving.overwrite(snapshot('x'))).toBe(false);
+    expect(calls.at(-1)).toBe('saveDocument:p-1:index:"x":new');
+    expect(saving.conflict.value).toBe(true);
+  });
+
+  it('shows a failure to read the file again, and saves nothing', async () => {
+    const unreadable = error('workspace.document-unreadable', { file: 'he/index.md' });
+    const { client, calls } = fakeClient({
+      save: { ok: false, error: changed },
+      read: { index: { ok: false, error: unreadable } },
+    });
+    const { saving } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await saving.save(snapshot('x'));
+    expect(await saving.overwrite(snapshot('x'))).toBe(false);
+    expect(calls.filter((call) => call.startsWith('saveDocument'))).toHaveLength(1);
+    expect([saving.conflict.value, saving.error.value, saving.status.value]).toEqual([
+      false,
+      unreadable,
+      'clean',
+    ]);
+  });
+
+  it('reports a broken transport while reading again as internal.unexpected', async () => {
+    const scripted = fakeClient({ save: { ok: false, error: changed } }).client;
+    const client: PaperLionApi = {
+      ...scripted,
+      readDocumentPair: () => Promise.reject(new Error('channel closed')),
+    };
+    const { saving } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await saving.save(snapshot('x'));
+    expect(await saving.overwrite(snapshot('x'))).toBe(false);
+    expect(saving.error.value?.code).toBe('internal.unexpected');
+  });
+
+  it('forgets the conflict when the page is read again', async () => {
+    const { client } = fakeClient({ save: { ok: false, error: changed } });
+    const { saving, current } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await saving.save(snapshot('x'));
+    current.value = pairFor('index', 'Home\n', 'שלהם\n');
+    await nextTick();
+    expect([saving.conflict.value, saving.error.value]).toEqual([false, null]);
+  });
+
+  it('leaves the next page alone when reading again answers after a page change', async () => {
+    let answer: (value: Result<DocumentPairDto, ErrorDto>) => void = () => undefined;
+    const scripted = fakeClient({ save: { ok: false, error: changed } });
+    const client: PaperLionApi = {
+      ...scripted.client,
+      readDocumentPair: () => new Promise((resolve) => (answer = resolve)),
+    };
+    const { saving, current } = setup(client, pairFor('index', 'Home\n', 'בית\n'));
+    await saving.save(snapshot('x'));
+    const overwriting = saving.overwrite(snapshot('x'));
+    current.value = pairFor('guide/intro', 'Intro\n', 'מבוא\n');
+    await nextTick();
+    answer({ ok: true, value: pairFor('index', 'Home\n', 'שלהם\n') });
+    expect(await overwriting).toBe(false);
+    expect(scripted.calls.filter((call) => call.startsWith('saveDocument'))).toHaveLength(1);
+    expect(saving.status.value).toBe('clean');
+  });
+});
+
 describe('useTranslationSaving: drafts', () => {
   afterEach(() => {
     vi.useRealTimers();

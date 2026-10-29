@@ -21,6 +21,8 @@ export interface TranslationSaving {
   readonly error: ShallowRef<ErrorDto | null>;
   /** Keeping the draft failed (the edits are still in the editor). */
   readonly draftError: ShallowRef<ErrorDto | null>;
+  /** A save was refused because the file changed on disk: ask what to keep. */
+  readonly conflict: Ref<boolean>;
   /** Starts a new translation for a page that has none. */
   start(): void;
   /** The editor reports whether it has unsaved changes. */
@@ -29,6 +31,13 @@ export interface TranslationSaving {
   noteEdit(): void;
   /** Saves the snapshot; true when it was saved. Failures stay in `error`. */
   save(snapshot: EditorSnapshot): Promise<boolean>;
+  /**
+   * After a conflict: saves the snapshot over the file as it is now (read again, so a change made
+   * after that is still refused). True when it was saved.
+   */
+  overwrite(snapshot: EditorSnapshot): Promise<boolean>;
+  /** After a conflict: keeps the edits unsaved (the error stays showing). */
+  keepEditing(): void;
   /** Drops the unsaved edits' draft (leaving without saving). */
   discardDraft(): Promise<void>;
   /** Drops a restored draft: the editor goes back to the file. */
@@ -52,8 +61,9 @@ const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, det
  * Saving the open page's translation, and keeping its unsaved edits as a draft (in the app's data,
  * via main) so a crash or a restart doesn't lose them. The save sends the text the editing started
  * from (`base`: the file as read, the last save, or a restored draft's base; `null` for a new
- * translation), so main refuses to overwrite a file that changed on disk meanwhile. A new page (or
- * the same page read again) starts over.
+ * translation), so main refuses to overwrite a file that changed on disk meanwhile. Such a refusal
+ * raises `conflict`, for the UI to ask: keep editing, reload, or overwrite. A new page (or the same
+ * page read again) starts over.
  */
 export function useTranslationSaving(
   client: PaperLionApi,
@@ -69,6 +79,7 @@ export function useTranslationSaving(
   const savedOnce = ref(false);
   const error = shallowRef<ErrorDto | null>(null);
   const draftError = shallowRef<ErrorDto | null>(null);
+  const conflict = ref(false);
   const base = ref<string | null>(null);
   // Whether main may hold a draft for this page (restored, or kept since).
   let kept = false;
@@ -92,6 +103,7 @@ export function useTranslationSaving(
       savedOnce.value = false;
       error.value = null;
       draftError.value = null;
+      conflict.value = false;
       base.value = draft === null ? (current?.target?.text ?? null) : draft.base;
     },
     { immediate: true },
@@ -161,6 +173,7 @@ export function useTranslationSaving(
       if (pair.value !== current) return result.ok;
       if (!result.ok) {
         error.value = result.error;
+        conflict.value = result.error.code === 'workspace.document-changed';
         return false;
       }
       // Main forgot the draft with the save. A pending draft still runs: it keeps text typed during
@@ -182,6 +195,30 @@ export function useTranslationSaving(
     }
   }
 
+  async function overwrite(snapshot: EditorSnapshot): Promise<boolean> {
+    const project = projectId.value;
+    const current = pair.value;
+    if (project === null || current === null || saving.value) return false;
+    conflict.value = false;
+    saving.value = true;
+    try {
+      const read = await client.readDocumentPair({ projectId: project, key: current.key });
+      if (pair.value !== current) return false;
+      if (!read.ok) {
+        error.value = read.error;
+        return false;
+      }
+      // The file as it is now (or none, if it was deleted) is what the save replaces.
+      base.value = read.value.target?.text ?? null;
+    } catch {
+      if (pair.value === current) error.value = transportFailed;
+      return false;
+    } finally {
+      if (pair.value === current) saving.value = false;
+    }
+    return save(snapshot);
+  }
+
   return {
     started,
     restored,
@@ -191,6 +228,7 @@ export function useTranslationSaving(
     status,
     error,
     draftError,
+    conflict,
     start: () => {
       started.value = true;
     },
@@ -203,6 +241,10 @@ export function useTranslationSaving(
       timer = setTimeout(() => void keepDraft(), options.draftDelay ?? 800);
     },
     save,
+    overwrite,
+    keepEditing: () => {
+      conflict.value = false;
+    },
     discardDraft,
     discardRestored: async () => {
       const current = pair.value;

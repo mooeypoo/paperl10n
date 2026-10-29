@@ -49,6 +49,7 @@ export function error(
 type OpenAnswer = Result<ProjectSummaryDto | null, ErrorDto>;
 type ListAnswer = Result<readonly SourceDocumentDto[], ErrorDto>;
 type ReadAnswer = Result<DocumentPairDto, ErrorDto>;
+type SaveAnswer = Result<{ path: string; written: boolean }, ErrorDto>;
 
 const language = (tag: string, name: string, autonym: string | null, rtl = false): LanguageDto => ({
   tag,
@@ -103,14 +104,19 @@ export function fakeClient(
     suggest?: Result<LanguageSuggestionsDto, ErrorDto>;
     /** The answer to choosing a target (default: the language, as LTR unless Hebrew/Arabic). */
     choose?: Result<LocaleDto, ErrorDto>;
-    /** The answer to saving a page (default: written to he/<key>.md). */
-    save?: Result<{ path: string; written: boolean }, ErrorDto>;
+    /**
+     * The answer to saving a page (default: written to he/<key>.md). A list answers one save
+     * each, in order, then the default.
+     */
+    save?: SaveAnswer | SaveAnswer[];
     /** The answer to keeping a draft (default: kept). */
     saveDraft?: Result<null, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
   const list = [...(answers.list ?? [])];
+  const saves = Array.isArray(answers.save) ? [...answers.save] : [];
+  const save = Array.isArray(answers.save) ? undefined : answers.save;
   const calls: string[] = [];
   const client: PaperLionApi = {
     openProject: () => {
@@ -159,7 +165,7 @@ export function fakeClient(
         `saveDocument:${projectId}:${key}:${JSON.stringify(text)}:${base === null ? 'new' : JSON.stringify(base)}`,
       );
       return Promise.resolve(
-        answers.save ?? { ok: true, value: { path: `he/${key}.md`, written: true } },
+        saves.shift() ?? save ?? { ok: true, value: { path: `he/${key}.md`, written: true } },
       );
     },
     saveDraft: ({ projectId, key, text, base }) => {

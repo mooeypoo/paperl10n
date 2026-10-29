@@ -293,6 +293,8 @@ describe('drafts', () => {
     expect(targetPane(element)?.textContent).toContain(
       'Unsaved changes from your last session were restored.',
     );
+    // The file is still what the draft started from: nothing to warn about.
+    expect(targetPane(element)?.textContent).not.toContain('changed on disk');
 
     button(targetPane(element) ?? element, 'Discard them').click();
     await flushPromises();
@@ -336,5 +338,130 @@ describe('drafts', () => {
     await flushPromises();
     expect(calls.at(-2)).toBe('discardDraft:p-1:index');
     expect(pageStatus(element, 'index')).toBe('started');
+  });
+});
+
+describe('a translation changed on disk', () => {
+  const changed = error('workspace.document-changed', { file: 'he/index.md' });
+  const conflictDialog = () => document.querySelector<HTMLDialogElement>('dialog.conflict');
+  const theirs = pairFor('index', 'Home\r\n', 'שלהם\r\n');
+
+  /** Opens index, types, and saves into a conflict. `read` may be changed later (what's on disk). */
+  async function conflicted(answers: Answers = {}) {
+    const app = await opened({ save: [{ ok: false, error: changed }], ...answers });
+    page(app.element, 'index').click();
+    await flushPromises();
+    await type(app.element, '!');
+    saveButton(app.element).click();
+    await flushPromises();
+    return app;
+  }
+
+  it('asks what to keep, keep editing by default; keeping on editing asks again on the next save', async () => {
+    const { element } = await conflicted();
+    const dialog = conflictDialog();
+    expect(dialog?.open).toBe(true);
+    expect(dialog?.getAttribute('role')).toBe('alertdialog');
+    expect(dialog?.textContent).toContain('⁨he/index.md⁩ was changed outside Paper Lion');
+    expect(document.activeElement?.textContent.trim()).toBe('Keep editing');
+
+    button(dialog ?? element, 'Keep editing').click();
+    await flushPromises();
+    expect(conflictDialog()?.open).toBe(false);
+    expect(status(element)).toBe('Unsaved changes');
+    expect(targetPane(element)?.querySelector('[role="alert"]')?.textContent).toContain(
+      'changed on disk',
+    );
+
+    // Ctrl+S tries again: the fake now accepts, as if the file were back as it was.
+    pressSave({ key: 's', code: 'KeyS', ctrlKey: true });
+    await flushPromises();
+    expect(status(element)).toBe('Saved');
+  });
+
+  it('keeps editing on Escape, and ignores Ctrl+S while asking', async () => {
+    const { element, calls } = await conflicted();
+    pressSave({ key: 's', code: 'KeyS', ctrlKey: true });
+    await flushPromises();
+    expect(calls.filter((call) => call.startsWith('saveDocument'))).toHaveLength(1);
+    conflictDialog()?.dispatchEvent(new Event('cancel', { cancelable: true }));
+    await flushPromises();
+    expect(conflictDialog()?.open).toBe(false);
+    expect(status(element)).toBe('Unsaved changes');
+  });
+
+  it('reloads from disk: the edits and their draft go, and the editor shows the file', async () => {
+    const read: Record<string, { ok: true; value: typeof theirs }> = {
+      index: {
+        ok: true,
+        value: { ...theirs, draft: { text: 'בית ועוד\r\n', base: 'בית\r\n' } },
+      },
+    };
+    const { element, calls } = await opened({
+      list: [
+        {
+          ok: true,
+          value: documents.map((document) => ({ ...document, hasDraft: document.key === 'index' })),
+        },
+      ],
+      read,
+      save: { ok: false, error: changed },
+    });
+    page(element, 'index').click();
+    await flushPromises();
+    // The draft started from text the file no longer has.
+    expect(targetPane(element)?.textContent).toContain(
+      'The file has changed on disk since, so saving will ask which version to keep.',
+    );
+    saveButton(element).click();
+    await flushPromises();
+    expect(conflictDialog()?.open).toBe(true);
+
+    read.index = { ok: true, value: theirs };
+    button(conflictDialog() ?? element, 'Reload from disk').click();
+    await flushPromises();
+    expect(calls.slice(-2)).toEqual(['discardDraft:p-1:index', 'readDocumentPair:p-1:index']);
+    expect(conflictDialog()?.open).toBe(false);
+    expect(targetEditor(element).state.doc.toString()).toBe('שלהם\n');
+    expect(status(element)).toBe('');
+    expect(targetPane(element)?.querySelector('[role="alert"]')).toBeNull();
+    expect(pageStatus(element, 'index')).toBe('started');
+  });
+
+  it('overwrites with mine, against the file as it is now', async () => {
+    const read = { index: { ok: true as const, value: pairFor('index', 'Home\r\n', 'בית\r\n') } };
+    const { element, calls } = await conflicted({ read });
+    read.index = { ok: true, value: theirs };
+    button(conflictDialog() ?? element, 'Overwrite with mine').click();
+    await flushPromises();
+    expect(calls.slice(-2)).toEqual([
+      'readDocumentPair:p-1:index',
+      'saveDocument:p-1:index:"בית\\r\\n!":"שלהם\\r\\n"',
+    ]);
+    expect(conflictDialog()?.open).toBe(false);
+    expect(status(element)).toBe('Saved');
+    expect(targetPane(element)?.querySelector('[role="alert"]')).toBeNull();
+    expect(targetEditor(element).state.doc.toString()).toBe('בית\n!');
+  });
+
+  it('stays on the page when saving from the unsaved-changes question finds a conflict', async () => {
+    const { element } = await opened({ save: [{ ok: false, error: changed }] });
+    page(element, 'index').click();
+    await flushPromises();
+    await type(element, '!');
+    page(element, 'guide/getting-started').click();
+    await flushPromises();
+    button(unsavedDialog() ?? element, 'Save').click();
+    await flushPromises();
+    expect(unsavedDialog()?.open).toBe(false);
+    expect(conflictDialog()?.open).toBe(true);
+    expect(page(element, 'index').getAttribute('aria-current')).toBe('page');
+
+    // Closing the window waits for the conflict's answer, rather than asking a second question.
+    const closing = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(closing);
+    await flushPromises();
+    expect(closing.defaultPrevented).toBe(true);
+    expect(unsavedDialog()?.open).toBe(false);
   });
 });

@@ -88,7 +88,10 @@ language's first page can be saved). `base` is the translation as it was when ed
 - **No needless writes:** text equal to the file isn't written (`written: false`).
 - **No overwriting someone else's change:** if the file on disk is no longer `base` (git pull,
   another editor, a deleted file, or a file created since a seeded page was opened), nothing is
-  written and the result is `workspace.document-changed`. The UI decides what to offer.
+  written and the result is `workspace.document-changed`. The UI decides what to offer (M2 E5:
+  keep editing, reload the file, or overwrite it). Overwriting reads the page again and saves with
+  the file's current text as `base`, so even a deliberate overwrite only replaces what was read
+  (a change made after that is refused again). No "force" flag exists.
 
 Once the file holds the text (written, or already there), the page's draft is forgotten. A failed
 save keeps it.

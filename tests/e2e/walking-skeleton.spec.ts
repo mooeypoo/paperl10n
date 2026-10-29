@@ -283,6 +283,41 @@ test('keeps unsaved edits as a draft, and restores them after a crash', async ()
   await expect.poll(() => readdirSync(drafts).length).toBe(0);
 });
 
+test('saving over a file changed on disk asks; reload shows theirs, overwrite keeps mine', async () => {
+  const project = await openCopyOfBasic();
+  const file = join(project, 'he/index.md');
+  await page.locator('nav').getByText('index', { exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'עברית · translation' });
+  await editor.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('שלי');
+
+  // Another editor (or git) changes the file meanwhile.
+  writeFileSync(file, '# שלהם\n');
+  await page.keyboard.press('Control+S');
+  const question = page.getByRole('alertdialog', { name: 'The translation changed on disk' });
+  await expect(question).toBeVisible();
+  expect(readFileSync(file, 'utf8')).toBe('# שלהם\n');
+
+  await question.getByRole('button', { name: 'Reload from disk' }).click();
+  await expect(question).toBeHidden();
+  await expect(editor).toHaveText('# שלהם');
+  await expect(page.getByRole('status')).toHaveText('');
+
+  // Again, and this time keep mine.
+  await editor.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type(' ושלי');
+  writeFileSync(file, '# שלהם שוב\n');
+  await page.keyboard.press('Control+S');
+  await question.getByRole('button', { name: 'Overwrite with mine' }).click();
+  await expect(page.getByRole('status')).toHaveText('Saved');
+  expect(readFileSync(file, 'utf8')).toBe('# שלהם\n ושלי');
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
 test('the renderer has no Node, and the preload exposes exactly the IPC contract', async () => {
   const globals = await page.evaluate(() => ({
     require: typeof (globalThis as Record<string, unknown>).require,

@@ -75,5 +75,11 @@
   "paperl10n-discard-changes": "Button in the unsaved-changes dialog: leave the page and drop the unsaved changes.",
   "paperl10n-error-workspace-draft-unwritable": "Shown when Paper Lion can't write a draft (unsaved edits it keeps in its own data folder, to restore after a crash or restart). The edits are still in the editor.",
   "paperl10n-draft-restored": "Note above the translation editor when a page opens with a draft: unsaved edits Paper Lion kept from an earlier session (or before a crash). Shown until they're saved or discarded.",
-  "paperl10n-discard-draft": "Button next to the restored-changes note: drops the restored unsaved changes, so the editor shows the file as it is."
+  "paperl10n-discard-draft": "Button next to the restored-changes note: drops the restored unsaved changes, so the editor shows the file as it is.",
+  "paperl10n-draft-restored-changed": "Note above the translation editor when a page opens with a draft (see paperl10n-draft-restored) and the file changed on disk after the draft was started. Saving will then show the conflict dialog.",
+  "paperl10n-conflict-title": "Title of the dialog shown when saving finds that the translation's file was changed on disk (by git, another editor) since editing started.",
+  "paperl10n-conflict-message": "Body of the conflict dialog. $1: the translation file's path, like he/guide/intro.md (shown isolated). Mentions the two ways out: paperl10n-conflict-reload and paperl10n-conflict-overwrite.",
+  "paperl10n-conflict-keep-editing": "Button in the conflict dialog (the default): close it and keep the changes unsaved in the editor.",
+  "paperl10n-conflict-reload": "Button in the conflict dialog: drop the unsaved changes and show the file as it is on disk now.",
+  "paperl10n-conflict-overwrite": "Button in the conflict dialog: replace the file on disk with the changes in the editor, losing the other change."
 }

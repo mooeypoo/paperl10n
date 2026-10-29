@@ -4,6 +4,7 @@ import type { ErrorDto } from '#ipc-contract';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import { useClient } from './client';
 import AppHeader from './components/AppHeader.vue';
+import ConflictDialog from './components/ConflictDialog.vue';
 import DocumentView from './components/DocumentView.vue';
 import LanguagePicker from './components/LanguagePicker.vue';
 import PagesSidebar from './components/PagesSidebar.vue';
@@ -42,6 +43,7 @@ const saving = useTranslationSaving(client, projectId, pair, {
 const { started, restored, restoredNotice, dirty, isNew, status: saveStatus } = saving;
 const saveError = saving.error;
 const draftError = saving.draftError;
+const conflict = saving.conflict;
 
 /** Saves the open page's translation; true when there's nothing left unsaved. */
 async function saveCurrent(): Promise<boolean> {
@@ -56,6 +58,8 @@ const pendingLeave = shallowRef<(() => void) | null>(null);
 const leavingKey = ref('');
 
 function guard(leave: () => void): void {
+  // While the conflict question is open, it's answered first; leaving waits.
+  if (conflict.value) return;
   if (!dirty.value) {
     leave();
     return;
@@ -79,6 +83,22 @@ async function resolveLeave(choice: 'save' | 'discard' | 'cancel'): Promise<void
   leave();
 }
 
+// Saving found the file changed on disk: keep editing, reload it (dropping the edits and their
+// draft), or overwrite it with the edits.
+async function resolveConflict(choice: 'reload' | 'overwrite' | 'keep'): Promise<void> {
+  if (choice === 'keep') {
+    saving.keepEditing();
+  } else if (choice === 'reload') {
+    saving.keepEditing();
+    await saving.discardDraft();
+    reading.reload();
+  } else {
+    const snapshot = documentView.value?.snapshot() ?? null;
+    if (snapshot === null) saving.keepEditing();
+    else await saving.overwrite(snapshot);
+  }
+}
+
 function open(): void {
   guard(() => void project.open());
 }
@@ -93,7 +113,7 @@ function onKeydown(event: KeyboardEvent): void {
   const save = event.code === 'KeyS' || event.key.toLowerCase() === 's';
   if (!save || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
   event.preventDefault();
-  if (pendingLeave.value === null) void saveCurrent();
+  if (pendingLeave.value === null && !conflict.value) void saveCurrent();
 }
 
 // Closing the window: cancel it, ask, and close for real once the user decides.
@@ -154,6 +174,14 @@ async function chooseTarget(tag: string): Promise<void> {
       @save="resolveLeave('save')"
       @discard="resolveLeave('discard')"
       @cancel="resolveLeave('cancel')"
+    />
+    <ConflictDialog
+      :open="conflict"
+      :path="selected?.targetPath ?? ''"
+      :busy="saveStatus === 'saving'"
+      @reload="resolveConflict('reload')"
+      @overwrite="resolveConflict('overwrite')"
+      @keep-editing="resolveConflict('keep')"
     />
     <LanguagePicker
       :open="pickerOpen"

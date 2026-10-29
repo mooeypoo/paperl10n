@@ -50,6 +50,12 @@ const target = computed(() => {
   }
   return file;
 });
+// A restored draft started from a text the file no longer has: saving will ask what to keep.
+const restoredFromOlder = computed(() => {
+  const pair = current.value;
+  const draft = pair?.draft ?? null;
+  return draft !== null && draft.base !== (pair?.target?.text ?? null);
+});
 // The editor starts clean only on the file's own text.
 const targetSaved = computed(() => !props.restored && (current.value?.target ?? null) !== null);
 const statusText = computed(() =>
@@ -125,7 +131,15 @@ defineExpose({
             {{ errorMessage(draftError, t) }}
           </p>
           <div v-if="restoredNotice" class="document-restored">
-            <p class="document-note">{{ t('paperl10n-draft-restored') }}</p>
+            <p class="document-note">
+              {{
+                t(
+                  restoredFromOlder
+                    ? 'paperl10n-draft-restored-changed'
+                    : 'paperl10n-draft-restored',
+                )
+              }}
+            </p>
             <button type="button" class="pl-button" @click="emit('discardRestored')">
               {{ t('paperl10n-discard-draft') }}
             </button>

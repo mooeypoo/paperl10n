@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0–E4 done, E5 (external changes) next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0–E5 done, E6 (the decisions into the PRD) next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -298,7 +298,30 @@ inline syntax. The spike confirms it.
   only a new file (or MDX or read-only changing) starts over. The label, `lang`, and `dir` sit in
   a CodeMirror compartment that is swapped in place, keeping the text and its undo history.
   Mutation checks: the label restarting the editor, and the compartment never reconfigured.
-- **E5, external changes:** the conflict flow on save.
+- **E5, external changes:** the conflict flow on save. ✅ Done (UI only: no contract change).
+    - **The question:** when a save is refused with `workspace.document-changed` (git pull, another
+      editor, a deleted file, a draft restored over a file that changed since), an alert dialog
+      names the file and offers **Keep editing** (the default, also Escape), **Reload from disk**,
+      or **Overwrite with mine** (styled as a destructive action).
+    - **Keep editing:** the edits stay unsaved and the error stays in the pane; the next save asks
+      again if the file is still different.
+    - **Reload from disk:** forgets the page's draft and reads the page again. The editor shows the
+      file as it is (or "Start translating" if it was deleted), clean.
+    - **Overwrite with mine:** reads the page again and saves with the file's current text as the
+      base (`null` if it was deleted). Main's check still applies, so a change made in between asks
+      again. A failed read shows its error and saves nothing.
+    - **Restored drafts:** when a draft's base is no longer the file, the restored note says so up
+      front: "The file has changed on disk since, so saving will ask which version to keep."
+    - **Leaving and closing:** saving from the unsaved-changes question into a conflict stays on the
+      page with the conflict question. While it's open, Ctrl+S does nothing, and closing the window
+      or leaving waits for its answer instead of asking a second question.
+    - **E2E:** edit, change the file from outside, Ctrl+S: the question shows and the file is
+      untouched. Reload shows theirs; edit again, change it again, Overwrite: the file holds
+      theirs plus mine.
+    - Mutation checks, each failing tests: never asking, asking for every failure, overwriting
+      against the old base, saving after a failed read, the conflict surviving a new read, reload
+      keeping the draft or not reading again, leaving or Ctrl+S during the question, no default
+      focus, Escape ignored, and the restored note's warning missing or always shown.
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 Round-trip tests throughout: open, edit nothing, save → the file is unchanged byte for byte; an

@@ -20,6 +20,19 @@ describe('useDocumentPair', () => {
     expect(calls).toEqual(['readDocumentPair:p-1:index', 'readDocumentPair:p-1:guide/intro']);
   });
 
+  it('reads the same page again on reload, as a new pair', async () => {
+    const read = { index: { ok: true as const, value: pairFor('index', 'Home\n', 'בית\n') } };
+    const { client, calls } = fakeClient({ read });
+    const state = useDocumentPair(client, ref('p-1'), ref('index'));
+    await flushPromises();
+    read.index = { ok: true, value: pairFor('index', 'Home\n', 'שלהם\n') };
+    state.reload();
+    expect(state.loading.value).toBe(true);
+    await flushPromises();
+    expect(state.pair.value?.target?.text).toBe('שלהם\n');
+    expect(calls).toEqual(['readDocumentPair:p-1:index', 'readDocumentPair:p-1:index']);
+  });
+
   it('loads nothing without a project or a page', async () => {
     const { client, calls } = fakeClient();
     const state = useDocumentPair(client, ref(null), ref('index'));

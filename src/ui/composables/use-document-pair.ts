@@ -6,6 +6,8 @@ export interface DocumentPairState {
   readonly pair: ShallowRef<DocumentPairDto | null>;
   readonly error: ShallowRef<ErrorDto | null>;
   readonly loading: Ref<boolean>;
+  /** Reads the page again (its files changed on disk). */
+  reload(): void;
 }
 
 const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, details: [] };
@@ -50,5 +52,5 @@ export function useDocumentPair(
   }
 
   watch([projectId, key], ([project, page]) => void load(project, page), { immediate: true });
-  return { pair, error, loading };
+  return { pair, error, loading, reload: () => void load(projectId.value, key.value) };
 }
