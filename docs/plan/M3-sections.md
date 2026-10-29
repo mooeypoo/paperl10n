@@ -1,0 +1,207 @@
+# M3 discussion: sections, source changes, and hints
+
+Status: **open for discussion (2026-10-29).** Nothing is decided yet; each question ends with a
+recommendation. Steps follow once the questions are answered.
+
+PRD M3: "Section view with per-section status and progress, the full-page view, source-change
+highlighting (needs the outdated-detection decision below), preservation hints, the length
+comparison, and loose scroll sync." PRD §11 leaves two questions that M3 has to answer first:
+**outdated detection** and the **section split level**.
+
+## Where M2 left us
+
+- Both panes are CodeMirror 6 editors over the whole file (the full-page view, in effect), with
+  the live preview, explicit save, drafts, and the conflict check on save.
+- A page's status is only "the translation exists or not" (`targetExists`), plus the unsaved
+  marker. `missing · draft · translated · outdated` (PRD §6) isn't modelled yet.
+- `document` parses into `blocks` (with heading depths) in main; the editor parses the same
+  dialect in the renderer (`#markdown-syntax`, ADR 0017). The parsed blocks in `DocumentTextDto`
+  are unused by the UI since M2 ([follow-ups](follow-ups.md)); M3 decides whether it needs them.
+- The `translation` domain exists but is empty. Its allowed edges are `document`, `catalog`, and
+  `locale`. `workspace` (where the use cases that read the project live) can't import it yet.
+
+## Questions to decide
+
+### 1. Outdated detection (PRD §11)
+
+To say "the source changed since this translation was up to date" and to highlight *what*
+changed, Paper Lion needs a record of the source as it was when the translator last said "this
+is up to date". Where that record lives:
+
+| Option | Shared with others (git) | Touches published files | Shows what changed | Notes |
+|---|---|---|---|---|
+| **A. A status file in the project** (for example `.paperl10n/status/he.json`), committed with the translations | Yes | No | Per block, from block fingerprints | One file per target language, so translators of different languages don't conflict. Pages are keyed by document key. |
+| B. App data only | No: per machine | No | Per block | Simplest, but status is lost on another machine and invisible to co-translators. |
+| C. A frontmatter field in each translation (`sourceHash: …`) | Yes | **Yes**: every translated page gains a key the site has to accept | Page-level only, unless the field grows | Starlight and VitePress validate or render frontmatter; an unknown key is a risk per site. |
+| D. Git history: remember the source commit the translation matched, diff with git | Yes | No (with A or B to hold the commit) | Exact text diff | Needs git and a committed source; uncommitted edits and rebases complicate it. PRD §11 leaves "git awareness" open. |
+
+**What's recorded (with A or B):** for each page, a fingerprint (hash) of each source block at
+the time it was marked up to date. Comparing the stored block list with today's (a sequence
+diff) gives changed and new blocks to highlight, and the places where blocks were removed. Section
+status follows from the blocks in each source section. Hashes, not text: a snapshot of every
+source page would roughly double the repository's content per language. The cost is that Paper
+Lion can show *which* blocks changed, not the old wording; git (D) can add that later on top.
+
+**Fingerprints ignore what doesn't change meaning:** line endings and trailing whitespace. Any
+other edit (a typo fix included) marks the block changed; deciding that a change "doesn't
+matter" stays with the translator, who marks it up to date again.
+
+**Recommendation: A**, block fingerprints in a committed status file, one per target language.
+It travels with the project, never edits a published file, and fits the PRD's "blocks are the
+unit of source-change tracking". It also answers PRD §11 "Sidecar state" for status: next to the
+project.
+
+### 2. What the statuses mean, and when a page becomes "translated"
+
+PRD §6 has four statuses. With A, they can be defined as:
+
+| Status | Page | Section |
+|---|---|---|
+| `missing` | No translation file. | The page is missing, or the translation has no section paired with it. |
+| `draft` | The file exists (or is being started) but was never marked up to date. | Never marked up to date. |
+| `translated` | Marked up to date, and every source block is unchanged since. | Marked, and its source blocks are unchanged. |
+| `outdated` | Marked once, and the source changed since. | Marked, and a source block in it changed (or was added or removed). |
+
+**Marking up to date** is an explicit action, never a side effect of saving (a save is often a
+work in progress):
+
+| Option | Notes |
+|---|---|
+| **Per section and per page** (recommended) | Each paired section has "Mark up to date"; the page has one for all its sections. Matches per-section progress ("3 of 5 sections up to date"). |
+| Per page only | Simpler, but a page with one changed section is all-or-nothing. |
+| Automatically on save | Wrong for partial work; rejected. |
+
+The mark is stored when it's made (the status file changes then, not on the next save). It
+records the source **as the translator sees it**: if the source file on disk changed since the
+page was opened, marking is refused and offers a reload (as saving does in E5), so a version the
+translator hasn't read is never marked up to date.
+
+**Existing translations on first open:** a project translated before Paper Lion has no status
+file, so every existing translation would read as `draft`. Options: (a) leave them as `draft`
+and offer **"Mark all existing translations up to date"** once, for the whole language; (b) treat
+pages without a record as `translated` until the source changes (impossible to detect without a
+record, so it would never turn `outdated`); (c) guess a baseline from git. **Recommendation: (a)**,
+with a clear one-time prompt in the page list. (c) can come with git awareness later.
+
+### 3. Sections: the split level and uneven headings (PRD §11)
+
+PRD §7.2: sections split at headings, at "the document's top section level (usually `##`)".
+Proposed rules, in order:
+
+1. **The split level is the shallowest heading depth in the source body**, frontmatter excluded.
+2. **Except a lone title:** if that depth appears exactly once and it's the first heading (a
+   `# Title` over `##` sections), the split level is the next depth that appears.
+3. **The text before the first heading** at that level is its own section, the *intro*.
+4. **Frontmatter** is its own row at the top, paired with the translation's frontmatter (its
+   `title` and `description` need translating), not part of the intro.
+5. **Deeper headings stay inside their section.** A long section without subheadings stays one
+   section: M3 doesn't split by length.
+6. **Only top-level heading blocks count.** A `#` line in a code block or HTML isn't a heading,
+   and neither is one inside a list or a quote. Headings between `:::` fences do count: the
+   parser reads a container's content as ordinary Markdown, and the site renders them as headings.
+7. **The translation is split at the same level** as its source, and sections pair in order.
+   When the counts differ, or the translation's headings sit at a different level, Paper Lion
+   says so, shows the pairs it can make up to the first mismatch, and offers the full-page view.
+   It never guesses (PRD §7.2).
+
+**Changing the level per document** (PRD §7.2): stored in the status file next to the page's
+fingerprints, so it's shared. Recommendation: build it last in M3, only if the default rules
+prove wrong on the maintainer's site.
+
+### 4. How the section view is built
+
+| Option | The file as one document | Alignment | Cost |
+|---|---|---|---|
+| **A. One editor per pane (as now), aligned at paired headings** with spacers, like a side-by-side diff | Yes: drafts, dirty state, undo, conflicts, and round-trip safety from M2 stay as they are | Exact at every paired heading; scroll is locked | Spacers must follow line heights as text wraps (CodeMirror block widgets plus measurement) |
+| B. One small editor per section, in rows | No: the file is assembled from slices on save | By layout, for free | Editing across a section boundary (adding or removing a heading) needs re-slicing; undo, search, and selection are per section; M2's file-level machinery needs rework |
+| C. One editor per pane, no alignment; a section list beside it jumps both panes to a pair | Yes | At the jump only | Cheapest, but loses "headings on their own row" (PRD §7.2) |
+
+**Recommendation: A.** The section view becomes a way of *showing* the same two editors: spacers
+keep each pair of headings side by side, each section's status shows at its heading (with "Mark
+up to date"), and the full-page view is the same editors without spacers. Editing a heading
+re-pairs live. `@codemirror/merge` does similar alignment, but it's built around a text diff
+between the panes, which isn't our model; our own spacers avoid a new dependency. (Ask first if
+that changes.)
+
+**Where the section rules run:** status (page list, progress) is computed in main from the files
+on disk; the section view in the renderer must re-split live as the translator types. The rules
+in question 3 are small and pure. Proposal: write them once as a pure function over headings
+(depths and positions), in `translation/domain`, used by main, and shared with `ui/editor`
+through a small shared unit like `#markdown-syntax` (an ADR, as 0017 was), or re-split in the
+renderer from the same function over IPC. Recommendation: the shared pure function, with an ADR.
+
+### 5. Source-change highlighting
+
+In the **source** pane (PRD §6, "shown on the source side, as a reference"): changed and new
+blocks get a background tint and a gutter mark; where blocks were removed, a thin marker between
+blocks says "removed text here". A section heading with changes says "changed since marked up to
+date". Nothing is marked in the translation: what to change there is the translator's call.
+
+Option for later: the old wording, from git, on hover (needs git awareness).
+
+### 6. Preservation hints
+
+Neutral notes (PRD §6), never errors, about things usually kept as is: code blocks, link
+targets, images, components, and frontmatter keys, when their **counts** differ between a source
+section and its pair (or the whole page in the full-page view or when sections don't pair).
+
+The catch is **link targets**: translations often point to localized pages (`/guide/` in the
+source, `/he/guide/` in Hebrew), so a raw comparison would flag every link on a Starlight site.
+
+| Option | Notes |
+|---|---|
+| **Ask the format plugin to map a target to the source's form** (recommended) | An optional `DocumentFormat` method (the plugin knows its locale prefixes). The plugin API's export list is frozen by a test, so this is a deliberate API change. Without the method, links compare as written. |
+| Compare raw targets | Noisy on every localized site. |
+| Count links, not targets | Misses a link pointing to the wrong page. |
+
+Code blocks compare by count and by their language tag; their contents don't (comments in code
+are often translated). Components compare by tag name. Frontmatter compares by keys.
+
+### 7. Length comparison
+
+A page-level note in the translation pane's header: "about 80% of the source's length". Measured
+on text as rendered: Markdown syntax, code blocks, URLs, and frontmatter removed (the live
+preview's rules already know what's syntax). Characters, not words (word counts mean little
+across scripts). Information only: never a warning, never per section (PRD §7.2).
+
+### 8. Loose scroll sync (full-page view)
+
+With option 4A, the section view is aligned and doesn't need it. In the full-page view: scrolling
+one pane scrolls the other so the nearest paired heading lines up, and between headings by
+relative position. A toggle, on by default. Recommendation: build it with the full-page toggle, as
+the last step.
+
+### 9. Architecture
+
+- `translation/domain`: sections (split, pair), fingerprints and the block sequence diff, status,
+  preservation-hint counts, length. Pure, table-tested.
+- `translation/application`: a `TranslationStatusStore` port (read and write a language's status
+  file), with a contract suite run against an in-memory fake and the real adapter. The real
+  adapter writes atomically and only inside the project, with the same checks as `workspace`'s
+  `ProjectWriter` (which `translation` can't import: there's no edge that way).
+- **A new domain edge, `workspace → translation`**, so the use cases that read the project
+  (listing pages, reading a pair) can report status. Adding an edge is a reviewed change
+  (`scripts/domain-graph.ts`, `docs/architecture.md`). The alternative, `translation` use cases
+  depending on `workspace`, inverts today's layering.
+- New IPC methods: marking up to date (a section, a page, all existing pages), and status on the
+  page list and the pair.
+- Performance (PRD §9: ~1,000 pages): listing status reads and hashes every source page. Measure
+  first; if it's slow, list with "exists" first and fill status in after.
+
+## Proposed steps (after the decisions)
+
+- **S1, sections in the domain:** the split and pairing rules (question 3) as pure functions, with
+  table tests over real-site shapes (lone title, intro, uneven levels, mismatched counts,
+  headings in code and containers).
+- **S2, the section view:** aligned editors (4A), per-section rows marked at their headings, the
+  mismatch message, and the toggle to the full-page view. No status yet.
+- **S3, status:** the status file and its port, fingerprints, "Mark up to date" (section, page,
+  all existing), the four statuses in the page list, and section progress in the page header.
+- **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.
+- **S5, hints and length:** preservation hints per section (with the plugin's link mapping, if
+  chosen) and the length note.
+- **S6, full-page sync:** loose scroll sync and, if needed, the per-document split level.
+- **S7, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
+
+Round-trip rule throughout: marking, highlighting, and hints never change a document's text;
+only the status file is written by them.
