@@ -47,6 +47,34 @@ export function describeProjectWriterContract(
       expect(await contents()).toEqual({ ...tree, 'en/new.md': 'new' });
     });
 
+    it('creates missing folders when asked, and only then', async () => {
+      const { writer, contents } = await make(tree);
+      expect((await writer.writeText(p('ar/guide/intro.md'), 'x')).ok).toBe(false);
+      expect(
+        await writer.writeText(p('ar/guide/intro.md'), 'مرحبا', { createFolders: true }),
+      ).toEqual({
+        ok: true,
+        value: undefined,
+      });
+      expect((await writer.writeText(p('ar/guide/more.md'), 'y')).ok).toBe(true);
+      expect(await contents()).toEqual({
+        ...tree,
+        'ar/guide/intro.md': 'مرحبا',
+        'ar/guide/more.md': 'y',
+      });
+    });
+
+    it('refuses to create a folder where a file stands, changing nothing', async () => {
+      const { writer, contents } = await make(tree);
+      expect(
+        await writer.writeText(p('en/index.md/inner.md'), 'x', { createFolders: true }),
+      ).toEqual({
+        ok: false,
+        error: { code: 'files.not-a-directory', path: 'en/index.md/inner.md' },
+      });
+      expect(await contents()).toEqual(tree);
+    });
+
     it.each<[string, string, string]>([
       ['a folder', 'en', 'files.not-a-file'],
       ['the project root', '', 'files.not-a-file'],

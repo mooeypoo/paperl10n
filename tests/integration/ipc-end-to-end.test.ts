@@ -159,6 +159,35 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       direction: 'rtl',
     });
   },
+  saveDocument: async () => {
+    const folder = await copyOfBasic();
+    const { api } = rendererApi(folder);
+    const projectId = await openBasic(api);
+    const before = await readFile(join(folder, 'he/index.md'), 'utf8');
+    const edited = `${before}\r\nשורה חדשה ✓\r\n`;
+    expect(await api.saveDocument({ projectId, key: 'index', text: edited, base: before })).toEqual(
+      {
+        ok: true,
+        value: { path: 'he/index.md', written: true },
+      },
+    );
+    expect(await readFile(join(folder, 'he/index.md'), 'utf8')).toBe(edited);
+    // A new translation, in a folder that doesn't exist yet.
+    expect(
+      await api.saveDocument({
+        projectId,
+        key: 'guide/getting-started',
+        text: '# התחלה\n',
+        base: null,
+      }),
+    ).toEqual({ ok: true, value: { path: 'he/guide/getting-started.md', written: true } });
+    expect(await readFile(join(folder, 'he/guide/getting-started.md'), 'utf8')).toBe('# התחלה\n');
+    // Saving over a file that changed since: refused, as an error DTO.
+    expect(await api.saveDocument({ projectId, key: 'index', text: 'x', base: before })).toEqual({
+      ok: false,
+      error: { code: 'workspace.document-changed', params: { file: 'he/index.md' }, details: [] },
+    });
+  },
   chooseTargetLocale: async () => {
     const folder = await copyOfBasic();
     const { api } = rendererApi(folder);

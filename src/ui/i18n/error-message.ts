@@ -21,6 +21,8 @@ export const errorMessageParams: Readonly<Record<ErrorCode, readonly string[]>> 
   'workspace.target-is-source': ['language'],
   'workspace.unknown-document': ['key'],
   'workspace.document-unreadable': ['file', 'problem'],
+  'workspace.document-changed': ['file'],
+  'workspace.document-unwritable': ['file', 'problem'],
   'formats.invalid-options': ['formatId', 'reason'],
   'formats.unsupported-project': ['formatId', 'reason'],
   'formats.file-access': ['formatId', 'file', 'problem'],

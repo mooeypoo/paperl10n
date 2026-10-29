@@ -38,6 +38,13 @@ export const argumentValidators: Readonly<
     typeof request.query === 'string' &&
     request.query.length <= 100 &&
     isLanguageCode(request.uiLanguage),
+  saveDocument: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'key', 'text', 'base']) &&
+    isProjectId(request.projectId) &&
+    isDocumentKey(request.key) &&
+    isDocumentText(request.text) &&
+    (request.base === null || isDocumentText(request.base)),
   chooseTargetLocale: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'language']) &&
@@ -57,6 +64,15 @@ function hasExactly<K extends string>(
 
 function isProjectId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 200;
+}
+
+function isDocumentKey(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= 1000;
+}
+
+/** A page's text: generous, but bounded (10 million UTF-16 code units, about 20 MB). */
+function isDocumentText(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 10_000_000;
 }
 
 /** A language code as the renderer sends it. Its meaning is checked by the use case. */
@@ -116,6 +132,18 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
         projectId: request.projectId,
         query: request.query,
         uiLanguage: request.uiLanguage,
+      });
+    }
+    case 'saveDocument': {
+      // checked by argumentValidators
+      const [request] = args as [
+        { projectId: string; key: string; text: string; base: string | null },
+      ];
+      return api.saveDocument({
+        projectId: request.projectId,
+        key: request.key,
+        text: request.text,
+        base: request.base,
       });
     }
     case 'chooseTargetLocale': {

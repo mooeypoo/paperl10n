@@ -94,6 +94,8 @@ export function fakeClient(
     suggest?: Result<LanguageSuggestionsDto, ErrorDto>;
     /** The answer to choosing a target (default: the language, as LTR unless Hebrew/Arabic). */
     choose?: Result<LocaleDto, ErrorDto>;
+    /** The answer to saving a page (default: written to he/<key>.md). */
+    save?: Result<{ path: string; written: boolean }, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -139,6 +141,12 @@ export function fakeClient(
           [l.tag, l.name, l.autonym ?? ''].some((name) => name.toLowerCase().startsWith(folded)),
         ),
       });
+    },
+    saveDocument: ({ projectId, key, text }) => {
+      calls.push(`saveDocument:${projectId}:${key}:${String(text.length)}`);
+      return Promise.resolve(
+        answers.save ?? { ok: true, value: { path: `he/${key}.md`, written: true } },
+      );
     },
     chooseTargetLocale: ({ projectId, language: tag }) => {
       calls.push(`chooseTargetLocale:${projectId}:${tag}`);

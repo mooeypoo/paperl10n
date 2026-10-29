@@ -33,6 +33,7 @@ export function guardApi(api: PaperLionApi, onUnexpected: OnUnexpected): PaperLi
       guard('suggestTargetLanguages', onUnexpected, () => api.suggestTargetLanguages(request)),
     searchTargetLanguages: (request) =>
       guard('searchTargetLanguages', onUnexpected, () => api.searchTargetLanguages(request)),
+    saveDocument: (request) => guard('saveDocument', onUnexpected, () => api.saveDocument(request)),
     chooseTargetLocale: (request) =>
       guard('chooseTargetLocale', onUnexpected, () => api.chooseTargetLocale(request)),
   };

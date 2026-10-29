@@ -77,17 +77,26 @@ export class InMemoryProjectFiles implements ProjectFiles {
   writeText(
     path: ProjectPath,
     text: string,
+    options: { readonly createFolders?: boolean } = {},
   ): Promise<
     Result<
       void,
-      { readonly code: 'files.not-found' | 'files.not-a-file'; readonly path: ProjectPath }
+      {
+        readonly code: 'files.not-found' | 'files.not-a-file' | 'files.not-a-directory';
+        readonly path: ProjectPath;
+      }
     >
   > {
     if (path === '' || this.#directories.has(path))
       return Promise.resolve(err({ code: 'files.not-a-file', path }));
-    const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
-    if (!this.#directories.has(parent))
+    const segments = path.split('/');
+    const ancestors = segments.slice(0, -1).map((_, i) => segments.slice(0, i + 1).join('/'));
+    if (ancestors.some((folder) => this.#files.has(folder as ProjectPath)))
+      return Promise.resolve(err({ code: 'files.not-a-directory', path }));
+    const missing = ancestors.filter((folder) => !this.#directories.has(folder));
+    if (missing.length > 0 && options.createFolders !== true)
       return Promise.resolve(err({ code: 'files.not-found', path }));
+    for (const folder of missing) this.#directories.add(folder);
     this.#files.set(path, text);
     return Promise.resolve(ok(undefined));
   }

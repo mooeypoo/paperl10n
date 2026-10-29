@@ -60,5 +60,7 @@
   "paperl10n-languages-count": "Announced to screen readers: how many languages the picker shows. $1: the number.",
   "paperl10n-no-matching-languages": "Shown when no language matches the search. $1: what the user typed. \"languages\" and \"paperl10n.config.json\" are code: don't translate them.",
   "paperl10n-language-current": "Read by screen readers after the language that is the current translation language.",
-  "paperl10n-cancel": "Button that closes a dialog without changing anything."
+  "paperl10n-cancel": "Button that closes a dialog without changing anything.",
+  "paperl10n-error-workspace-document-changed": "Error when saving a translation that someone or something else (git, another editor) changed on disk after editing started. $1: the file's path.",
+  "paperl10n-error-workspace-document-unwritable": "Error when writing a translation file fails. $1: the file's path; $2: a technical problem code, e.g. \"files.unwritable\"."
 }

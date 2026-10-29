@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); the spike (E0) passed, E1 next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0 (spike) and E1 (saving) done, E2 next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -146,6 +146,22 @@ inline syntax. The spike confirms it.
     (Orca on Linux), and how typing at direction boundaries feels. To do on the E2 build.
 - **E1, writing more:** `ProjectWriter` creates missing folders. A `saveDocument` use case writes a
   target file atomically, after checking that the file on disk is still what was read.
+  - *Done-notes:* `ProjectWriter.writeText` takes `{ createFolders }`. `nodeProjectWriter`
+    creates folders one at a time, checking that each is a real folder inside the project, so a
+    symlinked folder can't lead outside. `InMemoryProjectFiles` matches, and both pass the
+    contract's new cases. `saveDocument` (workspace use case, IPC method of the same name) writes
+    a page's translation exactly as given, creates missing folders, writes nothing when the text
+    already matches the file (`written: false`), and refuses (`workspace.document-changed`) when
+    the file on disk isn't what editing started from (`base`, or `null` for a new translation).
+    New errors: `workspace.document-changed`, `workspace.document-unwritable`. Main bounds the
+    text at 10 million UTF-16 code units. No UI yet (E3).
+  - **For E2:** CodeMirror normalizes line breaks by default (a CRLF file would come back with
+    LF). The editor must keep the file's own line separator (`EditorState.lineSeparator`, set
+    from the file), and round-trip tests must cover CRLF, mixed endings, a BOM, and a missing
+    final newline.
+  - Mutation checks: saving without the conflict check, writing unchanged text, saving without
+    folder creation, folder creation following a link out of the project, the in-memory writer
+    making a folder over a file, and main ignoring `base`: each fails tests.
 - **E2, the editor:** a target pane editor (CodeMirror behind a UI component, Markdown
   decorations from the same Lezer parser, the bidi rules), and a read-only source pane.
 - **E3, seed and save:** "Start translating", Save (button, Ctrl/Cmd+S), dirty state in the page

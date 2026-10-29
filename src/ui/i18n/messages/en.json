@@ -60,5 +60,7 @@
   "paperl10n-languages-count": "{{PLURAL:$1|One language|$1 languages}}",
   "paperl10n-no-matching-languages": "No language matches \"$1\". To use a language Paper Lion doesn't know, define it under \"languages\" in paperl10n.config.json.",
   "paperl10n-language-current": "(current)",
-  "paperl10n-cancel": "Cancel"
+  "paperl10n-cancel": "Cancel",
+  "paperl10n-error-workspace-document-changed": "$1 changed on disk since you started editing it, so it wasn't overwritten.",
+  "paperl10n-error-workspace-document-unwritable": "The file $1 can't be saved ($2)."
 }

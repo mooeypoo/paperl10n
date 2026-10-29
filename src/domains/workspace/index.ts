@@ -54,3 +54,10 @@ export {
   type ChooseTargetLocaleError,
 } from './application/choose-target-locale.ts';
 export type { LanguageEntry } from './application/project-languages.ts';
+export {
+  createSaveDocument,
+  type SaveDocument,
+  type SaveDocumentError,
+  type SaveDocumentRequest,
+} from './application/save-document.ts';
+export type { FileWriteError, ProjectWriter } from './application/ports/project-writer.ts';

@@ -55,6 +55,10 @@ function setup() {
       calls.push(['searchTargetLanguages', request]);
       return Promise.resolve(ok([]));
     },
+    saveDocument: (request) => {
+      calls.push(['saveDocument', request]);
+      return Promise.resolve(ok({ path: 'he/k.md', written: true }));
+    },
     chooseTargetLocale: (request) => {
       calls.push(['chooseTargetLocale', request]);
       return Promise.resolve(ok({ id: request.language, direction: 'rtl' }));
@@ -99,6 +103,8 @@ describe('registerApi', () => {
       ok: true,
       value: { id: 'he', direction: 'rtl' },
     });
+    const save = { projectId: 'p1', key: 'k', text: 'שלום', base: null };
+    expect(await send('saveDocument', trusted, save)).toMatchObject({ ok: true });
     expect(calls).toEqual([
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
@@ -106,6 +112,7 @@ describe('registerApi', () => {
       ['suggestTargetLanguages', suggest],
       ['searchTargetLanguages', search],
       ['chooseTargetLocale', choose],
+      ['saveDocument', save],
     ]);
   });
 
@@ -218,5 +225,21 @@ describe('argumentValidators', () => {
     ['an extra field', [{ projectId: 'abc', language: 'he', save: true }], false],
   ])('chooseTargetLocale: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.chooseTargetLocale(args)).toBe(valid);
+  });
+
+  const save = { projectId: 'abc', key: 'guide/intro', text: '# מבוא\n', base: '# Intro\n' };
+  it.each<[string, unknown[], boolean]>([
+    ['a full request', [save], true],
+    ['a new translation (no base)', [{ ...save, base: null }], true],
+    ['empty text', [{ ...save, text: '' }], true],
+    ['no base field', [{ projectId: 'abc', key: 'k', text: 'x' }], false],
+    ['a numeric text', [{ ...save, text: 1 }], false],
+    ['an empty key', [{ ...save, key: '' }], false],
+    ['a text over the limit', [{ ...save, text: 'x'.repeat(10_000_001) }], false],
+    ['a base over the limit', [{ ...save, base: 'x'.repeat(10_000_001) }], false],
+    ['a path instead of a key', [{ ...save, path: '/etc/passwd' }], false],
+    ['an extra argument', [save, 'more'], false],
+  ])('saveDocument: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.saveDocument(args)).toBe(valid);
   });
 });

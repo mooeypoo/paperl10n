@@ -112,6 +112,8 @@ export const errorCodes = [
   'workspace.target-is-source',
   'workspace.unknown-document',
   'workspace.document-unreadable',
+  'workspace.document-changed',
+  'workspace.document-unwritable',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.file-access',
@@ -159,6 +161,18 @@ export interface PaperLionApi {
     readonly query: string;
     readonly uiLanguage: string;
   }): Promise<Result<readonly LanguageDto[], ErrorDto>>;
+  /**
+   * Saves a page's translation exactly as given, creating it (and its folders) if needed.
+   * `base` is the translation as it was when editing started (`null`: it didn't exist); a file
+   * that changed on disk since is never overwritten (`workspace.document-changed`). Text equal to
+   * the file isn't written (`written: false`).
+   */
+  saveDocument(request: {
+    readonly projectId: string;
+    readonly key: string;
+    readonly text: string;
+    readonly base: string | null;
+  }): Promise<Result<{ readonly path: string; readonly written: boolean }, ErrorDto>>;
   /** Makes a language the project's target and saves it to the config; returns it with its direction. */
   chooseTargetLocale(request: {
     readonly projectId: string;
@@ -175,6 +189,7 @@ export const apiMethods = [
   'suggestTargetLanguages',
   'searchTargetLanguages',
   'chooseTargetLocale',
+  'saveDocument',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

@@ -113,6 +113,21 @@ const cases: [AppError, ErrorDto][] = [
     },
   ],
   [
+    { code: 'workspace.document-changed', path: 'he/index.md' as ProjectPath },
+    { code: 'workspace.document-changed', params: { file: 'he/index.md' }, details: [] },
+  ],
+  [
+    {
+      code: 'workspace.document-unwritable',
+      cause: { code: 'files.not-a-directory', path: 'he/x/index.md' as ProjectPath },
+    },
+    {
+      code: 'workspace.document-unwritable',
+      params: { file: 'he/x/index.md', problem: 'files.not-a-directory' },
+      details: [],
+    },
+  ],
+  [
     { code: 'workspace.no-target-locale' },
     { code: 'workspace.no-target-locale', params: {}, details: [] },
   ],

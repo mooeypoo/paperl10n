@@ -8,6 +8,7 @@ import {
   createListSourceDocuments,
   createOpenProject,
   createReadDocumentPair,
+  createSaveDocument,
   createSearchTargetLanguages,
   createSuggestTargetLanguages,
   type FolderPicker,
@@ -44,6 +45,7 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
     suggestTargetLanguages: createSuggestTargetLanguages({ sessions: deps.sessions }),
     searchTargetLanguages: createSearchTargetLanguages({ sessions: deps.sessions }),
     chooseTargetLocale: createChooseTargetLocale({ sessions: deps.sessions }),
+    saveDocument: createSaveDocument({ sessions: deps.sessions }),
   });
   return ok(guardApi(handlers, deps.onUnexpected));
 }

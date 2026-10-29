@@ -60,5 +60,7 @@
   "paperl10n-languages-count": "{{PLURAL:$1|שפה אחת|$1 שפות}}",
   "paperl10n-no-matching-languages": "אף שפה לא מתאימה ל־\"$1\". כדי להשתמש בשפה ש־Paper Lion לא מכיר, הגדירו אותה תחת \"languages\" בקובץ paperl10n.config.json.",
   "paperl10n-language-current": "(נוכחית)",
-  "paperl10n-cancel": "ביטול"
+  "paperl10n-cancel": "ביטול",
+  "paperl10n-error-workspace-document-changed": "הקובץ $1 השתנה בדיסק מאז שהתחלתם לערוך אותו, ולכן הוא לא נדרס.",
+  "paperl10n-error-workspace-document-unwritable": "אי אפשר לשמור את הקובץ $1 ($2)."
 }

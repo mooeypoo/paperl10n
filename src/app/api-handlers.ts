@@ -8,6 +8,7 @@ import type {
   OpenProject,
   ReadDocument,
   ReadDocumentPair,
+  SaveDocument,
   SearchTargetLanguages,
   SuggestTargetLanguages,
 } from '#domains/workspace';
@@ -22,6 +23,7 @@ export interface UseCases {
   readonly suggestTargetLanguages: SuggestTargetLanguages;
   readonly searchTargetLanguages: SearchTargetLanguages;
   readonly chooseTargetLocale: ChooseTargetLocale;
+  readonly saveDocument: SaveDocument;
 }
 
 function toLocaleDto(locale: Locale): LocaleDto {
@@ -116,6 +118,12 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
       return Promise.resolve(
         result.ok ? ok(result.value.map(toLanguageDto)) : err(toErrorDto(result.error)),
       );
+    },
+
+    async saveDocument({ projectId, key, text, base }) {
+      const result = await useCases.saveDocument(projectId, { key, text, base });
+      if (!result.ok) return err(toErrorDto(result.error));
+      return ok({ path: result.value.path, written: result.value.written });
     },
 
     async chooseTargetLocale({ projectId, language }) {

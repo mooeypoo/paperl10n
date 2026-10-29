@@ -11,6 +11,7 @@ describe('#domains/workspace public API', () => {
       'createListSourceDocuments',
       'createOpenProject',
       'createReadDocumentPair',
+      'createSaveDocument',
       'createSearchTargetLanguages',
       'createSuggestTargetLanguages',
       'parseProjectConfig',

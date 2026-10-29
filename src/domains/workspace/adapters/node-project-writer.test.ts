@@ -97,6 +97,16 @@ describe('nodeProjectWriter', () => {
     expect(await readFile(join(outside, 'secret.json'), 'utf8')).toBe('secret');
   });
 
+  it('creates no folders outside the project through a symlinked folder', async () => {
+    const root = await folderWith({});
+    const outside = await folderWith({});
+    await symlink(outside, join(root, 'out'));
+    expect(
+      await nodeProjectWriter(root).writeText(p('out/new/page.md'), 'x', { createFolders: true }),
+    ).toEqual({ ok: false, error: { code: 'files.outside-project', path: 'out/new/page.md' } });
+    expect(await readdir(outside)).toEqual([]);
+  });
+
   it('reports a folder it may not write to, and leaves nothing behind', async () => {
     const root = await folderWith({ 'locked/a.json': '{}' });
     await chmod(join(root, 'locked'), 0o555);

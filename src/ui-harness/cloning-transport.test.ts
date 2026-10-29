@@ -32,6 +32,7 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
     suggestTargetLanguages: () =>
       Promise.resolve({ ok: true, value: { inProject: [], recent: [], suggested: [] } }),
     searchTargetLanguages: () => Promise.resolve({ ok: true, value: [] }),
+    saveDocument: ({ key }) => Promise.resolve({ ok: true, value: { path: key, written: true } }),
     chooseTargetLocale: ({ language }) =>
       Promise.resolve({ ok: true, value: { id: language, direction: 'rtl' } }),
     ...overrides,

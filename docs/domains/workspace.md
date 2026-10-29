@@ -75,6 +75,22 @@ documents, reads the source and the translation, and parses both with the `Markd
 isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
 file that vanished), or a `FormatError`.
 
+### `saveDocument(projectId, { key, text, base })`
+
+`createSaveDocument({ sessions })`. Writes a page's translation, for the project's target locale,
+exactly as given, through the `ProjectWriter` (atomic; missing folders created, so a new
+language's first page can be saved). `base` is the translation as it was when editing started, or
+`null` when it didn't exist (a page seeded from its source). Two guarantees from PRD §7.4:
+
+- **No needless writes:** text equal to the file isn't written (`written: false`).
+- **No overwriting someone else's change:** if the file on disk is no longer `base` (git pull,
+  another editor, a deleted file, or a file created since a seeded page was opened), nothing is
+  written and the result is `workspace.document-changed`. The UI decides what to offer.
+
+Errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-document`,
+`workspace.document-changed`, `workspace.document-unreadable`, `workspace.document-unwritable`
+(with the file problem), or a `FormatError`.
+
 ### Target languages: `suggestTargetLanguages`, `searchTargetLanguages`, `chooseTargetLocale`
 
 What the language picker needs, all on the open project's catalog and never offering the source:
@@ -116,7 +132,7 @@ the two files is workspace's job: it holds the open project's files and layout.
 |---|---|---|
 | `FolderPicker` | `createDialogFolderPicker` (`#adapters/workspace/dialog-folder-picker`, with Electron's dialog injected) | `pick(): Promise<string \| null>`; contract: `describeFolderPickerContract` |
 | `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files, a `ProjectWriter`, and the folder's display name; contract: `describeProjectFilesOpenerContract` |
-| `ProjectWriter` | `nodeProjectWriter` (`#adapters/workspace/node-project-writer`); `InMemoryProjectFiles` (tests, UI harness) | `writeText(path, text)`, atomic: a temporary file next to the target, flushed, then renamed over it. Writes through a symlink only to a file inside the project; keeps an existing file's permissions. Only the app writes; plugins only read. Contract: `describeProjectWriterContract` |
+| `ProjectWriter` | `nodeProjectWriter` (`#adapters/workspace/node-project-writer`); `InMemoryProjectFiles` (tests, UI harness) | `writeText(path, text, { createFolders })`, atomic: a temporary file next to the target, flushed, then renamed over it. Writes through a symlink only to a file inside the project; keeps an existing file's permissions. With `createFolders`, missing folders are created one at a time, each checked to be a real folder inside the project (`files.not-a-directory` when a file is in the way). Only the app writes; plugins only read. Contract: `describeProjectWriterContract` |
 | `ProjectSessions` | `InMemoryProjectSessions` (`#adapters/workspace/in-memory-project-sessions`) | random UUID ids; `update` replaces a stored project (choosing a target); contract: `describeProjectSessionsContract` |
 
 Test support (`#domain-testing/workspace`): `FakeFolderPicker`, `FakeProjectFilesOpener`, and the

@@ -32,6 +32,7 @@ describe('guardApi', () => {
           Promise.resolve(ok([{ tag: query, name: query, autonym: null, direction: 'ltr' }])),
         chooseTargetLocale: ({ language }) =>
           Promise.resolve(ok({ id: language, direction: 'rtl' })),
+        saveDocument: ({ key }) => Promise.resolve(ok({ path: key, written: false })),
       },
       onUnexpected,
     );
@@ -59,6 +60,10 @@ describe('guardApi', () => {
       ok: true,
       value: { id: 'he', direction: 'rtl' },
     });
+    expect(await api.saveDocument({ projectId: 'p', key: 'k', text: '', base: null })).toEqual({
+      ok: true,
+      value: { path: 'k', written: false },
+    });
     expect(calls).toEqual([]);
   });
 
@@ -84,6 +89,9 @@ describe('guardApi', () => {
         chooseTargetLocale: () => {
           throw new Error('sync boom');
         },
+        saveDocument: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -95,6 +103,7 @@ describe('guardApi', () => {
         suggestTargetLanguages: () => Promise.reject(new Error('async boom')),
         searchTargetLanguages: () => Promise.reject(new Error('async boom')),
         chooseTargetLocale: () => Promise.reject(new Error('async boom')),
+        saveDocument: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -119,6 +128,9 @@ describe('guardApi', () => {
       await api.searchTargetLanguages({ projectId: 'p', query: 'x', uiLanguage: 'en' }),
     ).toEqual(unexpected);
     expect(await api.chooseTargetLocale({ projectId: 'p', language: 'he' })).toEqual(unexpected);
+    expect(await api.saveDocument({ projectId: 'p', key: 'k', text: '', base: null })).toEqual(
+      unexpected,
+    );
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
@@ -126,6 +138,7 @@ describe('guardApi', () => {
       'suggestTargetLanguages',
       'searchTargetLanguages',
       'chooseTargetLocale',
+      'saveDocument',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });
