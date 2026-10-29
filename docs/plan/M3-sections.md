@@ -1,12 +1,27 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **open for discussion (2026-10-29).** Nothing is decided yet; each question ends with a
-recommendation. Steps follow once the questions are answered.
+Status: **decided (2026-10-29); S1 next.** See [Decided](#decided). The discussion follows, for
+context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
 highlighting (needs the outdated-detection decision below), preservation hints, the length
 comparison, and loose scroll sync." PRD §11 leaves two questions that M3 has to answer first:
 **outdated detection** and the **section split level**.
+
+## Decided
+
+| Topic | Decision |
+|---|---|
+| Outdated detection (PRD §11) | **A status file in the project, one per target language**, committed with the translations: a fingerprint of each source block from when the translation was marked up to date. Never a published file. Shows which blocks changed, not their old wording. |
+| Statuses and marking | **The four statuses as in question 2. "Mark up to date" per section and per page**, explicit, never on save. Existing translations start as `draft`, with a one-time "Mark all existing translations up to date". |
+| The section view | **One editor per pane, as in M2, aligned at paired headings with spacers.** The full-page view is the same editors without spacers. No new dependency. |
+| Link targets in hints | **An optional `DocumentFormat` method** that maps a translation's link target to the source's form (a deliberate plugin API change). Without it, links compare as written. |
+
+Taken as recommended unless the maintainer says otherwise: the split rules in question 3 (the
+per-document level last, only if needed); source changes shown in the source pane only; the
+length note per page, by rendered characters; loose scroll sync in the full-page view only, last;
+the `workspace → translation` edge and a status-store port with a contract suite; and a pure
+section function shared with the renderer through a small shared unit (with an ADR, in S2).
 
 ## Where M2 left us
 
