@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29), starting with the spike (E0).** See [Decided](#decided). The
+Status: **decided (2026-10-29); the spike (E0) passed, E1 next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -11,7 +11,7 @@ safety." PRD §11 asks for the editor decision before M2 starts.
 | Topic | Decision |
 |---|---|
 | Editor (PRD §11) | **CodeMirror 6, spike first.** Markdown stays the document, so the round-trip guarantee holds by construction; visual editing grows later as live-preview decorations. The E0 spike over bidi samples confirms it before E2; if CodeMirror fails it, we come back to ProseMirror/Tiptap. |
-| Dependencies | **Approved:** `@codemirror/state`, `@codemirror/view`, `@codemirror/commands`, `@codemirror/language`, `@codemirror/lang-markdown` (all MIT). |
+| Dependencies | **Approved:** `@codemirror/state`, `@codemirror/view`, `@codemirror/commands`, `@codemirror/language`, `@codemirror/lang-markdown` (all MIT). After the spike, E2 uses the first four only: the Markdown language is built from our own `@lezer/markdown` parser (see E0). |
 | Saving | **Explicit save, plus drafts in app data.** Ctrl/Cmd+S and Save write the file atomically. Unsaved edits are kept as drafts in the app's data folder (never in the project) and restored after a crash or restart. |
 | Seeding | **On first save.** "Start translating" opens a byte-for-byte copy of the source as unsaved; the file (and any missing folders) is written on save. |
 
@@ -110,6 +110,40 @@ inline syntax. The spike confirms it.
 ## Proposed steps (after the decisions)
 
 - **E0, the spike:** CodeMirror over the bidi samples; findings recorded here. Throwaway code.
+  - *Done-notes (2026-10-29):* **CodeMirror 6 passes; E2 goes ahead with it.** The spike ran
+    two editors side by side in Electron (offscreen, sandboxed) over a Hebrew/Arabic page with
+    frontmatter, links, inline code, a code block, `:::` containers, inline JSX, and a JSX block.
+    One editor used the proposed bidi rules; the other used none. CodeMirror 6.43 has the APIs
+    needed: `EditorView.perLineTextDirection`, `EditorView.bidiIsolatedRanges`, and
+    `bidiIsolate` on mark decorations.
+  - **Caret and typing:** walking a mixed Hebrew/Arabic line with the arrow keys reached every
+    position, never stalled, and behaved the same with and without isolation (CodeMirror moves
+    the caret in visual order). Hebrew typed right after a link's `)` landed after it in the
+    text.
+  - **What to isolate (same rule as the reading view):** only syntax that contains letters:
+    inline code, URLs, and HTML/JSX tags, each as one LTR run. Isolating bracket marks (`[`,
+    `]`, `(`, `)`) one by one *broke* them: RTL text no longer mirrors them, so `[המדריך]`
+    showed as `]המדריך[`. With the narrow rule, `[המדריך](https://…)`, `[…](./config.ts)` and
+    `<Badge text="חדש" />` all read correctly (the tag's characters measured left to right in
+    order; without isolation they're scrambled).
+  - **Per-line direction:** code blocks, frontmatter, and HTML/JSX blocks as LTR lines (line
+    decorations with `dir="ltr"` plus `perLineTextDirection`) read correctly. Without them, code
+    showed as `;export default greeting`. Still to decide in E2: `:::tip[…]` container fence
+    lines (RTL now, with the marker at the far end).
+  - **Cost:** on a 5,279-line document, a keystroke renders within one frame (16.7 ms median and
+    p95) with or without isolation. Production code should build decorations for the visible
+    ranges only (the spike walked the whole tree).
+  - **Bundle:** state + view + commands ≈ 95 KB gzipped. A Markdown language over our own
+    `@lezer/markdown` parser adds ≈ 12 KB (a parser the app already ships). `markdown()` from
+    `@codemirror/lang-markdown` adds ≈ 77 KB more, because it nests the HTML, CSS, and JavaScript
+    languages for highlighting. **So E2 drops `lang-markdown`** and builds the language from our
+    parser with `@codemirror/language`: four packages instead of five, and the editor and the
+    reading view parse alike.
+  - **For E2 to settle:** the renderer re-parses as you type, so it needs the same Lezer parser
+    setup (container fences, MDX lines) as `document/adapters`. The UI can't import adapters, so
+    the shared setup needs a home (probably a small ADR).
+  - **Not checked here (needs a person at a real keyboard):** IME composition, a screen reader
+    (Orca on Linux), and how typing at direction boundaries feels. To do on the E2 build.
 - **E1, writing more:** `ProjectWriter` creates missing folders. A `saveDocument` use case writes a
   target file atomically, after checking that the file on disk is still what was read.
 - **E2, the editor:** a target pane editor (CodeMirror behind a UI component, Markdown
