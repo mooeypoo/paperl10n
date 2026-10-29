@@ -135,4 +135,66 @@ describe('useProject', () => {
     await first;
     expect(project.summary.value?.name).toBe('newer');
   });
+
+  describe('chooseTarget', () => {
+    const noTarget = { ...summary, targetLocale: null };
+
+    it('sets the target, then lists the pages for it', async () => {
+      const { client, calls } = fakeClient({
+        open: [{ ok: true, value: noTarget }],
+        list: [{ ok: true, value: documents }],
+      });
+      const project = useProject(client);
+      await project.open();
+      expect(await project.chooseTarget('ar')).toBeNull();
+      expect(calls).toEqual([
+        'openProject',
+        'chooseTargetLocale:p-1:ar',
+        'listSourceDocuments:p-1',
+      ]);
+      expect(project.summary.value?.targetLocale).toEqual({ id: 'ar', direction: 'rtl' });
+      expect(project.documents.value).toEqual(documents);
+      expect(project.busy.value).toBe(false);
+    });
+
+    it('returns the error and changes nothing when the choice fails', async () => {
+      const failure = error('workspace.unknown-language', { language: 'xx' });
+      const { client } = fakeClient({
+        open: [{ ok: true, value: noTarget }],
+        choose: { ok: false, error: failure },
+      });
+      const project = useProject(client);
+      await project.open();
+      expect(await project.chooseTarget('xx')).toEqual(failure);
+      expect(project.summary.value?.targetLocale).toBeNull();
+    });
+
+    it('keeps the new target and shows a listing error', async () => {
+      const failure = error('formats.plugin-failed', { formatId: 'format-x', reason: 'boom' });
+      const { client } = fakeClient({
+        open: [{ ok: true, value: noTarget }],
+        list: [{ ok: false, error: failure }],
+      });
+      const project = useProject(client);
+      await project.open();
+      expect(await project.chooseTarget('fr')).toBeNull();
+      expect(project.summary.value?.targetLocale?.id).toBe('fr');
+      expect(project.error.value).toEqual(failure);
+    });
+
+    it('does nothing without a project, and reports a broken transport', async () => {
+      const { client, calls } = fakeClient();
+      expect(await useProject(client).chooseTarget('fr')).toBeNull();
+      expect(calls).toEqual([]);
+
+      const broken = fakeClient({ open: [{ ok: true, value: noTarget }] });
+      const project = useProject({
+        ...broken.client,
+        chooseTargetLocale: () => Promise.reject(new Error('gone')),
+      });
+      await project.open();
+      expect(await project.chooseTarget('fr')).toEqual(error('internal.unexpected'));
+      expect(project.busy.value).toBe(false);
+    });
+  });
 });

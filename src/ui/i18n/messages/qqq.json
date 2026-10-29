@@ -47,6 +47,18 @@
   "paperl10n-error-workspace-no-target-locale": "Error when the UI asks for pages before the project has a translation (target) language.",
   "paperl10n-error-workspace-unknown-language": "Error when the chosen language isn't in Paper Lion's language list or the project's config. $1: the language code, e.g. \"xx-foo\". \"languages\" and \"paperl10n.config.json\" are code: don't translate them.",
   "paperl10n-error-workspace-target-is-source": "Error when the chosen translation language is the project's source language. $1: the language code, e.g. \"en\".",
-  "paperl10n-needs-target": "Shown when an opened project has no translation (target) language. Temporary: a language picker replaces it. \"targetLocale\" and \"paperl10n.config.json\" are code: don't translate them.",
-  "paperl10n-error-workspace-config-unwritable": "Error when saving a change to the config file fails. $1: the file name; $2: a technical problem code, e.g. \"files.unwritable\"."
+  "paperl10n-needs-target": "Shown when an opened project has no translation (target) language yet, next to a button that opens the language picker. \"paperl10n.config.json\" is a file name: don't translate it.",
+  "paperl10n-error-workspace-config-unwritable": "Error when saving a change to the config file fails. $1: the file name; $2: a technical problem code, e.g. \"files.unwritable\".",
+  "paperl10n-choose-target": "Title of the translation-language picker, and the button that opens it when the project has no translation language yet.",
+  "paperl10n-change-target": "Accessible label of the header button showing the translation language. $1: the language's own name, e.g. \"עברית\".",
+  "paperl10n-language-search": "Accessible label of the search box in the language picker.",
+  "paperl10n-language-search-placeholder": "Placeholder of the language picker's search box: languages can be found by their own name, their name in the interface language, their English name, or their code.",
+  "paperl10n-languages": "Accessible label of the list of languages in the language picker.",
+  "paperl10n-languages-in-project": "Language picker section: languages the project already has.",
+  "paperl10n-languages-recent": "Language picker section: languages the user chose recently.",
+  "paperl10n-languages-suggested": "Language picker section: English, the computer's languages, and languages spoken in the user's region.",
+  "paperl10n-languages-count": "Announced to screen readers: how many languages the picker shows. $1: the number.",
+  "paperl10n-no-matching-languages": "Shown when no language matches the search. $1: what the user typed. \"languages\" and \"paperl10n.config.json\" are code: don't translate them.",
+  "paperl10n-language-current": "Read by screen readers after the language that is the current translation language.",
+  "paperl10n-cancel": "Button that closes a dialog without changing anything."
 }

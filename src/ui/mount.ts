@@ -7,6 +7,7 @@ import { createApp, watchEffect, type App as VueApp } from 'vue';
 import App from './App.vue';
 import { clientKey } from './client';
 import { createTheme, themeKey } from './composables/use-theme';
+import { environmentKey } from './environment';
 import { createI18n, i18nKey, isUiLocale, type UiLocale } from './i18n/i18n';
 import { browserPreferences, type PreferenceStore } from './preferences';
 
@@ -57,6 +58,7 @@ export function mountApp(
   app.provide(clientKey, client);
   app.provide(i18nKey, i18n);
   app.provide(themeKey, createTheme(preferences, root));
+  app.provide(environmentKey, { preferences, systemLanguages: [...systemLanguages] });
   app.mount(element);
   return app;
 }

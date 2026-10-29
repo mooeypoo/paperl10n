@@ -47,6 +47,18 @@
   "paperl10n-error-workspace-no-target-locale": "Choose the language to translate into first.",
   "paperl10n-error-workspace-unknown-language": "Paper Lion doesn't know the language \"$1\". To use it, define it under \"languages\" in paperl10n.config.json.",
   "paperl10n-error-workspace-target-is-source": "\"$1\" is this project's source language, so the translation can't be in it too.",
-  "paperl10n-needs-target": "This project has no translation language yet. Until the language picker arrives, add \"targetLocale\" to paperl10n.config.json and open the project again.",
-  "paperl10n-error-workspace-config-unwritable": "The config file $1 can't be saved ($2)."
+  "paperl10n-needs-target": "Choose the language to translate this project into. Paper Lion saves it in paperl10n.config.json, so everyone working on the project shares it.",
+  "paperl10n-error-workspace-config-unwritable": "The config file $1 can't be saved ($2).",
+  "paperl10n-choose-target": "Choose the translation language",
+  "paperl10n-change-target": "Translation language: $1. Change it",
+  "paperl10n-language-search": "Search languages",
+  "paperl10n-language-search-placeholder": "Name or code, in any language",
+  "paperl10n-languages": "Languages",
+  "paperl10n-languages-in-project": "In this project",
+  "paperl10n-languages-recent": "Recently used",
+  "paperl10n-languages-suggested": "Suggested",
+  "paperl10n-languages-count": "{{PLURAL:$1|One language|$1 languages}}",
+  "paperl10n-no-matching-languages": "No language matches \"$1\". To use a language Paper Lion doesn't know, define it under \"languages\" in paperl10n.config.json.",
+  "paperl10n-language-current": "(current)",
+  "paperl10n-cancel": "Cancel"
 }

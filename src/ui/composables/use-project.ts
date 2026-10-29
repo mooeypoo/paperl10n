@@ -9,6 +9,11 @@ export interface ProjectState {
   readonly busy: Ref<boolean>;
   /** Asks for a folder and opens it. Cancelling the dialog leaves everything as it was. */
   open(): Promise<void>;
+  /**
+   * Makes a language the project's target (saved to its config), then lists the pages again.
+   * Returns the error when it fails; the project stays as it was.
+   */
+  chooseTarget(language: string): Promise<ErrorDto | null>;
 }
 
 const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, details: [] };
@@ -56,5 +61,31 @@ export function useProject(client: PaperLionApi): ProjectState {
     }
   }
 
-  return { summary, documents, error, busy, open };
+  async function chooseTarget(language: string): Promise<ErrorDto | null> {
+    const current = summary.value;
+    if (current === null) return null;
+    const request = ++latest;
+    busy.value = true;
+    try {
+      const chosen = await client.chooseTargetLocale({ projectId: current.projectId, language });
+      if (!chosen.ok) return chosen.error;
+      const listed = await client.listSourceDocuments({ projectId: current.projectId });
+      if (request !== latest) return null;
+      summary.value = { ...current, targetLocale: chosen.value };
+      if (listed.ok) {
+        error.value = null;
+        documents.value = listed.value;
+      } else {
+        error.value = listed.error;
+        documents.value = [];
+      }
+      return null;
+    } catch {
+      return transportFailed;
+    } finally {
+      if (request === latest) busy.value = false;
+    }
+  }
+
+  return { summary, documents, error, busy, open, chooseTarget };
 }

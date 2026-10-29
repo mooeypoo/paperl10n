@@ -4,7 +4,7 @@ import { flushPromises } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { mountApp } from './mount';
 import { memoryPreferences, type PreferenceStore } from './preferences';
-import { documents, error, fakeClient, pairFor, summary } from './test-support';
+import { documents, error, fakeClient, languages, pairFor, summary } from './test-support';
 
 let unmount: (() => void) | undefined;
 afterEach(() => {
@@ -247,22 +247,6 @@ describe('the app shell', () => {
     expect(element.textContent).toContain('No source documents found.');
   });
 
-  it('says a project without a target language needs one, and shows no pages yet', async () => {
-    const { client, calls } = fakeClient({
-      open: [{ ok: true, value: { ...summary, targetLocale: null } }],
-    });
-    const element = start(client);
-    button(element, 'Open folder…').click();
-    await flushPromises();
-    expect(calls).toEqual(['openProject']);
-    expect(element.querySelector('header')?.textContent).toContain('basic');
-    expect(element.querySelector('.header-languages')).toBeNull();
-    expect(panes(element)).toHaveLength(0);
-    expect(element.querySelector('.app-notice')?.textContent).toContain(
-      'no translation language yet',
-    );
-  });
-
   it('mirrors the shell in Hebrew, while each pane keeps its own direction', async () => {
     const { client } = fakeClient({
       open: [{ ok: true, value: summary }],
@@ -397,5 +381,178 @@ describe('the app', () => {
     const element = start(client, 'he');
     expect(document.documentElement.dir).toBe('rtl');
     expect(element.textContent).toContain('פתחו תיקיית פרויקט');
+  });
+});
+
+describe('the target-language picker', () => {
+  const noTarget = { ...summary, targetLocale: null };
+  const dialog = () => document.querySelector('dialog');
+  const search = () => dialog()?.querySelector<HTMLInputElement>('input[role="combobox"]');
+  const options = () => [...(dialog()?.querySelectorAll('[role="option"]') ?? [])];
+  const optionTags = () => options().map((o) => o.querySelector('.picker-tag')?.textContent);
+  const headings = () =>
+    [...(dialog()?.querySelectorAll('.picker-heading') ?? [])].map((h) => h.textContent.trim());
+
+  async function openWithoutTarget(answers: Parameters<typeof fakeClient>[0] = {}) {
+    const fake = fakeClient({
+      open: [{ ok: true, value: noTarget }],
+      list: [{ ok: true, value: documents }],
+      ...answers,
+    });
+    const preferences = memoryPreferences();
+    const element = start(fake.client, undefined, preferences);
+    button(element, 'Open folder…').click();
+    await flushPromises();
+    return { ...fake, element, preferences };
+  }
+
+  async function type(text: string) {
+    const input = search();
+    if (input === null || input === undefined) throw new Error('no search box');
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await flushPromises();
+  }
+
+  async function press(key: string) {
+    search()?.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    await flushPromises();
+  }
+
+  it('opens by itself for a project without a target, with the search box focused', async () => {
+    const { element } = await openWithoutTarget();
+    expect(dialog()?.open).toBe(true);
+    expect(document.activeElement).toBe(search());
+    expect(dialog()?.getAttribute('aria-labelledby')).toBe('picker-title');
+    expect(document.getElementById('picker-title')?.textContent).toBe(
+      'Choose the translation language',
+    );
+    expect(headings()).toEqual(['In this project', 'Suggested']);
+    expect(optionTags()).toEqual(['he', 'fr']);
+    expect(panes(element)).toHaveLength(0);
+  });
+
+  it('shows each language by its own name, with its lang and dir, then its name and code', () =>
+    openWithoutTarget().then(() => {
+      const [hebrew] = options();
+      const ownName = hebrew?.querySelector('.picker-own-name');
+      expect(ownName?.textContent).toBe('עברית');
+      expect([ownName?.getAttribute('lang'), ownName?.getAttribute('dir')]).toEqual(['he', 'rtl']);
+      expect(hebrew?.querySelector('.picker-name')?.textContent).toBe('Hebrew');
+      expect(hebrew?.querySelector('.picker-tag [dir]')?.getAttribute('dir')).toBe('ltr');
+    }));
+
+  it("doesn't mark a name in the interface language as the language's own", async () => {
+    await openWithoutTarget({
+      suggest: { ok: true, value: { inProject: [languages.lantern], recent: [], suggested: [] } },
+    });
+    const ownName = options()[0]?.querySelector('.picker-own-name');
+    expect(ownName?.textContent).toBe('art-x-lantern');
+    expect(ownName?.hasAttribute('lang')).toBe(false);
+  });
+
+  it('chooses a language, lists the pages for it, remembers it, and closes', async () => {
+    const { element, calls, preferences } = await openWithoutTarget({
+      list: [{ ok: true, value: documents }],
+    });
+    (options()[1] as HTMLElement).click();
+    await flushPromises();
+    const chosenAt = calls.indexOf('chooseTargetLocale:p-1:fr');
+    expect(chosenAt).toBeGreaterThan(-1);
+    expect(calls.slice(chosenAt, chosenAt + 3)).toEqual([
+      'chooseTargetLocale:p-1:fr',
+      'listSourceDocuments:p-1',
+      'readDocumentPair:p-1:guide/getting-started',
+    ]);
+    expect(dialog()?.open).toBe(false);
+    const target = element.querySelector('.header-target [lang]');
+    expect([target?.getAttribute('lang'), target?.textContent]).toEqual(['fr', 'Français']);
+    expect(panes(element)).toHaveLength(2);
+    expect(preferences.get('recent-target-languages')).toBe('["fr"]');
+  });
+
+  it('searches as you type, and chooses with the arrow keys and Enter', async () => {
+    const { calls } = await openWithoutTarget();
+    await type('a');
+    expect(calls).toContain('searchTargetLanguages:p-1:en:a');
+    expect(optionTags()).toEqual(['ar', 'art-x-lantern']);
+    const input = search();
+    expect(input?.getAttribute('aria-activedescendant')).toBe('language-option-ar');
+    expect(options()[0]?.getAttribute('aria-selected')).toBe('true');
+    await press('ArrowDown');
+    expect(input?.getAttribute('aria-activedescendant')).toBe('language-option-art-x-lantern');
+    await press('ArrowDown');
+    expect(input?.getAttribute('aria-activedescendant')).toBe('language-option-ar');
+    await press('ArrowUp');
+    await press('Enter');
+    expect(calls).toContain('chooseTargetLocale:p-1:art-x-lantern');
+  });
+
+  it('says when nothing matches, and how to add a language', async () => {
+    await openWithoutTarget();
+    await type('zzz');
+    expect(options()).toHaveLength(0);
+    expect(dialog()?.querySelector('.picker-none')?.textContent).toContain(
+      'No language matches "zzz"',
+    );
+    expect(dialog()?.querySelector('[role="status"]')?.textContent).toContain('"zzz"');
+  });
+
+  it('closes on Cancel without choosing, and the page offers to choose again', async () => {
+    const { element, calls } = await openWithoutTarget();
+    button(dialog() ?? element, 'Cancel').click();
+    await flushPromises();
+    expect(dialog()?.open).toBe(false);
+    expect(calls.some((call) => call.startsWith('chooseTargetLocale'))).toBe(false);
+    expect(element.querySelector('.app-notice')?.textContent).toContain('Choose the language');
+    button(
+      element.querySelector('.app-notice') ?? element,
+      'Choose the translation language',
+    ).click();
+    await flushPromises();
+    expect(dialog()?.open).toBe(true);
+  });
+
+  it('shows why a choice failed, and stays open', async () => {
+    await openWithoutTarget({
+      choose: {
+        ok: false,
+        error: error('workspace.config-unwritable', {
+          file: 'paperl10n.config.json',
+          problem: 'files.unwritable',
+        }),
+      },
+    });
+    (options()[0] as HTMLElement).click();
+    await flushPromises();
+    expect(dialog()?.open).toBe(true);
+    expect(dialog()?.querySelector('[role="alert"]')?.textContent).toContain(
+      "The config file paperl10n.config.json can't be saved (files.unwritable).",
+    );
+  });
+
+  it('opens from the header to change the target, marking the current one', async () => {
+    const element = await openedApp();
+    const change = element.querySelector<HTMLButtonElement>('.header-target');
+    expect(change?.getAttribute('aria-label')).toBe('Translation language: עברית. Change it');
+    expect(change?.getAttribute('aria-haspopup')).toBe('dialog');
+    change?.click();
+    await flushPromises();
+    expect(dialog()?.open).toBe(true);
+    expect(options()[0]?.querySelector('.picker-current')?.textContent).toContain('(current)');
+    expect(options()[1]?.querySelector('.picker-current')).toBeNull();
+  });
+
+  it('sends the recent picks and the interface language with the suggestions request', async () => {
+    const { client, calls } = fakeClient({ open: [{ ok: true, value: noTarget }] });
+    const element = start(
+      client,
+      'he',
+      memoryPreferences({ 'recent-target-languages': '["ar","de"]' }),
+    );
+    button(element, 'פתיחת תיקייה…').click();
+    await flushPromises();
+    expect(calls).toContain('suggestTargetLanguages:p-1:he:ar,de');
+    expect(document.getElementById('picker-title')?.textContent).toBe('בחירת שפת התרגום');
   });
 });

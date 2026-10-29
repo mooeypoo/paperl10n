@@ -24,6 +24,8 @@
   --pl-color-markup: #5f6779;
   --pl-color-code-surface: #f3ecdd;
   --pl-color-link: #8a4f00;
+  /* Behind a modal dialog. */
+  --pl-color-backdrop: rgb(20 33 61 / 35%);
 
   /* Bundled fonts first (fonts.css), then each platform's own, so text never goes missing. */
   --pl-font-ui:
@@ -76,6 +78,7 @@
     --pl-color-markup: #8f97a8;
     --pl-color-code-surface: #121927;
     --pl-color-link: #f9c25b;
+    --pl-color-backdrop: rgb(0 0 0 / 55%);
     --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
     --pl-shadow-control: 0 1px 2px rgb(0 0 0 / 40%);
     --pl-mark-backing: #f4eee2;
@@ -100,6 +103,7 @@
   --pl-color-markup: #8f97a8;
   --pl-color-code-surface: #121927;
   --pl-color-link: #f9c25b;
+  --pl-color-backdrop: rgb(0 0 0 / 55%);
   --pl-shadow-sheet: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
   --pl-shadow-control: 0 1px 2px rgb(0 0 0 / 40%);
   --pl-mark-backing: #f4eee2;

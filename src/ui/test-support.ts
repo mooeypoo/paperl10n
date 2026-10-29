@@ -3,6 +3,9 @@
 import type {
   DocumentPairDto,
   ErrorDto,
+  LanguageDto,
+  LanguageSuggestionsDto,
+  LocaleDto,
   PaperLionApi,
   ProjectSummaryDto,
   SourceDocumentDto,
@@ -40,6 +43,24 @@ type OpenAnswer = Result<ProjectSummaryDto | null, ErrorDto>;
 type ListAnswer = Result<readonly SourceDocumentDto[], ErrorDto>;
 type ReadAnswer = Result<DocumentPairDto, ErrorDto>;
 
+const language = (tag: string, name: string, autonym: string | null, rtl = false): LanguageDto => ({
+  tag,
+  name,
+  autonym,
+  direction: rtl ? 'rtl' : 'ltr',
+});
+
+/** A small language catalog for picker tests. */
+export const languages = {
+  he: language('he', 'Hebrew', 'עברית', true),
+  ar: language('ar', 'Arabic', 'العربية', true),
+  fr: language('fr', 'French', 'français'),
+  de: language('de', 'German', 'Deutsch'),
+  lantern: language('art-x-lantern', 'art-x-lantern', null),
+} as const;
+
+const allLanguages: readonly LanguageDto[] = Object.values(languages);
+
 /** A pair for a document key: the source as given, the translation if `target` is a text. */
 export function pairFor(
   key: string,
@@ -69,6 +90,10 @@ export function fakeClient(
     list?: ListAnswer[];
     /** Answers by document key; a key without one gets a plain pair. */
     read?: Readonly<Record<string, ReadAnswer>>;
+    /** The picker's sections before typing (default: Hebrew in the project, French suggested). */
+    suggest?: Result<LanguageSuggestionsDto, ErrorDto>;
+    /** The answer to choosing a target (default: the language, as LTR unless Hebrew/Arabic). */
+    choose?: Result<LocaleDto, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -95,17 +120,32 @@ export function fakeClient(
         answers.read?.[key] ?? { ok: true, value: pairFor(key, `Source of ${key}\n`) },
       );
     },
-    suggestTargetLanguages: ({ projectId }) => {
-      calls.push(`suggestTargetLanguages:${projectId}`);
-      return Promise.resolve({ ok: true, value: { inProject: [], recent: [], suggested: [] } });
+    suggestTargetLanguages: ({ projectId, recent, uiLanguage }) => {
+      calls.push(`suggestTargetLanguages:${projectId}:${uiLanguage}:${recent.join(',')}`);
+      return Promise.resolve(
+        answers.suggest ?? {
+          ok: true,
+          value: { inProject: [languages.he], recent: [], suggested: [languages.fr] },
+        },
+      );
     },
-    searchTargetLanguages: ({ projectId, query }) => {
-      calls.push(`searchTargetLanguages:${projectId}:${query}`);
-      return Promise.resolve({ ok: true, value: [] });
+    // Matches tags and names that start with the query, like the real search's best ranks.
+    searchTargetLanguages: ({ projectId, query, uiLanguage }) => {
+      calls.push(`searchTargetLanguages:${projectId}:${uiLanguage}:${query}`);
+      const folded = query.trim().toLowerCase();
+      return Promise.resolve({
+        ok: true,
+        value: allLanguages.filter((l) =>
+          [l.tag, l.name, l.autonym ?? ''].some((name) => name.toLowerCase().startsWith(folded)),
+        ),
+      });
     },
-    chooseTargetLocale: ({ projectId, language }) => {
-      calls.push(`chooseTargetLocale:${projectId}:${language}`);
-      return Promise.resolve({ ok: true, value: { id: language, direction: 'ltr' } });
+    chooseTargetLocale: ({ projectId, language: tag }) => {
+      calls.push(`chooseTargetLocale:${projectId}:${tag}`);
+      const known = allLanguages.find((l) => l.tag === tag);
+      return Promise.resolve(
+        answers.choose ?? { ok: true, value: { id: tag, direction: known?.direction ?? 'ltr' } },
+      );
     },
   };
   return { client, calls };

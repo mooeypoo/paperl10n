@@ -28,6 +28,8 @@ export const icons = {
   },
   search: { paths: ['M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z', 'M20 20l-4-4'], mirrorsInRtl: false },
   forward: { paths: ['M5 12h14', 'M13 6l6 6-6 6'], mirrorsInRtl: true },
+  check: { paths: ['M5 12.5l4.5 4.5L19 7'], mirrorsInRtl: false },
+  expand: { paths: ['M6 9l6 6 6-6'], mirrorsInRtl: false },
 } as const satisfies Record<string, IconDefinition>;
 
 export type IconName = keyof typeof icons;

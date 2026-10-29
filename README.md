@@ -49,8 +49,11 @@ pnpm dev            # run the app with hot reload
 **Your own Starlight site:** add a `paperl10n.config.json` to its folder and open it:
 
 ```json
-{ "sourceLocale": "en", "targetLocale": "he", "documentFormat": "format-starlight" }
+{ "sourceLocale": "en", "documentFormat": "format-starlight" }
 ```
+
+Paper Lion then asks which language to translate into, and saves your choice in the same file as
+`"targetLocale"` (changing nothing else in it), so everyone working on the site shares it.
 
 See [`format-starlight`'s README](src/plugins/format-starlight/README.md) for folder conventions
 and options.

@@ -37,3 +37,29 @@ export function memoryPreferences(initial: Readonly<Record<string, string>> = {}
     },
   };
 }
+
+const RECENT_KEY = 'recent-target-languages';
+/** How many recent picks the picker shows (docs/plan/M1-languages.md: 4–6). */
+export const RECENT_LIMIT = 6;
+
+/** The user's recent target languages, most recent first. Garbage in storage reads as none. */
+export function recentLanguages(store: PreferenceStore): string[] {
+  try {
+    const parsed: unknown = JSON.parse(store.get(RECENT_KEY) ?? '[]');
+    return Array.isArray(parsed)
+      ? parsed
+          .filter(
+            (tag): tag is string => typeof tag === 'string' && tag !== '' && tag.length <= 100,
+          )
+          .slice(0, RECENT_LIMIT)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Puts a language first among the recent picks (once, ignoring case), keeping the newest few. */
+export function rememberRecentLanguage(store: PreferenceStore, tag: string): void {
+  const others = recentLanguages(store).filter((t) => t.toLowerCase() !== tag.toLowerCase());
+  store.set(RECENT_KEY, JSON.stringify([tag, ...others].slice(0, RECENT_LIMIT)));
+}

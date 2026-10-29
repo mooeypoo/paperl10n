@@ -92,5 +92,5 @@ update, and a test fails until it does.
 
 ## Not here (yet)
 
-- The picker (L5), fallback chains in use (`pt-BR` → `pt`, catalogs, M4), plural rules.
+- Fallback chains in use (`pt-BR` → `pt`, catalogs, M4), plural rules.
 - Mapping system-specific codes to locale ids: done by format plugins.

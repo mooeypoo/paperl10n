@@ -47,6 +47,18 @@
   "paperl10n-error-workspace-no-target-locale": "קודם צריך לבחור את שפת התרגום.",
   "paperl10n-error-workspace-unknown-language": "Paper Lion לא מכיר את השפה \"$1\". כדי להשתמש בה, הגדירו אותה תחת \"languages\" בקובץ paperl10n.config.json.",
   "paperl10n-error-workspace-target-is-source": "\"$1\" היא שפת המקור של הפרויקט, ולכן התרגום לא יכול להיות בה.",
-  "paperl10n-needs-target": "לפרויקט הזה עדיין אין שפת תרגום. עד שבורר השפות יגיע, הוסיפו את \"targetLocale\" לקובץ paperl10n.config.json ופתחו את הפרויקט מחדש.",
-  "paperl10n-error-workspace-config-unwritable": "אי אפשר לשמור את קובץ ההגדרות $1 ($2)."
+  "paperl10n-needs-target": "בחרו את השפה שאליה יתורגם הפרויקט. Paper Lion שומר אותה בקובץ paperl10n.config.json, כך שכל מי שעובד על הפרויקט ישתמש באותה שפה.",
+  "paperl10n-error-workspace-config-unwritable": "אי אפשר לשמור את קובץ ההגדרות $1 ($2).",
+  "paperl10n-choose-target": "בחירת שפת התרגום",
+  "paperl10n-change-target": "שפת התרגום: $1. שינוי",
+  "paperl10n-language-search": "חיפוש שפה",
+  "paperl10n-language-search-placeholder": "שם או קוד, בכל שפה",
+  "paperl10n-languages": "שפות",
+  "paperl10n-languages-in-project": "בפרויקט הזה",
+  "paperl10n-languages-recent": "בשימוש לאחרונה",
+  "paperl10n-languages-suggested": "הצעות",
+  "paperl10n-languages-count": "{{PLURAL:$1|שפה אחת|$1 שפות}}",
+  "paperl10n-no-matching-languages": "אף שפה לא מתאימה ל־\"$1\". כדי להשתמש בשפה ש־Paper Lion לא מכיר, הגדירו אותה תחת \"languages\" בקובץ paperl10n.config.json.",
+  "paperl10n-language-current": "(נוכחית)",
+  "paperl10n-cancel": "ביטול"
 }

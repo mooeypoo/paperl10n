@@ -1,16 +1,20 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
-import { computed } from 'vue';
+import type { ErrorDto } from '#ipc-contract';
+import { computed, ref, shallowRef, watch } from 'vue';
 import { useClient } from './client';
 import AppHeader from './components/AppHeader.vue';
 import DocumentView from './components/DocumentView.vue';
+import LanguagePicker from './components/LanguagePicker.vue';
 import PagesSidebar from './components/PagesSidebar.vue';
 import WelcomeState from './components/WelcomeState.vue';
 import { useDocumentPair } from './composables/use-document-pair';
 import { usePages } from './composables/use-pages';
 import { useProject } from './composables/use-project';
+import { useEnvironment } from './environment';
 import { errorMessage } from './i18n/error-message';
 import { useI18n } from './i18n/i18n';
+import { rememberRecentLanguage } from './preferences';
 
 const { t } = useI18n();
 const client = useClient();
@@ -26,11 +30,47 @@ const errorText = computed(() => (error.value === null ? '' : errorMessage(error
 function open(): void {
   void project.open();
 }
+
+const { preferences } = useEnvironment();
+const pickerOpen = ref(false);
+const chooseError = shallowRef<ErrorDto | null>(null);
+
+function openPicker(): void {
+  chooseError.value = null;
+  pickerOpen.value = true;
+}
+
+// A project opened without a target language asks for one right away.
+watch(summary, (opened, previous) => {
+  if (opened !== null && opened.targetLocale === null && opened.projectId !== previous?.projectId)
+    openPicker();
+});
+
+async function chooseTarget(tag: string): Promise<void> {
+  chooseError.value = null;
+  const failure = await project.chooseTarget(tag);
+  if (failure !== null) {
+    chooseError.value = failure;
+    return;
+  }
+  const chosen = summary.value?.targetLocale ?? null;
+  if (chosen !== null) rememberRecentLanguage(preferences, chosen.id);
+  pickerOpen.value = false;
+}
 </script>
 
 <template>
   <div class="app">
-    <AppHeader :summary="summary" :busy="busy" @open="open" />
+    <AppHeader :summary="summary" :busy="busy" @open="open" @choose-language="openPicker" />
+    <LanguagePicker
+      :open="pickerOpen"
+      :project-id="projectId"
+      :current="summary?.targetLocale ?? null"
+      :busy="busy"
+      :choose-error="chooseError"
+      @close="pickerOpen = false"
+      @choose="chooseTarget"
+    />
 
     <div v-if="summary !== null" class="app-body">
       <PagesSidebar
@@ -56,9 +96,12 @@ function open(): void {
             </li>
           </ul>
         </div>
-        <p v-if="summary.targetLocale === null" class="app-notice">
-          {{ t('paperl10n-needs-target') }}
-        </p>
+        <div v-if="summary.targetLocale === null" class="app-notice">
+          <p>{{ t('paperl10n-needs-target') }}</p>
+          <button type="button" class="pl-button" data-variant="primary" @click="openPicker">
+            {{ t('paperl10n-choose-target') }}
+          </button>
+        </div>
         <DocumentView
           v-else-if="selected !== null"
           :source-locale="summary.sourceLocale"
@@ -128,6 +171,11 @@ function open(): void {
 }
 
 .app-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-3);
   margin: 0;
   padding: var(--pl-space-3) var(--pl-space-4);
   border-radius: var(--pl-radius-md);

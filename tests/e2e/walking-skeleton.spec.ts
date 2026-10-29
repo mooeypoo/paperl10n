@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The walking skeleton in the real, built Electron app: sandboxed renderer, preload, IPC, main,
 // the disk adapter, and format-stub. Only the native folder dialog is stubbed (in main).
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -103,6 +103,36 @@ test('opens a project and shows both panes with their own lang and dir', async (
   await expect(panes.nth(0)).toContainText('en/guide/getting-started.md');
   await expect(panes.nth(1)).toContainText('he/guide/getting-started.md');
 
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
+test('asks for a target language when the project has none, and saves the choice', async () => {
+  // A copy without a target: choosing one writes to the config, never to the fixture.
+  const project = join(profile, 'no-target');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  const config = join(project, 'paperl10n.config.json');
+  writeFileSync(config, '{\n  "sourceLocale": "en",\n  "documentFormat": "format-stub"\n}\n');
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+
+  const picker = page.getByRole('dialog', { name: 'Choose the translation language' });
+  await expect(picker).toBeVisible();
+  const search = picker.getByRole('combobox', { name: 'Search languages' });
+  await expect(search).toBeFocused();
+  await expect(picker.getByRole('group', { name: 'In this project' })).toContainText('עברית');
+
+  await search.fill('arab');
+  await expect(picker.getByRole('option').first()).toContainText('العربية');
+  await search.press('Enter');
+
+  await expect(picker).toBeHidden();
+  const panes = page.locator('section');
+  await expect(panes.nth(1)).toHaveAttribute('lang', 'ar');
+  await expect(panes.nth(1)).toHaveAttribute('dir', 'rtl');
+  expect(readFileSync(config, 'utf8')).toBe(
+    '{\n  "sourceLocale": "en",\n  "targetLocale": "ar",\n  "documentFormat": "format-stub"\n}\n',
+  );
   expect(await problems.violations()).toEqual([]);
   expect(problems.console).toEqual([]);
 });

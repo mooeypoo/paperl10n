@@ -9,7 +9,7 @@ import AppMark from './AppMark.vue';
 import ThemeSwitch from './ThemeSwitch.vue';
 
 const props = defineProps<{ summary: ProjectSummaryDto | null; busy: boolean }>();
-const emit = defineEmits<{ open: [] }>();
+const emit = defineEmits<{ open: []; chooseLanguage: [] }>();
 
 const { t, locale } = useI18n();
 const languages = Object.keys(uiLocales);
@@ -37,17 +37,30 @@ function onLanguageChange(event: Event): void {
           {{ summary.documentFormat.displayName }}
         </span>
       </p>
-      <p v-if="target !== null" class="header-languages">
-        <span class="visually-hidden">
+      <p class="header-languages">
+        <span v-if="target !== null" class="visually-hidden">
           {{ t('paperl10n-language-pair', autonym(source.id), autonym(target.id)) }}
         </span>
         <span aria-hidden="true" :lang="source.id" :dir="source.direction">{{
           autonym(source.id)
         }}</span>
         <AppIcon name="forward" :size="16" />
-        <span aria-hidden="true" :lang="target.id" :dir="target.direction">{{
-          autonym(target.id)
-        }}</span>
+        <button
+          type="button"
+          class="pl-button header-target"
+          :aria-label="
+            target === null ? undefined : t('paperl10n-change-target', autonym(target.id))
+          "
+          aria-haspopup="dialog"
+          :disabled="busy"
+          @click="emit('chooseLanguage')"
+        >
+          <span v-if="target !== null" :lang="target.id" :dir="target.direction">{{
+            autonym(target.id)
+          }}</span>
+          <span v-else>{{ t('paperl10n-choose-target') }}</span>
+          <AppIcon name="expand" :size="16" />
+        </button>
       </p>
     </template>
 
@@ -123,6 +136,15 @@ function onLanguageChange(event: Event): void {
   gap: var(--pl-space-2);
   margin: 0;
   font-size: var(--pl-text-sm);
+  font-weight: 500;
+}
+
+.header-target {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pl-space-1);
+  min-block-size: 2rem;
+  padding-inline: var(--pl-space-3);
   font-weight: 500;
 }
 

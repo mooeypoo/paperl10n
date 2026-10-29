@@ -112,7 +112,7 @@ Each is its own branch and PR, as in M0.
     use cases in `workspace`: `suggestTargetLanguages`, `searchTargetLanguages`,
     `chooseTargetLocale` (session only until L4), with IPC methods of the same names (contract,
     preload, main's validators, `guardApi`, the harness transport, and end-to-end cases).
-    `ProjectSessions` gained `update`, with contract tests. Until L5, the UI shows a notice
+    `ProjectSessions` gained `update`, with contract tests. Until L5, the UI showed a notice
     for a project without a target.
   - Each open project keeps its own catalog: the bundled one plus the config's `languages` and
     any locale folder whose code the catalog doesn't know, so a Starlight folder like
@@ -146,6 +146,27 @@ Each is its own branch and PR, as in M0.
     clean-checkout step fails with a modified fixture and passes on a clean tree.
 - **L5, the picker:** the header button, the dialog (sections, search, keyboard and screen
   reader support, each name with its own `lang`/`dir`), and the opened-without-target flow.
+  - *Done-notes:* `LanguagePicker.vue`, a native modal `<dialog>` with the ARIA combobox pattern:
+    a search box (`role="combobox"`, `aria-activedescendant`) over a `listbox` of `group`s
+    (In this project, Recently used, Suggested; results while typing). Arrow keys move and wrap,
+    Enter chooses, Escape and Cancel close, and a status line announces the count or "no match".
+    Each row shows the autonym with its own `lang`/`dir`, then the name in the interface language
+    and the code (LTR, but placed by the row's direction), and a check on the current target.
+    A name in the interface language (no autonym known) isn't marked as the language's own.
+  - The header's target becomes a button ("Translation language: עברית. Change it"). A project
+    without a target opens the picker by itself, and the page offers "Choose the translation
+    language" if it's dismissed. Choosing saves to the config (L4), lists the pages again, and
+    records the pick among the per-user recents (renderer preferences, at most six).
+    `useLanguagePicker` keeps only the newest answer, as `useProject` does.
+  - Checked in the browser harness (light, dark, Hebrew) and in Electron: a new e2e test opens a
+    copy of a project without a target, finds Arabic by typing, chooses it with Enter, and checks
+    the panes (`ar`/`rtl`) and the saved config.
+  - **Not done, still open (decided in round 2):** the *source* side of the header isn't a button
+    yet (changing the source changes which files are sources); unknown codes can't be named and
+    given a direction from the picker yet (the no-match message says how to add them to the
+    config); rows have no separate RTL marker (the autonym shows its own direction).
+  - Mutation checks: no auto-open without a target, a pick not remembered, an autonym without its
+    `lang`, arrow keys that don't wrap, and an older suggestions answer winning: each fails tests.
 
 ## Why it matters
 

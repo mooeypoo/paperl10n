@@ -131,5 +131,5 @@ four contract suites, which run against the fakes and every real implementation.
 
 ## Later
 
-The language picker and saving the choice to the config (M1), catalog formats in projects (M4), external-change detection
+Choosing the source language and naming unknown codes from the app (M1 follow-ups), catalog formats in projects (M4), external-change detection
 (file watching), and remembering recent projects.
