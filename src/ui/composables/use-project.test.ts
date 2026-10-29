@@ -19,6 +19,23 @@ describe('useProject', () => {
     expect(project.busy.value).toBe(false);
   });
 
+  it('opens a project without a target language, listing nothing until one is chosen', async () => {
+    const { client, calls } = fakeClient({
+      open: [
+        { ok: true, value: summary },
+        { ok: true, value: { ...summary, projectId: 'p-2', targetLocale: null } },
+      ],
+      list: [{ ok: true, value: documents }],
+    });
+    const project = useProject(client);
+    await project.open();
+    await project.open();
+    expect(calls).toEqual(['openProject', 'listSourceDocuments:p-1', 'openProject']);
+    expect(project.summary.value?.targetLocale).toBeNull();
+    expect(project.documents.value).toEqual([]);
+    expect(project.error.value).toBeNull();
+  });
+
   it('changes nothing when the folder dialog is cancelled', async () => {
     const { client } = fakeClient({
       open: [
@@ -87,6 +104,7 @@ describe('useProject', () => {
   it('is busy while a request is in flight', async () => {
     let finish: (value: { ok: true; value: null }) => void = () => undefined;
     const client: PaperLionApi = {
+      ...fakeClient().client,
       openProject: () => new Promise((resolve) => (finish = resolve)),
       listSourceDocuments: () => Promise.reject(new Error('unused')),
       readDocumentPair: () => Promise.reject(new Error('unused')),
@@ -103,6 +121,7 @@ describe('useProject', () => {
     const resolvers: ((value: { ok: true; value: ProjectSummaryDto }) => void)[] = [];
     const newer = { ...summary, projectId: 'p-2', name: 'newer' };
     const client: PaperLionApi = {
+      ...fakeClient().client,
       openProject: () => new Promise((resolve) => resolvers.push(resolve)),
       listSourceDocuments: () => Promise.resolve({ ok: true, value: documents }),
       readDocumentPair: () => Promise.reject(new Error('unused')),

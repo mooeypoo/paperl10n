@@ -24,6 +24,25 @@ export const argumentValidators: Readonly<
     typeof request.key === 'string' &&
     request.key.length > 0 &&
     request.key.length <= 1000,
+  suggestTargetLanguages: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'recent', 'systemLanguages', 'uiLanguage']) &&
+    isProjectId(request.projectId) &&
+    isLanguageList(request.recent) &&
+    isLanguageList(request.systemLanguages) &&
+    isLanguageCode(request.uiLanguage),
+  searchTargetLanguages: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'query', 'uiLanguage']) &&
+    isProjectId(request.projectId) &&
+    typeof request.query === 'string' &&
+    request.query.length <= 100 &&
+    isLanguageCode(request.uiLanguage),
+  chooseTargetLocale: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'language']) &&
+    isProjectId(request.projectId) &&
+    isLanguageCode(request.language),
 };
 
 /** A plain object with exactly these keys, and nothing else. */
@@ -38,6 +57,16 @@ function hasExactly<K extends string>(
 
 function isProjectId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 200;
+}
+
+/** A language code as the renderer sends it. Its meaning is checked by the use case. */
+function isLanguageCode(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= 100;
+}
+
+/** A short list of language codes (recent picks, OS languages). */
+function isLanguageList(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.length <= 20 && value.every(isLanguageCode);
 }
 
 export interface IpcEvent {
@@ -68,6 +97,30 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
     case 'readDocumentPair': {
       const [request] = args as [{ projectId: string; key: string }]; // checked by argumentValidators
       return api.readDocumentPair({ projectId: request.projectId, key: request.key });
+    }
+    case 'suggestTargetLanguages': {
+      // checked by argumentValidators
+      const [request] = args as [
+        { projectId: string; recent: string[]; systemLanguages: string[]; uiLanguage: string },
+      ];
+      return api.suggestTargetLanguages({
+        projectId: request.projectId,
+        recent: [...request.recent],
+        systemLanguages: [...request.systemLanguages],
+        uiLanguage: request.uiLanguage,
+      });
+    }
+    case 'searchTargetLanguages': {
+      const [request] = args as [{ projectId: string; query: string; uiLanguage: string }]; // checked by argumentValidators
+      return api.searchTargetLanguages({
+        projectId: request.projectId,
+        query: request.query,
+        uiLanguage: request.uiLanguage,
+      });
+    }
+    case 'chooseTargetLocale': {
+      const [request] = args as [{ projectId: string; language: string }]; // checked by argumentValidators
+      return api.chooseTargetLocale({ projectId: request.projectId, language: request.language });
     }
   }
 }

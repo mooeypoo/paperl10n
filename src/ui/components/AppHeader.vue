@@ -29,7 +29,7 @@ function onLanguageChange(event: Event): void {
       <h1 class="header-title">{{ t('paperl10n-app-name') }}</h1>
     </div>
 
-    <template v-if="summary !== null && source !== null && target !== null">
+    <template v-if="summary !== null && source !== null">
       <p class="header-project">
         <strong>{{ summary.name }}</strong>
         <span aria-hidden="true">·</span>
@@ -37,7 +37,7 @@ function onLanguageChange(event: Event): void {
           {{ summary.documentFormat.displayName }}
         </span>
       </p>
-      <p class="header-languages">
+      <p v-if="target !== null" class="header-languages">
         <span class="visually-hidden">
           {{ t('paperl10n-language-pair', autonym(source.id), autonym(target.id)) }}
         </span>

@@ -7,9 +7,12 @@ describe('#domains/workspace public API', () => {
     expect(Object.keys(workspace).sort()).toEqual([
       'CONFIG_FILE_NAME',
       'DEFAULT_SOURCE_LOCALE',
+      'createChooseTargetLocale',
       'createListSourceDocuments',
       'createOpenProject',
       'createReadDocumentPair',
+      'createSearchTargetLanguages',
+      'createSuggestTargetLanguages',
       'parseProjectConfig',
     ]);
   });

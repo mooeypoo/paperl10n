@@ -32,5 +32,22 @@ export function describeProjectSessionsContract(
       expect(sessions.get('not-an-id')).toBeUndefined();
       expect(sessions.get('')).toBeUndefined();
     });
+
+    it('replaces a stored project, leaving the others alone', () => {
+      const sessions = make();
+      const first = sessions.add(project());
+      const other = project();
+      const second = sessions.add(other);
+      const replacement = project();
+      expect(sessions.update(first, replacement)).toBe(true);
+      expect(sessions.get(first)).toBe(replacement);
+      expect(sessions.get(second)).toBe(other);
+    });
+
+    it('updates nothing for ids it did not hand out', () => {
+      const sessions = make();
+      expect(sessions.update('not-an-id', project())).toBe(false);
+      expect(sessions.get('not-an-id')).toBeUndefined();
+    });
   });
 }

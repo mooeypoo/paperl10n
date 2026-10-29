@@ -107,6 +107,22 @@ Each is its own branch and PR, as in M0.
 - **L3, the use cases and IPC:** list the project's languages (from the plugin: declared locales
   and existing locale folders), search and suggestions, and choosing a target. Opening a project
   without a target language returns a "needs a target" state instead of an error.
+  - *Done-notes:* `targetLocale` is optional in the config; without it, `openProject` returns
+    `targetLocale: null`, and listing or reading pages returns `workspace.no-target-locale`. New
+    use cases in `workspace`: `suggestTargetLanguages`, `searchTargetLanguages`,
+    `chooseTargetLocale` (session only until L4), with IPC methods of the same names (contract,
+    preload, main's validators, `guardApi`, the harness transport, and end-to-end cases).
+    `ProjectSessions` gained `update`, with contract tests. Until L5, the UI shows a notice
+    for a project without a target.
+  - Each open project keeps its own catalog: the bundled one plus the config's `languages` and
+    any locale folder whose code the catalog doesn't know, so a Starlight folder like
+    `qaa-x-folder/` can be shown and chosen without a config entry. The suggestions' "in this
+    project" section includes the config's languages and the current target, even before
+    their folders exist.
+  - The UI sends the interface language with each request, so names come back in it.
+  - Mutation checks: search or suggestions offering the source, choosing the source, choosing
+    without storing it, the catalog without unknown folders, main ignoring a malformed recent
+    list, and listing pages without a target: each fails tests.
 - **L4, writing the config:** an atomic `ProjectWriter` port (temp file + rename) with its
   contract suite, and a config update that changes only the language fields, keeping the rest
   of the file byte for byte. Per-user recents live in the renderer's preferences (ADR 0016).

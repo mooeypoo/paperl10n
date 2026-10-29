@@ -26,6 +26,12 @@ describe('guardApi', () => {
           Promise.resolve(
             ok({ key, source: { path: 'a', text: '', blocks: [], inline: [] }, target: null }),
           ),
+        suggestTargetLanguages: () =>
+          Promise.resolve(ok({ inProject: [], recent: [], suggested: [] })),
+        searchTargetLanguages: ({ query }) =>
+          Promise.resolve(ok([{ tag: query, name: query, autonym: null, direction: 'ltr' }])),
+        chooseTargetLocale: ({ language }) =>
+          Promise.resolve(ok({ id: language, direction: 'rtl' })),
       },
       onUnexpected,
     );
@@ -37,6 +43,21 @@ describe('guardApi', () => {
     expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual({
       ok: true,
       value: { key: 'k', source: { path: 'a', text: '', blocks: [], inline: [] }, target: null },
+    });
+    expect(
+      await api.suggestTargetLanguages({
+        projectId: 'p',
+        recent: [],
+        systemLanguages: [],
+        uiLanguage: 'en',
+      }),
+    ).toEqual({ ok: true, value: { inProject: [], recent: [], suggested: [] } });
+    expect(
+      await api.searchTargetLanguages({ projectId: 'p', query: 'x', uiLanguage: 'en' }),
+    ).toEqual({ ok: true, value: [{ tag: 'x', name: 'x', autonym: null, direction: 'ltr' }] });
+    expect(await api.chooseTargetLocale({ projectId: 'p', language: 'he' })).toEqual({
+      ok: true,
+      value: { id: 'he', direction: 'rtl' },
     });
     expect(calls).toEqual([]);
   });
@@ -54,6 +75,15 @@ describe('guardApi', () => {
         readDocumentPair: () => {
           throw new Error('sync boom');
         },
+        suggestTargetLanguages: () => {
+          throw new Error('sync boom');
+        },
+        searchTargetLanguages: () => {
+          throw new Error('sync boom');
+        },
+        chooseTargetLocale: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -62,6 +92,9 @@ describe('guardApi', () => {
         openProject: () => Promise.reject(new Error('async boom')),
         listSourceDocuments: () => Promise.reject(new Error('async boom')),
         readDocumentPair: () => Promise.reject(new Error('async boom')),
+        suggestTargetLanguages: () => Promise.reject(new Error('async boom')),
+        searchTargetLanguages: () => Promise.reject(new Error('async boom')),
+        chooseTargetLocale: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -74,10 +107,25 @@ describe('guardApi', () => {
     expect(await api.openProject()).toEqual(unexpected);
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual(unexpected);
     expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual(unexpected);
+    expect(
+      await api.suggestTargetLanguages({
+        projectId: 'p',
+        recent: [],
+        systemLanguages: [],
+        uiLanguage: 'en',
+      }),
+    ).toEqual(unexpected);
+    expect(
+      await api.searchTargetLanguages({ projectId: 'p', query: 'x', uiLanguage: 'en' }),
+    ).toEqual(unexpected);
+    expect(await api.chooseTargetLocale({ projectId: 'p', language: 'he' })).toEqual(unexpected);
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
       'readDocumentPair',
+      'suggestTargetLanguages',
+      'searchTargetLanguages',
+      'chooseTargetLocale',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });

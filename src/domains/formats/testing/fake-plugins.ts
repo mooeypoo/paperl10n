@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { documentKey, type SourceDocument } from '#domains/document';
+import { localeId } from '#kernel/locale-id';
 import { projectPath } from '#kernel/project-path';
 import { err, ok } from '#kernel/result';
 import type { Detection } from '../domain/detection.ts';
@@ -27,11 +28,13 @@ export function fakeManifest(id: string): Record<string, unknown> {
 
 /**
  * A document plugin for tests. By default it never detects, and its layout is folder-per-locale:
- * sources are `<sourceLocale>/**.md`, targets `<target>/<key>.md`. Override any method.
+ * sources are `<sourceLocale>/**.md`, targets `<target>/<key>.md`. Its `locales` are the source
+ * and `otherLocales`, each in its own folder. Override any method.
  */
 export function fakeDocumentPlugin(
   id: string,
   overrides: Partial<DocumentFormat> = {},
+  otherLocales: readonly string[] = [],
 ): PluginModule {
   const format: DocumentFormat = {
     kind: 'document',
@@ -41,7 +44,14 @@ export function fakeDocumentPlugin(
       if (!sourceFolder.ok)
         return Promise.resolve(err({ code: 'formats.unsupported-project', reason: 'bad locale' }));
       const layout: DocumentLayout = {
-        locales: [{ locale: context.sourceLocale, folder: sourceFolder.value }],
+        locales: [
+          { locale: context.sourceLocale, folder: sourceFolder.value },
+          ...otherLocales.flatMap((raw) => {
+            const locale = localeId(raw);
+            const folder = projectPath(raw);
+            return locale.ok && folder.ok ? [{ locale: locale.value, folder: folder.value }] : [];
+          }),
+        ],
         listSourceDocuments: async () => {
           const listed = await context.files.list(sourceFolder.value, { extensions: ['.md'] });
           if (!listed.ok) return err({ code: 'formats.file-access', cause: listed.error });

@@ -21,5 +21,23 @@ export function createApi(invoke: Invoke): PaperLionApi {
         projectId: request.projectId,
         key: request.key,
       }) as ReturnType<PaperLionApi['readDocumentPair']>,
+    suggestTargetLanguages: (request) =>
+      invoke(channelFor('suggestTargetLanguages'), {
+        projectId: request.projectId,
+        recent: [...request.recent],
+        systemLanguages: [...request.systemLanguages],
+        uiLanguage: request.uiLanguage,
+      }) as ReturnType<PaperLionApi['suggestTargetLanguages']>,
+    searchTargetLanguages: (request) =>
+      invoke(channelFor('searchTargetLanguages'), {
+        projectId: request.projectId,
+        query: request.query,
+        uiLanguage: request.uiLanguage,
+      }) as ReturnType<PaperLionApi['searchTargetLanguages']>,
+    chooseTargetLocale: (request) =>
+      invoke(channelFor('chooseTargetLocale'), {
+        projectId: request.projectId,
+        language: request.language,
+      }) as ReturnType<PaperLionApi['chooseTargetLocale']>,
   };
 }

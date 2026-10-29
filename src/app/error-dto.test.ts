@@ -101,6 +101,18 @@ const cases: [AppError, ErrorDto][] = [
       details: [],
     },
   ],
+  [
+    { code: 'workspace.no-target-locale' },
+    { code: 'workspace.no-target-locale', params: {}, details: [] },
+  ],
+  [
+    { code: 'workspace.unknown-language', language: 'xx-foo' },
+    { code: 'workspace.unknown-language', params: { language: 'xx-foo' }, details: [] },
+  ],
+  [
+    { code: 'workspace.target-is-source', language: 'en' },
+    { code: 'workspace.target-is-source', params: { language: 'en' }, details: [] },
+  ],
 ];
 
 /** Codes no use case returns: the transport layer produces them. */

@@ -107,6 +107,50 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     expect(pair.value.target?.path).toBe('he/index.md');
     expect(pair.value.target?.text.length).toBeGreaterThan(0);
   },
+  suggestTargetLanguages: async () => {
+    const { api } = rendererApi();
+    const projectId = await openBasic(api);
+    const result = await api.suggestTargetLanguages({
+      projectId,
+      recent: ['ar', 'he'],
+      systemLanguages: ['en-US'],
+      uiLanguage: 'he',
+    });
+    if (!result.ok) throw new Error(`expected suggestions: ${JSON.stringify(result)}`);
+    expect(result.value.inProject).toEqual([
+      { tag: 'he', name: 'עברית', autonym: 'עברית', direction: 'rtl' },
+    ]);
+    expect(result.value.recent.map((language) => language.tag)).toEqual(['ar']);
+    // English is the source, so it isn't offered; the OS's regional English is, then the region's.
+    const suggested = result.value.suggested.map((language) => language.tag);
+    expect(suggested[0]).toBe('en-US');
+    expect(suggested).not.toContain('en');
+    expect(suggested).toContain('es');
+  },
+  searchTargetLanguages: async () => {
+    const { api } = rendererApi();
+    const projectId = await openBasic(api);
+    const result = await api.searchTargetLanguages({ projectId, query: 'ערבית', uiLanguage: 'he' });
+    expect(result.ok && result.value[0]).toEqual({
+      tag: 'ar',
+      name: 'ערבית',
+      autonym: 'العربية',
+      direction: 'rtl',
+    });
+  },
+  chooseTargetLocale: async () => {
+    const { api } = rendererApi();
+    const projectId = await openBasic(api);
+    expect(await api.chooseTargetLocale({ projectId, language: 'AR' })).toEqual({
+      ok: true,
+      value: { id: 'ar', direction: 'rtl' },
+    });
+    const listed = await api.listSourceDocuments({ projectId });
+    expect(listed.ok && listed.value.map((entry) => entry.targetPath)).toEqual([
+      'ar/guide/getting-started.md',
+      'ar/index.md',
+    ]);
+  },
 };
 
 describe('every IPC method, end to end without Electron', () => {

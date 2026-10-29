@@ -107,6 +107,41 @@ describe('openProject', () => {
     expect(result.ok && result.value?.targetLocale).toEqual(expected);
   });
 
+  it('opens a project without a target language, so the user can choose one', async () => {
+    const { openProject, sessions } = setup({
+      tree: { ...project, 'paperl10n.config.json': config({}) },
+    });
+    const result = await openProject();
+    expect(result.ok && result.value?.targetLocale).toBeNull();
+    if (!result.ok || result.value === null) return;
+    expect(sessions.get(result.value.projectId)?.targetLocale).toBeNull();
+  });
+
+  it("adds the project's own languages to its catalog: config entries and unknown locale folders", async () => {
+    const { openProject, sessions } = setup({
+      tree: {
+        ...project,
+        'paperl10n.config.json': config({
+          targetLocale: 'he',
+          languages: { 'art-x-lantern': { name: 'Lanternese', dir: 'rtl' } },
+        }),
+      },
+      plugins: [
+        fakeDocumentPlugin('format-fake', detects('likely'), [
+          'he',
+          'art-x-lantern',
+          'qaa-x-folder',
+        ]),
+      ],
+    });
+    const result = await openProject();
+    if (!result.ok || result.value === null) throw new Error('expected a project');
+    const catalog = sessions.get(result.value.projectId)?.catalog;
+    expect(catalog?.find('art-x-lantern')).toMatchObject({ name: 'Lanternese', direction: 'rtl' });
+    expect(catalog?.find('qaa-x-folder')).toMatchObject({ name: 'qaa-x-folder', custom: true });
+    expect(catalog?.find('he')?.custom).toBe(false);
+  });
+
   it('passes config warnings through', async () => {
     const { openProject } = setup({
       tree: { ...project, 'paperl10n.config.json': config({ targetLocale: 'he', colour: 'red' }) },
@@ -192,15 +227,10 @@ describe('openProject', () => {
       ],
       [
         'an invalid config',
-        { tree: { ...project, 'paperl10n.config.json': config({}) } },
+        { tree: { ...project, 'paperl10n.config.json': config({ targetLocale: 'pt_BR' }) } },
         {
           code: 'workspace.config-invalid',
-          problems: [
-            {
-              field: 'targetLocale',
-              problem: 'is required (choosing it in the app arrives in M1)',
-            },
-          ],
+          problems: [{ field: 'targetLocale', problem: '"pt_BR" isn\'t a valid locale id' }],
         },
       ],
       [

@@ -14,7 +14,10 @@ export interface SourceDocumentEntry {
   readonly targetExists: boolean;
 }
 
-export type ListSourceDocumentsError = { readonly code: 'workspace.unknown-project' } | FormatError;
+export type ListSourceDocumentsError =
+  | { readonly code: 'workspace.unknown-project' }
+  | { readonly code: 'workspace.no-target-locale' }
+  | FormatError;
 
 export type ListSourceDocuments = (
   projectId: string,
@@ -27,13 +30,15 @@ export function createListSourceDocuments(deps: {
   return async (projectId) => {
     const project = deps.sessions.get(projectId);
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
+    const target = project.targetLocale;
+    if (target === null) return err({ code: 'workspace.no-target-locale' });
 
     const documents = await project.layout.listSourceDocuments();
     if (!documents.ok) return documents;
 
     const entries: SourceDocumentEntry[] = [];
     for (const document of documents.value) {
-      const targetPath = project.layout.targetPathFor(document, project.targetLocale.id);
+      const targetPath = project.layout.targetPathFor(document, target.id);
       if (!targetPath.ok) return targetPath;
       entries.push({
         key: document.key,

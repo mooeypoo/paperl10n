@@ -19,12 +19,14 @@ import type { ProjectId } from '../domain/project-id.ts';
 import type { FolderPicker } from './ports/folder-picker.ts';
 import type { FolderUnavailable, ProjectFilesOpener } from './ports/project-files-opener.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
+import { projectCatalog } from './project-languages.ts';
 
 export interface ProjectSummary {
   readonly projectId: ProjectId;
   readonly name: string;
   readonly sourceLocale: Locale;
-  readonly targetLocale: Locale;
+  /** `null` when the config has none yet: the user is asked to choose one. */
+  readonly targetLocale: Locale | null;
   readonly documentFormat: { readonly id: string; readonly displayName: string };
   readonly warnings: readonly string[];
 }
@@ -83,14 +85,15 @@ export function createOpenProject(deps: OpenProjectDependencies): OpenProject {
     });
     if (!layout.ok) return layout;
 
-    // The project's own languages: codes the catalog doesn't know, or adjusted directions.
-    const catalog = bundledLanguageCatalog().withCustom(config.languages);
+    const catalog = projectCatalog(bundledLanguageCatalog(), config, layout.value);
     const project = {
       name,
       files,
       config,
       sourceLocale: localeFrom(config.sourceLocale, catalog),
-      targetLocale: localeFrom(config.targetLocale, catalog),
+      targetLocale:
+        config.targetLocale === undefined ? null : localeFrom(config.targetLocale, catalog),
+      catalog,
       documentFormat: format.value,
       layout: layout.value,
     };

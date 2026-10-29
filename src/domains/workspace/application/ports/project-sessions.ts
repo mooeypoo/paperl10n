@@ -4,7 +4,7 @@ import type {
   ProjectFiles,
   RegisteredDocumentFormat,
 } from '#domains/formats';
-import type { Locale } from '#domains/locale';
+import type { LanguageCatalog, Locale } from '#domains/locale';
 import type { ProjectConfig } from '../../domain/project-config.ts';
 import type { ProjectId } from '../../domain/project-id.ts';
 
@@ -14,7 +14,10 @@ export interface OpenedProject {
   readonly files: ProjectFiles;
   readonly config: ProjectConfig;
   readonly sourceLocale: Locale;
-  readonly targetLocale: Locale;
+  /** `null` until the user chooses a target language. */
+  readonly targetLocale: Locale | null;
+  /** The bundled catalog with this project's own languages (config and locale folders) added. */
+  readonly catalog: LanguageCatalog;
   readonly documentFormat: RegisteredDocumentFormat;
   readonly layout: GuardedDocumentLayout;
 }
@@ -24,4 +27,6 @@ export interface ProjectSessions {
   /** Stores a project and returns a new, unique id for it. */
   add(project: OpenedProject): ProjectId;
   get(id: string): OpenedProject | undefined;
+  /** Replaces a stored project; `false` (and nothing stored) for an id it didn't hand out. */
+  update(id: string, project: OpenedProject): boolean;
 }

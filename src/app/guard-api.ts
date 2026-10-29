@@ -29,5 +29,11 @@ export function guardApi(api: PaperLionApi, onUnexpected: OnUnexpected): PaperLi
       guard('listSourceDocuments', onUnexpected, () => api.listSourceDocuments(request)),
     readDocumentPair: (request) =>
       guard('readDocumentPair', onUnexpected, () => api.readDocumentPair(request)),
+    suggestTargetLanguages: (request) =>
+      guard('suggestTargetLanguages', onUnexpected, () => api.suggestTargetLanguages(request)),
+    searchTargetLanguages: (request) =>
+      guard('searchTargetLanguages', onUnexpected, () => api.searchTargetLanguages(request)),
+    chooseTargetLocale: (request) =>
+      guard('chooseTargetLocale', onUnexpected, () => api.chooseTargetLocale(request)),
   };
 }

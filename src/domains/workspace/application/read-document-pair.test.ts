@@ -121,6 +121,17 @@ describe('readDocumentPair', () => {
     });
   });
 
+  it('reports a project without a target language yet', async () => {
+    const { read, projectId } = await openWith({
+      'paperl10n.config.json': '{}',
+      'en/index.md': '',
+    });
+    expect(await read(projectId, 'index')).toEqual({
+      ok: false,
+      error: { code: 'workspace.no-target-locale' },
+    });
+  });
+
   it('reports a key that is not one of the project documents', async () => {
     const { read, projectId } = await openWith({ 'en/index.md': '' });
     expect(await read(projectId, 'missing/page')).toEqual({

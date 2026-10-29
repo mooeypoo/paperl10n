@@ -247,6 +247,22 @@ describe('the app shell', () => {
     expect(element.textContent).toContain('No source documents found.');
   });
 
+  it('says a project without a target language needs one, and shows no pages yet', async () => {
+    const { client, calls } = fakeClient({
+      open: [{ ok: true, value: { ...summary, targetLocale: null } }],
+    });
+    const element = start(client);
+    button(element, 'Open folder…').click();
+    await flushPromises();
+    expect(calls).toEqual(['openProject']);
+    expect(element.querySelector('header')?.textContent).toContain('basic');
+    expect(element.querySelector('.header-languages')).toBeNull();
+    expect(panes(element)).toHaveLength(0);
+    expect(element.querySelector('.app-notice')?.textContent).toContain(
+      'no translation language yet',
+    );
+  });
+
   it('mirrors the shell in Hebrew, while each pane keeps its own direction', async () => {
     const { client } = fakeClient({
       open: [{ ok: true, value: summary }],

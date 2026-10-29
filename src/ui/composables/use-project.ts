@@ -32,6 +32,13 @@ export function useProject(client: PaperLionApi): ProjectState {
         return;
       }
       if (opened.value === null) return;
+      if (opened.value.targetLocale === null) {
+        // Nothing to pair yet: the UI asks for a target language first.
+        error.value = null;
+        summary.value = opened.value;
+        documents.value = [];
+        return;
+      }
       const listed = await client.listSourceDocuments({ projectId: opened.value.projectId });
       if (request !== latest) return;
       if (!listed.ok) {

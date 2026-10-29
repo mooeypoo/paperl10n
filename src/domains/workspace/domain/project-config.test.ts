@@ -50,6 +50,13 @@ describe('parseProjectConfig', () => {
     });
   });
 
+  it('leaves the target locale out until one is chosen', () => {
+    expect(parseProjectConfig(json({}))).toEqual({
+      ok: true,
+      value: { config: { sourceLocale: 'en', formatOptions: {}, languages: [] }, warnings: [] },
+    });
+  });
+
   it('warns about unknown keys instead of failing', () => {
     const result = parseProjectConfig(json({ targetLocale: 'he', theme: 'dark', locales: [] }));
     expect(result.ok && result.value.warnings).toEqual([
@@ -59,7 +66,6 @@ describe('parseProjectConfig', () => {
   });
 
   it.each<[string, unknown, string[]]>([
-    ['no targetLocale', {}, ['targetLocale']],
     ['an invalid targetLocale', { targetLocale: 'pt_BR' }, ['targetLocale']],
     ['a non-string targetLocale', { targetLocale: 7 }, ['targetLocale']],
     ['a non-string sourceLocale', { sourceLocale: ['en'], targetLocale: 'he' }, ['sourceLocale']],

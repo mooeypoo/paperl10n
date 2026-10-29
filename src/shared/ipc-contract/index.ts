@@ -14,10 +14,29 @@ export interface ProjectSummaryDto {
   readonly projectId: string;
   readonly name: string;
   readonly sourceLocale: LocaleDto;
-  readonly targetLocale: LocaleDto;
+  /** `null` when the project has no target language yet: the UI asks for one. */
+  readonly targetLocale: LocaleDto | null;
   readonly documentFormat: { readonly id: string; readonly displayName: string };
   /** Non-fatal problems, e.g. unknown keys in the config file. */
   readonly warnings: readonly string[];
+}
+
+/** A language as the picker shows it. */
+export interface LanguageDto {
+  /** The BCP 47 tag, e.g. "pt-BR". */
+  readonly tag: string;
+  /** The name in the interface language the request asked for (English when unknown). */
+  readonly name: string;
+  /** The language's name in itself, when known. */
+  readonly autonym: string | null;
+  readonly direction: 'ltr' | 'rtl';
+}
+
+/** The picker's sections before the user types. A language appears in one section at most. */
+export interface LanguageSuggestionsDto {
+  readonly inProject: readonly LanguageDto[];
+  readonly recent: readonly LanguageDto[];
+  readonly suggested: readonly LanguageDto[];
 }
 
 export interface SourceDocumentDto {
@@ -87,6 +106,9 @@ export const errorCodes = [
   'workspace.unknown-document-format',
   'workspace.no-document-format',
   'workspace.unknown-project',
+  'workspace.no-target-locale',
+  'workspace.unknown-language',
+  'workspace.target-is-source',
   'workspace.unknown-document',
   'workspace.document-unreadable',
   'formats.invalid-options',
@@ -121,6 +143,26 @@ export interface PaperLionApi {
     readonly projectId: string;
     readonly key: string;
   }): Promise<Result<DocumentPairDto, ErrorDto>>;
+  /** Languages to offer as the target before the user types. Never the source language. */
+  suggestTargetLanguages(request: {
+    readonly projectId: string;
+    /** The user's recent picks, most recent first. */
+    readonly recent: readonly string[];
+    /** The OS languages, best first (`navigator.languages`). */
+    readonly systemLanguages: readonly string[];
+    readonly uiLanguage: string;
+  }): Promise<Result<LanguageSuggestionsDto, ErrorDto>>;
+  /** Languages matching what the user typed, best first. Never the source language. */
+  searchTargetLanguages(request: {
+    readonly projectId: string;
+    readonly query: string;
+    readonly uiLanguage: string;
+  }): Promise<Result<readonly LanguageDto[], ErrorDto>>;
+  /** Makes a language the project's target for this session, and returns it with its direction. */
+  chooseTargetLocale(request: {
+    readonly projectId: string;
+    readonly language: string;
+  }): Promise<Result<LocaleDto, ErrorDto>>;
 }
 
 export type ApiMethod = keyof PaperLionApi;
@@ -129,6 +171,9 @@ export const apiMethods = [
   'openProject',
   'listSourceDocuments',
   'readDocumentPair',
+  'suggestTargetLanguages',
+  'searchTargetLanguages',
+  'chooseTargetLocale',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

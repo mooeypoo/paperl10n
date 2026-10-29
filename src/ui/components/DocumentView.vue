@@ -1,11 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
-import type {
-  DocumentPairDto,
-  ErrorDto,
-  ProjectSummaryDto,
-  SourceDocumentDto,
-} from '#ipc-contract';
+import type { DocumentPairDto, ErrorDto, LocaleDto, SourceDocumentDto } from '#ipc-contract';
 import { computed } from 'vue';
 import { errorMessage } from '../i18n/error-message';
 import { useI18n } from '../i18n/i18n';
@@ -13,7 +8,8 @@ import { autonym } from '../i18n/language-name';
 import DocumentPane from './DocumentPane.vue';
 
 const props = defineProps<{
-  summary: ProjectSummaryDto;
+  sourceLocale: LocaleDto;
+  targetLocale: LocaleDto;
   document: SourceDocumentDto;
   pair: DocumentPairDto | null;
   loading: boolean;
@@ -37,15 +33,15 @@ const waiting = computed(() => props.loading || (current.value === null && props
     </div>
     <div v-else class="document-panes">
       <DocumentPane
-        :heading="t('paperl10n-source-pane', autonym(summary.sourceLocale.id))"
-        :locale="summary.sourceLocale"
+        :heading="t('paperl10n-source-pane', autonym(sourceLocale.id))"
+        :locale="sourceLocale"
         :path="document.sourcePath"
         :document="current?.source ?? null"
         :loading="waiting"
       />
       <DocumentPane
-        :heading="t('paperl10n-target-pane', autonym(summary.targetLocale.id))"
-        :locale="summary.targetLocale"
+        :heading="t('paperl10n-target-pane', autonym(targetLocale.id))"
+        :locale="targetLocale"
         :path="document.targetPath"
         :document="current?.target ?? null"
         :loading="waiting"

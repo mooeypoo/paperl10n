@@ -43,5 +43,9 @@
   "paperl10n-translation-missing": "This page isn't translated yet.",
   "paperl10n-pages-with-translation": "With a translation: $1 of $2",
   "paperl10n-status-started": "Has a translation",
-  "paperl10n-status-missing": "Not translated yet"
+  "paperl10n-status-missing": "Not translated yet",
+  "paperl10n-error-workspace-no-target-locale": "Choose the language to translate into first.",
+  "paperl10n-error-workspace-unknown-language": "Paper Lion doesn't know the language \"$1\". To use it, define it under \"languages\" in paperl10n.config.json.",
+  "paperl10n-error-workspace-target-is-source": "\"$1\" is this project's source language, so the translation can't be in it too.",
+  "paperl10n-needs-target": "This project has no translation language yet. Until the language picker arrives, add \"targetLocale\" to paperl10n.config.json and open the project again."
 }

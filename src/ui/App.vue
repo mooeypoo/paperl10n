@@ -56,9 +56,13 @@ function open(): void {
             </li>
           </ul>
         </div>
+        <p v-if="summary.targetLocale === null" class="app-notice">
+          {{ t('paperl10n-needs-target') }}
+        </p>
         <DocumentView
-          v-if="selected !== null"
-          :summary="summary"
+          v-else-if="selected !== null"
+          :source-locale="summary.sourceLocale"
+          :target-locale="summary.targetLocale"
           :document="selected"
           :pair="pair"
           :loading="loading"
@@ -120,6 +124,13 @@ function open(): void {
 }
 
 .app-warnings {
+  background: var(--pl-color-chip);
+}
+
+.app-notice {
+  margin: 0;
+  padding: var(--pl-space-3) var(--pl-space-4);
+  border-radius: var(--pl-radius-md);
   background: var(--pl-color-chip);
 }
 

@@ -19,6 +19,7 @@ export interface DocumentPair {
 
 export type ReadDocumentPairError =
   | { readonly code: 'workspace.unknown-project' }
+  | { readonly code: 'workspace.no-target-locale' }
   | { readonly code: 'workspace.unknown-document'; readonly key: string }
   | { readonly code: 'workspace.document-unreadable'; readonly cause: FileAccessError }
   | FormatError;
@@ -56,13 +57,15 @@ export function createReadDocumentPair(deps: {
   return async (projectId, key) => {
     const project = deps.sessions.get(projectId);
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
+    const targetLocale = project.targetLocale;
+    if (targetLocale === null) return err({ code: 'workspace.no-target-locale' });
 
     const documents = await project.layout.listSourceDocuments();
     if (!documents.ok) return documents;
     const document = documents.value.find((candidate) => candidate.key === key);
     if (document === undefined) return err({ code: 'workspace.unknown-document', key });
 
-    const targetPath = project.layout.targetPathFor(document, project.targetLocale.id);
+    const targetPath = project.layout.targetPathFor(document, targetLocale.id);
     if (!targetPath.ok) return targetPath;
 
     const source = await read(project.files, document.path, deps.parser);

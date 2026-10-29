@@ -22,4 +22,10 @@ export class InMemoryProjectSessions implements ProjectSessions {
   get(id: string): OpenedProject | undefined {
     return this.#projects.get(id);
   }
+
+  update(id: string, project: OpenedProject): boolean {
+    if (!this.#projects.has(id)) return false;
+    this.#projects.set(id, project);
+    return true;
+  }
 }

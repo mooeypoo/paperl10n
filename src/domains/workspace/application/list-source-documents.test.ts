@@ -6,11 +6,12 @@ import { detects, fakeDocumentPlugin } from '#domain-testing/formats';
 import { err, ok } from '#kernel/result';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
+import { createChooseTargetLocale } from './choose-target-locale.ts';
 import { createListSourceDocuments } from './list-source-documents.ts';
 import { createOpenProject } from './open-project.ts';
 
 /** Opens a project through the real use case, so the session is exactly what the app stores. */
-async function openWith(plugin: PluginModule) {
+async function openWith(plugin: PluginModule, settings: object = { targetLocale: 'he' }) {
   const registry = createFormatRegistry([plugin], { apiVersion: 2 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
@@ -18,7 +19,7 @@ async function openWith(plugin: PluginModule) {
     folderPicker: new FakeFolderPicker('/p'),
     opener: new FakeProjectFilesOpener({
       '/p': {
-        'paperl10n.config.json': JSON.stringify({ targetLocale: 'he' }),
+        'paperl10n.config.json': JSON.stringify(settings),
         'en/index.md': '',
         'en/guide/intro.md': '',
         'he/index.md': '',
@@ -31,6 +32,7 @@ async function openWith(plugin: PluginModule) {
   return {
     listSourceDocuments: createListSourceDocuments({ sessions }),
     projectId: opened.value.projectId,
+    sessions,
   };
 }
 
@@ -61,6 +63,28 @@ describe('listSourceDocuments', () => {
       ok: false,
       error: { code: 'workspace.unknown-project' },
     });
+  });
+
+  it('reports a project without a target language yet', async () => {
+    const { listSourceDocuments, projectId } = await openWith(
+      fakeDocumentPlugin('format-fake', detects('likely')),
+      {},
+    );
+    expect(await listSourceDocuments(projectId)).toEqual({
+      ok: false,
+      error: { code: 'workspace.no-target-locale' },
+    });
+  });
+
+  it('lists against a target chosen after opening', async () => {
+    const plugin = fakeDocumentPlugin('format-fake', detects('likely'));
+    const { listSourceDocuments, projectId, sessions } = await openWith(plugin, {});
+    expect(createChooseTargetLocale({ sessions })(projectId, 'ar').ok).toBe(true);
+    const listed = await listSourceDocuments(projectId);
+    expect(listed.ok && listed.value.map((entry) => entry.targetPath)).toEqual([
+      'ar/guide/intro.md',
+      'ar/index.md',
+    ]);
   });
 
   it('passes a listing error from the format through, with the format id', async () => {

@@ -43,5 +43,9 @@
   "paperl10n-translation-missing": "Shown in the translation pane when the page has no translation file yet.",
   "paperl10n-pages-with-translation": "Above the list of pages. $1: how many pages have a translation file; $2: how many pages there are. A translation file may be incomplete: this doesn't claim they are finished.",
   "paperl10n-status-started": "Status of a page whose translation file exists (it may be incomplete). Read by screen readers in the page list, and shown in the legend.",
-  "paperl10n-status-missing": "Status of a page with no translation file yet. Read by screen readers in the page list, and shown in the legend."
+  "paperl10n-status-missing": "Status of a page with no translation file yet. Read by screen readers in the page list, and shown in the legend.",
+  "paperl10n-error-workspace-no-target-locale": "Error when the UI asks for pages before the project has a translation (target) language.",
+  "paperl10n-error-workspace-unknown-language": "Error when the chosen language isn't in Paper Lion's language list or the project's config. $1: the language code, e.g. \"xx-foo\". \"languages\" and \"paperl10n.config.json\" are code: don't translate them.",
+  "paperl10n-error-workspace-target-is-source": "Error when the chosen translation language is the project's source language. $1: the language code, e.g. \"en\".",
+  "paperl10n-needs-target": "Shown when an opened project has no translation (target) language. Temporary: a language picker replaces it. \"targetLocale\" and \"paperl10n.config.json\" are code: don't translate them."
 }

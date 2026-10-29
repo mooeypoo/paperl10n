@@ -47,6 +47,18 @@ function setup() {
         }),
       );
     },
+    suggestTargetLanguages: (request) => {
+      calls.push(['suggestTargetLanguages', request]);
+      return Promise.resolve(ok({ inProject: [], recent: [], suggested: [] }));
+    },
+    searchTargetLanguages: (request) => {
+      calls.push(['searchTargetLanguages', request]);
+      return Promise.resolve(ok([]));
+    },
+    chooseTargetLocale: (request) => {
+      calls.push(['chooseTargetLocale', request]);
+      return Promise.resolve(ok({ id: request.language, direction: 'rtl' }));
+    },
   };
   registerApi(
     registrar,
@@ -78,10 +90,22 @@ describe('registerApi', () => {
     expect(await send('readDocumentPair', trusted, { projectId: 'p1', key: 'k' })).toMatchObject({
       ok: true,
     });
+    const suggest = { projectId: 'p1', recent: ['he'], systemLanguages: [], uiLanguage: 'en' };
+    expect(await send('suggestTargetLanguages', trusted, suggest)).toMatchObject({ ok: true });
+    const search = { projectId: 'p1', query: 'heb', uiLanguage: 'he' };
+    expect(await send('searchTargetLanguages', trusted, search)).toMatchObject({ ok: true });
+    const choose = { projectId: 'p1', language: 'he' };
+    expect(await send('chooseTargetLocale', trusted, choose)).toEqual({
+      ok: true,
+      value: { id: 'he', direction: 'rtl' },
+    });
     expect(calls).toEqual([
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
       ['readDocumentPair', { projectId: 'p1', key: 'k' }],
+      ['suggestTargetLanguages', suggest],
+      ['searchTargetLanguages', search],
+      ['chooseTargetLocale', choose],
     ]);
   });
 
@@ -154,5 +178,45 @@ describe('argumentValidators', () => {
     ['an array', [['abc', 'k']], false],
   ])('readDocumentPair: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.readDocumentPair(args)).toBe(valid);
+  });
+
+  const suggest = { projectId: 'abc', recent: ['he', 'ar'], systemLanguages: [], uiLanguage: 'en' };
+  it.each<[string, unknown[], boolean]>([
+    ['a full request', [suggest], true],
+    ['no arguments', [], false],
+    ['no recent picks field', [{ ...suggest, recent: undefined }], false],
+    ['recent picks that are not strings', [{ ...suggest, recent: [1] }], false],
+    ['an empty code among the OS languages', [{ ...suggest, systemLanguages: [''] }], false],
+    ['too many recent picks', [{ ...suggest, recent: Array(21).fill('he') }], false],
+    ['recent picks as a string', [{ ...suggest, recent: 'he' }], false],
+    ['an empty interface language', [{ ...suggest, uiLanguage: '' }], false],
+    ['an extra field', [{ ...suggest, path: '/etc' }], false],
+    ['an extra argument', [suggest, 'more'], false],
+  ])('suggestTargetLanguages: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.suggestTargetLanguages(args)).toBe(valid);
+  });
+
+  const search = { projectId: 'abc', query: 'heb', uiLanguage: 'en' };
+  it.each<[string, unknown[], boolean]>([
+    ['a full request', [search], true],
+    ['an empty query', [{ ...search, query: '' }], true],
+    ['no query', [{ projectId: 'abc', uiLanguage: 'en' }], false],
+    ['a numeric query', [{ ...search, query: 1 }], false],
+    ['a very long query', [{ ...search, query: 'x'.repeat(101) }], false],
+    ['a numeric interface language', [{ ...search, uiLanguage: 1 }], false],
+    ['an extra field', [{ ...search, limit: 1000 }], false],
+  ])('searchTargetLanguages: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.searchTargetLanguages(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a project id and a language', [{ projectId: 'abc', language: 'he' }], true],
+    ['no language', [{ projectId: 'abc' }], false],
+    ['an empty language', [{ projectId: 'abc', language: '' }], false],
+    ['a very long language', [{ projectId: 'abc', language: 'x'.repeat(101) }], false],
+    ['an empty project id', [{ projectId: '', language: 'he' }], false],
+    ['an extra field', [{ projectId: 'abc', language: 'he', save: true }], false],
+  ])('chooseTargetLocale: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.chooseTargetLocale(args)).toBe(valid);
   });
 });

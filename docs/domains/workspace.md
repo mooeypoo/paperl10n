@@ -28,7 +28,7 @@ there is to translate. Code: `src/domains/workspace/`, public API `#domains/work
 | Key | Required | Meaning |
 |---|---|---|
 | `sourceLocale` | no (default `en`) | Locale id of the source documents. |
-| `targetLocale` | **yes, in M0** | Locale id to translate into. Must differ from the source. Choosing it in the app arrives in M1 ([discussion](../plan/M1-languages.md)). |
+| `targetLocale` | no | Locale id to translate into. Must differ from the source. Without it the project opens with no target, and the app asks for one ([M1 languages](../plan/M1-languages.md)). |
 | `documentFormat` | no | Pins a document plugin by id instead of detecting one. |
 | `formatOptions` | no | Each plugin's own options, keyed by plugin id. The plugin validates its section. |
 | `languages` | no | Languages the project defines or adjusts, keyed by locale id: `name` and/or `dir` (`ltr`/`rtl`). Adds codes the language catalog doesn't know, or fixes a direction. Shared with the team, so nothing is guessed silently (M1). |
@@ -51,23 +51,49 @@ problems are reported at once (`workspace.config-invalid`, with a list of `{ fie
    (`workspace.unknown-document-format` if it isn't an installed document plugin); otherwise
    **the best-ranked detection** (`workspace.no-document-format`, with any detection failures).
 5. Open the format's layout with the plugin's own options. A `FormatError` passes through as is.
-6. Store the opened project in `ProjectSessions` and return a summary: project id, folder name,
-   source and target `Locale`s (with direction), format id and name, and config warnings.
+6. Build the project's **language catalog**: the bundled catalog plus the config's `languages`
+   and any locale folder whose code the catalog doesn't know (so every language already in the
+   project can be shown and chosen).
+7. Store the opened project in `ProjectSessions` and return a summary: project id, folder name,
+   source and target `Locale`s (with direction; the target is `null` when the config has none),
+   format id and name, and config warnings.
 
 ### `listSourceDocuments(projectId)`
 
 `createListSourceDocuments({ sessions })`. It returns each source document with its key, source
 path, target path for the project's target locale, and whether that translation file exists
-(`targetExists`). Errors: `workspace.unknown-project`, or a `FormatError` from the layout.
+(`targetExists`). Errors: `workspace.unknown-project`, `workspace.no-target-locale` (no target
+chosen yet), or a `FormatError` from the layout.
 
 ### `readDocumentPair(projectId, key)`
 
 `createReadDocumentPair({ sessions, parser })`. It finds the page by key among the layout's source
 documents, reads the source and the translation, and parses both with the `MarkdownParser` port
 (`#domains/document`; `.mdx` files with MDX tolerance). A translation that doesn't exist yet is
-`null`, not an error. Errors: `workspace.unknown-project`, `workspace.unknown-document` (the key
+`null`, not an error. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+`workspace.unknown-document` (the key
 isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
 file that vanished), or a `FormatError`.
+
+### Target languages: `suggestTargetLanguages`, `searchTargetLanguages`, `chooseTargetLocale`
+
+What the language picker needs, all on the open project's catalog and never offering the source:
+
+- `suggestTargetLanguages(projectId, { recent, systemLanguages, uiLanguage })`: the picker's
+  sections before the user types. **In this project** (its locales, the config's `languages`, the
+  current target), **recent** (the user's picks, kept by the UI), and **suggested** (English, the
+  OS languages, the region's most spoken). Rules: `suggestLanguages` in `#domains/locale`.
+- `searchTargetLanguages(projectId, { query, uiLanguage })`: up to 50 matches, best first
+  (`searchLanguages`).
+- Both return `LanguageEntry`s: tag, name in the interface language (English as a fallback),
+  autonym, and direction.
+- `chooseTargetLocale(projectId, language)`: makes a language the target, by tag or alias,
+  ignoring case, and returns its `Locale`. Errors: `workspace.unknown-language` (the catalog
+  doesn't know it: define it in the config's `languages` first), `workspace.target-is-source`.
+  It changes the session only. Saving it to the config file is L4 of the
+  [languages plan](../plan/M1-languages.md).
+
+Errors common to all three: `workspace.unknown-project`.
 
 Pairing *within* a page (sections, PRD §7.2) belongs to the `translation` domain from M3. Reading
 the two files is workspace's job: it holds the open project's files and layout.
@@ -78,7 +104,7 @@ the two files is workspace's job: it holds the open project's files and layout.
 |---|---|---|
 | `FolderPicker` | `createDialogFolderPicker` (`#adapters/workspace/dialog-folder-picker`, with Electron's dialog injected) | `pick(): Promise<string \| null>`; contract: `describeFolderPickerContract` |
 | `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files and the folder's display name; contract: `describeProjectFilesOpenerContract` |
-| `ProjectSessions` | `InMemoryProjectSessions` (`#adapters/workspace/in-memory-project-sessions`) | random UUID ids; contract: `describeProjectSessionsContract` |
+| `ProjectSessions` | `InMemoryProjectSessions` (`#adapters/workspace/in-memory-project-sessions`) | random UUID ids; `update` replaces a stored project (choosing a target); contract: `describeProjectSessionsContract` |
 
 Test support (`#domain-testing/workspace`): `FakeFolderPicker`, `FakeProjectFilesOpener`, and the
 three contract suites, which run against the fakes and every real implementation. Use-case tests also use `fakeDocumentPlugin` from
@@ -92,5 +118,5 @@ three contract suites, which run against the fakes and every real implementation
 
 ## Later
 
-Locale choice in the UI (M1), catalog formats in projects (M4), external-change detection
+The language picker and saving the choice to the config (M1), catalog formats in projects (M4), external-change detection
 (file watching), and remembering recent projects.

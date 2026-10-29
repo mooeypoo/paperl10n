@@ -39,3 +39,18 @@ export {
   type ReadDocumentPair,
   type ReadDocumentPairError,
 } from './application/read-document-pair.ts';
+export {
+  createSearchTargetLanguages,
+  createSuggestTargetLanguages,
+  type SearchTargetLanguages,
+  type SuggestionRequest,
+  type SuggestTargetLanguages,
+  type TargetLanguageSuggestions,
+  type TargetLanguagesError,
+} from './application/target-languages.ts';
+export {
+  createChooseTargetLocale,
+  type ChooseTargetLocale,
+  type ChooseTargetLocaleError,
+} from './application/choose-target-locale.ts';
+export type { LanguageEntry } from './application/project-languages.ts';

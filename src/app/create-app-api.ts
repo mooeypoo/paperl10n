@@ -4,9 +4,12 @@
 import type { MarkdownParser } from '#domains/document';
 import { createFormatRegistry, type PluginModule, type RegistryError } from '#domains/formats';
 import {
+  createChooseTargetLocale,
   createListSourceDocuments,
   createOpenProject,
   createReadDocumentPair,
+  createSearchTargetLanguages,
+  createSuggestTargetLanguages,
   type FolderPicker,
   type ProjectFilesOpener,
   type ProjectSessions,
@@ -38,6 +41,9 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
     }),
     listSourceDocuments: createListSourceDocuments({ sessions: deps.sessions }),
     readDocumentPair: createReadDocumentPair({ sessions: deps.sessions, parser: deps.parser }),
+    suggestTargetLanguages: createSuggestTargetLanguages({ sessions: deps.sessions }),
+    searchTargetLanguages: createSearchTargetLanguages({ sessions: deps.sessions }),
+    chooseTargetLocale: createChooseTargetLocale({ sessions: deps.sessions }),
   });
   return ok(guardApi(handlers, deps.onUnexpected));
 }

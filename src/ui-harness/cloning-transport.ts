@@ -17,5 +17,11 @@ export function cloningTransport(api: PaperLionApi): PaperLionApi {
     listSourceDocuments: (request) =>
       crossing(() => api.listSourceDocuments(structuredClone(request))),
     readDocumentPair: (request) => crossing(() => api.readDocumentPair(structuredClone(request))),
+    suggestTargetLanguages: (request) =>
+      crossing(() => api.suggestTargetLanguages(structuredClone(request))),
+    searchTargetLanguages: (request) =>
+      crossing(() => api.searchTargetLanguages(structuredClone(request))),
+    chooseTargetLocale: (request) =>
+      crossing(() => api.chooseTargetLocale(structuredClone(request))),
   };
 }

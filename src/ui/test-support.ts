@@ -95,6 +95,18 @@ export function fakeClient(
         answers.read?.[key] ?? { ok: true, value: pairFor(key, `Source of ${key}\n`) },
       );
     },
+    suggestTargetLanguages: ({ projectId }) => {
+      calls.push(`suggestTargetLanguages:${projectId}`);
+      return Promise.resolve({ ok: true, value: { inProject: [], recent: [], suggested: [] } });
+    },
+    searchTargetLanguages: ({ projectId, query }) => {
+      calls.push(`searchTargetLanguages:${projectId}:${query}`);
+      return Promise.resolve({ ok: true, value: [] });
+    },
+    chooseTargetLocale: ({ projectId, language }) => {
+      calls.push(`chooseTargetLocale:${projectId}:${language}`);
+      return Promise.resolve({ ok: true, value: { id: language, direction: 'ltr' } });
+    },
   };
   return { client, calls };
 }

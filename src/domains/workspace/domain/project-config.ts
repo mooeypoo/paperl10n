@@ -7,10 +7,11 @@ export const CONFIG_FILE_NAME = 'paperl10n.config.json';
 
 export const DEFAULT_SOURCE_LOCALE = 'en';
 
-/** `paperl10n.config.json`, version 0 (M0). Picking locales in the UI arrives in M1. */
+/** `paperl10n.config.json`, version 0. */
 export interface ProjectConfig {
   readonly sourceLocale: LocaleId;
-  readonly targetLocale: LocaleId;
+  /** Absent until the user chooses one; the app then asks for it. */
+  readonly targetLocale?: LocaleId;
   /** Pins a document format plugin by id, instead of detecting one. */
   readonly documentFormat?: string;
   /** Each plugin's own options, keyed by plugin id. Plugins validate their section. */
@@ -91,15 +92,8 @@ export function parseProjectConfig(text: string): Result<ParsedConfig, InvalidCo
   };
 
   const sourceLocale = readLocale('sourceLocale', input.sourceLocale ?? DEFAULT_SOURCE_LOCALE);
-  let targetLocale: LocaleId | undefined;
-  if (input.targetLocale === undefined) {
-    problems.push({
-      field: 'targetLocale',
-      problem: 'is required (choosing it in the app arrives in M1)',
-    });
-  } else {
-    targetLocale = readLocale('targetLocale', input.targetLocale);
-  }
+  const targetLocale =
+    input.targetLocale === undefined ? undefined : readLocale('targetLocale', input.targetLocale);
   if (sourceLocale !== undefined && sourceLocale === targetLocale) {
     problems.push({ field: 'targetLocale', problem: 'must differ from sourceLocale' });
   }
@@ -161,13 +155,13 @@ export function parseProjectConfig(text: string): Result<ParsedConfig, InvalidCo
     }
   }
 
-  if (problems.length > 0 || sourceLocale === undefined || targetLocale === undefined) {
+  if (problems.length > 0 || sourceLocale === undefined) {
     return err({ code: 'workspace.config-invalid', problems });
   }
   return ok({
     config: {
       sourceLocale,
-      targetLocale,
+      ...(targetLocale === undefined ? {} : { targetLocale }),
       ...(typeof documentFormat === 'string' ? { documentFormat } : {}),
       formatOptions,
       languages,
