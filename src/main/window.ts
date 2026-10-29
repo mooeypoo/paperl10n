@@ -5,10 +5,17 @@ import type { BrowserWindowConstructorOptions } from 'electron';
 
 export const WINDOW_TITLE = 'Paper Lion';
 
-/** The renderer runs sandboxed, isolated, without Node: AGENTS.md, Electron boundary. */
-export function createWindowOptions(preloadPath: string): BrowserWindowConstructorOptions {
+/**
+ * The renderer runs sandboxed, isolated, without Node: AGENTS.md, Electron boundary. `iconPath` is
+ * the window's icon (taskbar and window switcher on Linux and Windows).
+ */
+export function createWindowOptions(
+  preloadPath: string,
+  iconPath: string,
+): BrowserWindowConstructorOptions {
   return {
     title: WINDOW_TITLE,
+    icon: iconPath,
     width: 1200,
     height: 800,
     show: false,

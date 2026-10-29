@@ -11,7 +11,7 @@ import {
 
 describe('createWindowOptions', () => {
   it('runs the renderer sandboxed and isolated, without Node (AGENTS.md, Electron boundary)', () => {
-    const preferences = createWindowOptions('/app/preload.cjs').webPreferences;
+    const preferences = createWindowOptions('/app/preload.cjs', '/app/icon.png').webPreferences;
     expect(preferences).toMatchObject({
       preload: '/app/preload.cjs',
       contextIsolation: true,
@@ -26,8 +26,14 @@ describe('createWindowOptions', () => {
     });
   });
 
+  it('gives the window its icon', () => {
+    expect(createWindowOptions('/p', '/app/assets/icons/paperl10n-512.png').icon).toBe(
+      '/app/assets/icons/paperl10n-512.png',
+    );
+  });
+
   it('shows "Paper Lion" as the title', () => {
-    expect(createWindowOptions('/p').title).toBe('Paper Lion');
+    expect(createWindowOptions('/p', '/i').title).toBe('Paper Lion');
   });
 });
 

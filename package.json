@@ -46,6 +46,7 @@
     "lint:fix": "node scripts/check-spdx.ts --fix && eslint . --cache --cache-location node_modules/.cache/eslint/ --fix && stylelint \"src/**/*.{css,vue}\" --fix",
     "format": "prettier --write .",
     "update:language-data": "node scripts/update-language-data.ts",
+    "render:icons": "node scripts/run-electron.ts electron scripts/render-app-icons.ts",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",

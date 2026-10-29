@@ -339,6 +339,16 @@ test('the renderer has no Node, and the preload exposes exactly the IPC contract
   expect(exposed).toEqual([...apiMethods].sort());
 });
 
+test('has the app icon: the mark, at 512 px', async () => {
+  const icon = await app.evaluate(({ app: electronApp, nativeImage }) => {
+    const image = nativeImage.createFromPath(
+      `${electronApp.getAppPath()}/assets/icons/paperl10n-512.png`,
+    );
+    return { empty: image.isEmpty(), size: image.getSize() };
+  });
+  expect(icon).toEqual({ empty: false, size: { width: 512, height: 512 } });
+});
+
 test('runs in its own profile, not the real one', async () => {
   expect(await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'))).toBe(
     profile,

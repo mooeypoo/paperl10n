@@ -101,7 +101,11 @@ check:
   - **Small sizes:** brows, eye highlights, and thin strokes won't survive 16–32 px (window icon,
     taskbar, favicon). A simplified small-size variant is likely needed.
   - **App icon:** each platform needs its own format (`.icns`, `.ico`, PNG sizes), so it's done
-    together with packaging.
+    together with packaging. **Window icon done (2026-10-29):** PNGs at 16–512 px in
+    `assets/icons/`, rendered from the unmodified mark by `pnpm render:icons` with the project's
+    own Electron (no rasterizer dependency). Main sets the 512 px one on the window and the macOS
+    dock. `.ico`/`.icns` and the icon's place in a packaged app wait for packaging; a simplified
+    small-size mark is the maintainer's call.
   - **Palette:** the warm amber and cream with deep navy could seed the token palette, checked
     for contrast in both themes.
 

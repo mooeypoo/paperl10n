@@ -22,11 +22,15 @@ const devServerUrl = process.env.ELECTRON_RENDERER_URL;
 const rendererFile = join(import.meta.dirname, '../renderer/index.html');
 const appUrl = devServerUrl ?? pathToFileURL(rendererFile).href;
 
+// The mark, rendered by scripts/render-app-icons.ts. Installers get their own icon formats with
+// packaging; until then the app runs from the repository, where this file lives.
+const iconPath = join(app.getAppPath(), 'assets/icons/paperl10n-512.png');
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
   const window = new BrowserWindow(
-    createWindowOptions(join(import.meta.dirname, '../preload/index.cjs')),
+    createWindowOptions(join(import.meta.dirname, '../preload/index.cjs'), iconPath),
   );
   hardenContents(window.webContents, appUrl);
   window.once('ready-to-show', () => {
@@ -42,6 +46,8 @@ function createWindow(): void {
 async function start(): Promise<void> {
   await app.whenReady();
   hardenSession(session.defaultSession);
+  // macOS shows the dock icon, not the window's.
+  app.dock?.setIcon(iconPath);
 
   const api = createElectronAppApi({
     showFolderDialog: async () => {
