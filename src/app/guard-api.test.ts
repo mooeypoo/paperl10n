@@ -37,7 +37,7 @@ describe('guardApi', () => {
               source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
               target: null,
               draft: null,
-              sections: { paired: true, pairs: [] },
+              sections: { paired: true, level: null, pairs: [] },
             }),
           ),
         suggestTargetLanguages: () =>
@@ -64,7 +64,7 @@ describe('guardApi', () => {
         source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
         target: null,
         draft: null,
-        sections: { paired: true, pairs: [] },
+        sections: { paired: true, level: null, pairs: [] },
       },
     });
     expect(

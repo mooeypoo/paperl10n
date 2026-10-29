@@ -89,5 +89,11 @@
   "paperl10n-link-url": "Label of the link dialog's field for where the link goes: a web address or a path in the site.",
   "paperl10n-link-apply": "Button in the link dialog that writes the changed text and target into the link.",
   "paperl10n-link-add-apply": "Button in the link dialog that writes the new link into the text.",
-  "paperl10n-link-remove": "Button in the link dialog that removes the link but keeps its text in the page."
+  "paperl10n-link-remove": "Button in the link dialog that removes the link but keeps its text in the page.",
+  "paperl10n-view-label": "Accessible name of the pair of buttons above a page that choose how it is shown: section by section, or as the full page.",
+  "paperl10n-view-sections": "Toggle button: show the page section by section, each source section beside its translation (sections split at headings).",
+  "paperl10n-view-full": "Toggle button: show the source and the translation as whole pages, side by side.",
+  "paperl10n-sections-unpaired-count": "Note above a page that opened as the full page because its translation has a different number of sections than its source. $1: the number of sections in the translation. $2: the number in the source. Sections are the parts of a page between its headings of one level. Paper Lion pairs them again when the page is opened and they match.",
+  "paperl10n-sections-unpaired-level": "Note above a page that opened as the full page because the translation's headings are at another level than the source's (for example ### where the source has ##), or it has none.",
+  "paperl10n-sections-changed": "Note above a page in the section view after the translation gained or lost a section heading while editing (or its draft was discarded). The view stays as it is; sections are paired again when the page is opened again."
 }

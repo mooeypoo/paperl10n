@@ -143,7 +143,7 @@ describe('the app shell', () => {
               inline: [],
             },
             draft: null,
-            sections: { paired: true, pairs: [] },
+            sections: { paired: true, level: null, pairs: [] },
           },
         },
       },

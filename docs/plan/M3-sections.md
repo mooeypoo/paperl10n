@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1 done, S2 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S2 done, S3 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -240,6 +240,39 @@ the last step.
       translation paired with nothing.
   - **S2b, the view:** the aligned editors, the section markers, the full-page fallback and its
     note, the toggle, and the "sections changed" note while editing.
+    - *Done-notes:*
+      - **Lining up** (`ui/editor/section-alignment.ts`): each editor keeps where its sections
+        start (anchors, set when the page opens and moved by edits; one is dropped when its text
+        is deleted or its line left empty). In the section view, a rule marks each section's first
+        line, and two editors side by side get spacers (block widgets) above a section that starts
+        higher than its pair, walking the pairs in order. They're measured from both editors in one
+        measure pass and applied right after it (an editor can't be updated while it measures).
+        Stacked panes (a narrow window) get no spacers. The intro lines up too, so the panes'
+        different header heights don't matter.
+      - **Offsets:** main's offsets are into the file as read; the editor drops the BOM and counts
+        CRLF as one character, so they're mapped (`editorPosition` in `file-text.ts`).
+      - **Choosing the view:** a page asks for sections, and shows them when its pairing is for the
+        text the translation editor starts with (not after discarding a restored draft, which shows
+        the file). Otherwise it shows in full, with a note: a different number of sections (with
+        both counts) or headings at another level. "Sections" and "Full page" switch between them
+        (`aria-pressed`); switching keeps the text, its edits, and the anchors where edits moved
+        them.
+      - **While editing:** after typing pauses (0.3 s), the translation's top-level headings at the
+        split level are counted; a different count than when the page opened shows "The sections
+        have changed since this page opened. They'll be paired again when you reopen it." The view
+        doesn't change. The page's title, view buttons, and notes stay at the top while the page
+        scrolls, so the note is seen where the typing is.
+      - Tests: the spacer arithmetic (table), marks and anchors in an editor (edits, hidden marks,
+        deleted sections, the document start), heading counts (code, lists, quotes, containers,
+        Setext); through the UI: the view a page opens in, both notes, the toggle keeping edits, a
+        new translation, a discarded draft, and a file with a BOM and CRLF; and an E2E in Electron:
+        three pairs line up within 2 px with sections of different lengths on both sides, the
+        full page drops the rules, and a new heading shows the note while the panes stay lined up.
+      - Mutation checks, each failing tests: changes never noticed, the pairing used for another
+        text, the toggle resetting the anchors, anchors kept on emptied lines, the document's start
+        anchor moving, a rule on the first line, file offsets used unmapped, and "Sections" offered
+        for an unpaired page. One survived and was removed as redundant: choosing "full" for an
+        unpaired page on open (it can't show sections anyway).
 - **S3, status:** the status file and its port, fingerprints, "Mark up to date" (section, page,
   all existing), the four statuses in the page list, and section progress in the page header.
 - **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.

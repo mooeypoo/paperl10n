@@ -127,6 +127,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
         // Not started yet: paired with a copy of the source, which a lone heading splits at.
         sections: {
           paired: true,
+          level: 1,
           pairs: [
             { kind: 'heading', source: { start: 0, end: 38 }, target: { start: 0, end: 38 } },
           ],

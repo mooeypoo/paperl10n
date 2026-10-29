@@ -457,6 +457,64 @@ test('has the app icon: the mark, at 512 px', async () => {
   expect(icon).toEqual({ empty: false, size: { width: 512, height: 512 } });
 });
 
+test('shows paired sections side by side, lined up at their headings', async () => {
+  const project = join(profile, 'basic');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  const long = 'A paragraph long enough to wrap onto several lines in its pane. '.repeat(6);
+  writeFileSync(
+    join(project, 'en/index.md'),
+    `# Welcome\n\nIntro.\n\n## Install\n\n${long}\n\n${long}\n\n## Use\n\nShort.\n\n## Configure\n\nA line.\n`,
+  );
+  writeFileSync(
+    join(project, 'he/index.md'),
+    `# ברוכים הבאים\n\nמבוא.\n\n## התקנה\n\nקצר.\n\n## שימוש\n\n${'מילים רבות '.repeat(60)}\n\n## הגדרות\n\nשורה.\n`,
+  );
+  await page.setViewportSize({ width: 1500, height: 1000 });
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+
+  // Where each pane's sections start, from the top of the window.
+  const starts = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.markdown-editor')].map((host) =>
+        [...(host.shadowRoot?.querySelectorAll('.cm-section-start') ?? [])].map((line) =>
+          Math.round(line.getBoundingClientRect().top),
+        ),
+      ),
+    );
+  const linedUp = async () => {
+    const [source = [], target = []] = await starts();
+    return (
+      source.length === 3 &&
+      target.length === 3 &&
+      source.every((top, index) => Math.abs(top - (target[index] ?? 0)) <= 2)
+    );
+  };
+  await expect(page.getByRole('button', { name: 'Sections' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  // The source's long section and the translation's long one each push the other side down.
+  await expect.poll(linedUp).toBe(true);
+
+  await page.getByRole('button', { name: 'Full page' }).click();
+  await expect.poll(starts).toEqual([[], []]);
+  await page.getByRole('button', { name: 'Sections' }).click();
+  await expect.poll(linedUp).toBe(true);
+
+  // A new heading while typing: the view stays as it opened, and a note says so.
+  const target = page.getByRole('textbox', { name: 'עברית · translation' });
+  await target.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('\n## חדש\n');
+  await expect(page.getByText('The sections have changed since this page opened.')).toBeVisible();
+  await expect.poll(linedUp).toBe(true);
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
 test('runs in its own profile, not the real one', async () => {
   expect(await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'))).toBe(
     profile,

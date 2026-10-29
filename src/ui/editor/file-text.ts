@@ -141,3 +141,12 @@ export function fileText(state: EditorState): string {
   }
   return parts.join('');
 }
+
+/**
+ * Where an offset in a file's text (as main reads it) is in the editor's document: without the
+ * BOM, and with each line break one character. (Offsets at block starts are never inside a CRLF.)
+ */
+export function editorPosition(file: string, offset: number): number {
+  const bom = file.startsWith(BOM) ? 1 : 0;
+  return file.slice(bom, Math.max(offset, bom)).replace(/\r\n/g, '\n').length;
+}

@@ -64,6 +64,13 @@ textarea {
   font-weight: 600;
 }
 
+/* A toggle that's on (one of a group of views, say). */
+.pl-button[aria-pressed='true'] {
+  border-color: var(--pl-color-primary);
+  color: var(--pl-color-primary);
+  font-weight: 600;
+}
+
 .pl-button:disabled {
   cursor: progress;
   opacity: 0.7;

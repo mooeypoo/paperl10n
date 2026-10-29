@@ -126,6 +126,8 @@ export interface SectionPairDto {
 export type SectionPairingDto =
   | {
       readonly paired: true;
+      /** The heading depth both sides split at (`null`: the source has no headings). */
+      readonly level: number | null;
       /** Every section in order: frontmatter, intro, then the heading sections. */
       readonly pairs: readonly SectionPairDto[];
     }

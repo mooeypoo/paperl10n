@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { LocaleDto } from '#ipc-contract';
+import type { EditorView } from '@codemirror/view';
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
 import {
   createMarkdownEditor,
@@ -9,6 +10,7 @@ import {
   type MarkdownEditor,
   type MarkdownEditorOptions,
 } from '../editor/markdown-editor';
+import { editorPosition } from '../editor/file-text';
 import type { LinkEdit } from '../editor/link-editing';
 
 const props = defineProps<{
@@ -25,10 +27,24 @@ const props = defineProps<{
   /** The text is what the file holds (false for a new translation: unsaved until saved). Read
    * with each new file, so marking a save doesn't restart the editor. */
   saved: boolean;
+  /**
+   * Where each paired section starts in `file` (its offsets, as main read it), in pair order,
+   * `null` where this side lacks one; `null`: not paired. Read with each new file and when it
+   * changes; edits move them along from then on.
+   */
+  sectionStarts?: readonly (number | null)[] | null;
+  /** Show the section view: the section marks, lined up with another editor. */
+  sectionsShown?: boolean;
 }>();
 /** `dirty`: the text has unsaved changes (sent on mount, and whenever that changes). `change`:
  * after each edit. `editLink`: show a form for a link, and answer through the request. */
-const emit = defineEmits<{ dirty: [dirty: boolean]; change: []; editLink: [edit: LinkEdit] }>();
+const emit = defineEmits<{
+  dirty: [dirty: boolean];
+  change: [];
+  editLink: [edit: LinkEdit];
+  /** The editor's view once mounted, and `null` once gone (to line it up with another). */
+  view: [view: EditorView | null];
+}>();
 
 const host = useTemplateRef('host');
 let editor: MarkdownEditor | null = null;
@@ -53,10 +69,20 @@ const options = (): MarkdownEditorOptions => ({
   },
 });
 
+const setSectionStarts = () => {
+  const starts = props.sectionStarts ?? null;
+  editor?.setSectionStarts(
+    starts?.map((start) => (start === null ? null : editorPosition(props.file, start))) ?? null,
+  );
+  editor?.showSections(props.sectionsShown);
+};
+
 onMounted(() => {
   if (host.value === null) return;
   editor = createMarkdownEditor(host.value, options());
   emit('dirty', editor.dirty());
+  setSectionStarts();
+  emit('view', editor.view);
 });
 // A different file (or a different way to read it) starts over: new text, new undo history.
 watch(
@@ -65,6 +91,16 @@ watch(
     if (editor === null) return;
     editor.view.setState(editorState(options()));
     emit('dirty', editor.dirty());
+    setSectionStarts();
+  },
+);
+// Section starts come with the file they're for (a new pairing keeps the text and its history).
+watch(() => props.sectionStarts, setSectionStarts);
+// Switching views keeps the starts where edits moved them.
+watch(
+  () => props.sectionsShown,
+  (on) => {
+    editor?.showSections(on);
   },
 );
 // Another label (the interface's language changed) or locale keeps the text: unsaved edits stay.
@@ -80,6 +116,7 @@ watch(
   },
 );
 onBeforeUnmount(() => {
+  emit('view', null);
   editor?.destroy();
   editor = null;
 });
@@ -90,6 +127,8 @@ defineExpose({
   /** The text to save, and a way to mark it saved once saving succeeded. */
   snapshot: (): EditorSnapshot =>
     editor?.snapshot() ?? { text: props.file, markSaved: () => undefined },
+  /** How many top-level headings of `depth` the text has now (`null`: not known yet). */
+  headingCount: (depth: number): number | null => editor?.headingCount(depth) ?? null,
 });
 </script>
 

@@ -90,7 +90,7 @@ export function pairFor(
     source: doc(`en/${key}.md`, source),
     target: target === null ? null : doc(`he/${key}.md`, target),
     draft: null,
-    sections: { paired: true, pairs: [] },
+    sections: { paired: true, level: null, pairs: [] },
   };
 }
 

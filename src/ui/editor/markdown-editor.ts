@@ -17,6 +17,7 @@ import { linkEditing, type LinkEdit } from './link-editing.ts';
 import { livePreview } from './live-preview.ts';
 import { linkLabel } from './markdown-links.ts';
 import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
+import { headingCount, sectionView, setSectionAnchors, showSections } from './section-alignment.ts';
 
 /** How the editable area is presented: changing it keeps the text and its history. */
 export interface EditorPresentation {
@@ -59,6 +60,15 @@ export interface MarkdownEditor {
   dirty(): boolean;
   /** Presents the same text differently (another label, say), keeping edits and undo. */
   present(presentation: EditorPresentation): void;
+  /**
+   * Where the page's sections start in this document, in pair order (`null` where this side lacks
+   * one), set when the page opens; they follow edits from then on. `null`: not paired.
+   */
+  setSectionStarts(starts: readonly (number | null)[] | null): void;
+  /** Shows or hides the section view's marks and spacers. */
+  showSections(shown: boolean): void;
+  /** How many top-level headings of `depth` the text has now (`null`: not parsed that far). */
+  headingCount(depth: number): number | null;
   destroy(): void;
 }
 
@@ -79,6 +89,7 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
       markdownLanguage(options.mdx),
       markdownDecorations,
       livePreview,
+      sectionView,
       linkEditing((edit) => onEditLink?.(edit)),
       history(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -123,6 +134,13 @@ export function createMarkdownEditor(
     present: (next) => {
       view.dispatch({ effects: presentation.reconfigure(presented(next)) });
     },
+    setSectionStarts: (starts) => {
+      view.dispatch({ effects: setSectionAnchors.of(starts) });
+    },
+    showSections: (on) => {
+      view.dispatch({ effects: showSections.of(on) });
+    },
+    headingCount: (depth) => headingCount(view.state, depth),
     destroy: () => {
       view.destroy();
     },

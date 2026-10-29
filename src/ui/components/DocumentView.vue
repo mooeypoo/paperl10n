@@ -1,9 +1,11 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { DocumentPairDto, ErrorDto, LocaleDto, SourceDocumentDto } from '#ipc-contract';
-import { computed, useTemplateRef } from 'vue';
+import type { EditorView } from '@codemirror/view';
+import { computed, onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import type { SaveStatus } from '../composables/use-translation-saving';
 import type { EditorSnapshot } from '../editor/markdown-editor';
+import { alignSections } from '../editor/section-alignment';
 import { errorMessage } from '../i18n/error-message';
 import { isolated, useI18n } from '../i18n/i18n';
 import { autonym } from '../i18n/language-name';
@@ -63,6 +65,93 @@ const statusText = computed(() =>
 );
 const targetPane = useTemplateRef<InstanceType<typeof DocumentPane>>('targetPane');
 
+// The section view (docs/plan/M3-sections.md). Main paired the sections when the page opened, for
+// the text the translation opens with; the view is chosen then and stays as it opened until the
+// page is read again.
+const sections = computed(() => current.value?.sections ?? null);
+// The text the pairing is for: the draft, else the file, else a copy of the source.
+const pairedText = computed(() => {
+  const pair = current.value;
+  return pair === null ? null : (pair.draft?.text ?? pair.target?.text ?? pair.source.text);
+});
+// The translation editor shows that text (not after discarding a restored draft, say).
+const pairable = computed(
+  () =>
+    sections.value?.paired === true &&
+    target.value !== null &&
+    target.value.text === pairedText.value,
+);
+// The view asked for. Each page asks for sections; it shows them only when they pair.
+const mode = ref<'sections' | 'full'>('sections');
+const sectionsChanged = ref(false);
+watch(
+  current,
+  () => {
+    mode.value = 'sections';
+    sectionsChanged.value = false;
+  },
+  { immediate: true },
+);
+const sectionView = computed(() => mode.value === 'sections' && pairable.value);
+// Set once per pairing (switching views doesn't reset them: the editors keep them where edits
+// moved them).
+const starts = (side: 'source' | 'target') => {
+  const pairing = sections.value;
+  if (!pairable.value || pairing?.paired !== true) return null;
+  return pairing.pairs.map((pair) => pair[side]?.start ?? null);
+};
+const sourceStarts = computed(() => starts('source'));
+const targetStarts = computed(() => starts('target'));
+
+// The editors line up while both are shown in the section view.
+const sourceView = shallowRef<EditorView | null>(null);
+const targetView = shallowRef<EditorView | null>(null);
+watch(
+  [sourceView, targetView, sectionView],
+  ([source, translation, on], _previous, onCleanup) => {
+    if (source !== null && translation !== null && on)
+      onCleanup(alignSections(source, translation));
+  },
+  { flush: 'post' },
+);
+
+// Editing that adds or removes a heading at the split level leaves the view as it is, and says so.
+let checkTimer: ReturnType<typeof setTimeout> | undefined;
+function checkSections(): void {
+  const pairing = sections.value;
+  if (!sectionView.value || pairing?.paired !== true || pairing.level === null) return;
+  const { level } = pairing;
+  const expected = pairing.pairs.filter((pair) => pair.kind === 'heading').length;
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(() => {
+    const count = targetPane.value?.headingCount(level) ?? null;
+    if (count !== null) sectionsChanged.value = count !== expected;
+  }, 300);
+}
+onBeforeUnmount(() => {
+  clearTimeout(checkTimer);
+});
+// Why the page shows in full, when its sections didn't pair as it opened.
+const unpairedNote = computed(() => {
+  const pairing = sections.value;
+  if (pairing === null || pairing.paired || target.value === null) return '';
+  return pairing.reason === 'count'
+    ? t(
+        'paperl10n-sections-unpaired-count',
+        String(pairing.targetCount),
+        String(pairing.sourceCount),
+      )
+    : t('paperl10n-sections-unpaired-level');
+});
+// The sections no longer match the pairing (edited, or a restored draft discarded).
+const changedNote = computed(
+  () =>
+    mode.value === 'sections' &&
+    sections.value?.paired === true &&
+    target.value !== null &&
+    (sectionsChanged.value || !pairable.value),
+);
+
 defineExpose({
   /** The translation editor's text to save, or `null` when there's no editor. */
   snapshot: (): EditorSnapshot | null => targetPane.value?.snapshot() ?? null,
@@ -71,11 +160,44 @@ defineExpose({
 
 <template>
   <article class="document">
-    <header class="document-header">
-      <h2 class="document-title">
-        <bdi>{{ document.key }}</bdi>
-      </h2>
-    </header>
+    <!-- Stays in view while the page scrolls, so its notes are seen where the typing is. -->
+    <div class="document-top">
+      <header class="document-header">
+        <h2 class="document-title">
+          <bdi>{{ document.key }}</bdi>
+        </h2>
+        <div
+          v-if="current !== null && target !== null && error === null"
+          class="document-views"
+          role="group"
+          :aria-label="t('paperl10n-view-label')"
+        >
+          <button
+            type="button"
+            class="pl-button"
+            :aria-pressed="sectionView"
+            :disabled="!pairable"
+            @click="mode = 'sections'"
+          >
+            {{ t('paperl10n-view-sections') }}
+          </button>
+          <button
+            type="button"
+            class="pl-button"
+            :aria-pressed="!sectionView"
+            @click="mode = 'full'"
+          >
+            {{ t('paperl10n-view-full') }}
+          </button>
+        </div>
+      </header>
+      <p v-if="unpairedNote !== '' && !waiting" class="document-note document-sections-note">
+        {{ unpairedNote }}
+      </p>
+      <p v-if="changedNote && !waiting" class="document-note document-sections-note" role="status">
+        {{ t('paperl10n-sections-changed') }}
+      </p>
+    </div>
     <div v-if="error !== null" class="document-error" role="alert">
       {{ errorMessage(error, t) }}
     </div>
@@ -86,7 +208,10 @@ defineExpose({
         :path="document.sourcePath"
         :document="current?.source ?? null"
         :loading="waiting"
+        :section-starts="sourceStarts"
+        :sections-shown="sectionView"
         read-only
+        @view="(view) => (sourceView = view)"
       />
       <DocumentPane
         ref="targetPane"
@@ -97,10 +222,16 @@ defineExpose({
         :loading="waiting"
         :read-only="false"
         :saved="targetSaved"
+        :section-starts="targetStarts"
+        :sections-shown="sectionView"
         startable
         @start="emit('start')"
         @dirty="(dirty) => emit('dirty', dirty)"
-        @change="emit('change')"
+        @change="
+          emit('change');
+          checkSections();
+        "
+        @view="(view) => (targetView = view)"
       >
         <template v-if="target !== null && !waiting" #actions>
           <div class="document-save">
@@ -158,6 +289,30 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: var(--pl-space-4);
+}
+
+.document-top {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  padding-block: var(--pl-space-2);
+  background: var(--pl-color-bg);
+}
+
+.document-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pl-space-2) var(--pl-space-4);
+}
+
+.document-views {
+  display: flex;
+  gap: var(--pl-space-1);
 }
 
 .document-title {

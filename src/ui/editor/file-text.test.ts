@@ -2,7 +2,7 @@
 import { history, redo, undo } from '@codemirror/commands';
 import { EditorState, type TransactionSpec } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
-import { fileText, openFileText, usualEnding } from './file-text.ts';
+import { editorPosition, fileText, openFileText, usualEnding } from './file-text.ts';
 
 const open = (file: string) => {
   const opened = openFileText(file);
@@ -129,5 +129,23 @@ describe('usualEnding', () => {
     ['a tie with LF', 'a\r\nb\n', '\n'],
   ])('is LF or the most common ending: %s', (_description, file, expected) => {
     expect(usualEnding(file)).toBe(expected);
+  });
+});
+
+describe('editorPosition', () => {
+  it.each([
+    ['plain text', 'a\nb\nc', 4, 4],
+    ['the start', 'a\nb', 0, 0],
+    ['after a BOM', '\uFEFFa\nb', 3, 2],
+    ['the BOM itself', '\uFEFFa', 0, 0],
+    ['after CRLFs', 'a\r\nb\r\nc', 6, 4],
+    ['after lone CRs', 'a\rb\rc', 4, 4],
+    ['after mixed endings and a BOM', '\uFEFFa\r\nb\nc\rd', 8, 6],
+  ])('%s', (_description, file, offset, expected) => {
+    expect(editorPosition(file, offset)).toBe(expected);
+    // The same text in the editor's document.
+    expect(open(file).doc.sliceString(0, expected)).toBe(
+      file.slice(0, offset).replace('\uFEFF', '').replace(/\r\n?/g, '\n'),
+    );
   });
 });

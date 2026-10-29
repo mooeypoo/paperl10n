@@ -123,3 +123,12 @@
 .cm-editor .cm-md-strikethrough {
   text-decoration: line-through;
 }
+
+/* The section view (section-alignment.ts): a rule above each paired section, and room above it
+   so the boundary reads as a new row. Padding, not margin: CodeMirror measures lines with their
+   padding. */
+.cm-editor .cm-section-start {
+  margin-block-start: 0;
+  padding-block-start: var(--pl-space-3);
+  border-block-start: 1px solid var(--pl-color-line);
+}

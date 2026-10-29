@@ -72,6 +72,7 @@ function toSectionPairingDto(pairing: SectionPairing): SectionPairingDto {
     section === null ? null : { start: section.range.start, end: section.range.end };
   return {
     paired: true,
+    level: pairing.level,
     pairs: pairing.pairs.map(({ source, target }) => ({
       // A pair always has at least one side.
       kind: (source ?? target)?.kind ?? 'intro',

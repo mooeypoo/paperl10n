@@ -1,6 +1,7 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { DocumentTextDto, LocaleDto } from '#ipc-contract';
+import type { EditorView } from '@codemirror/view';
 import { computed, ref, useId, useTemplateRef } from 'vue';
 import type { LinkEdit } from '../editor/link-editing';
 import type { EditorSnapshot } from '../editor/markdown-editor';
@@ -22,10 +23,19 @@ withDefaults(
     saved?: boolean;
     /** Offer "Start translating" when there's no document. */
     startable?: boolean;
+    /** Where the paired sections start in `document` (see MarkdownEditor). */
+    sectionStarts?: readonly (number | null)[] | null;
+    /** Show the section view. */
+    sectionsShown?: boolean;
   }>(),
-  { saved: true, startable: false },
+  { saved: true, startable: false, sectionStarts: null, sectionsShown: false },
 );
-const emit = defineEmits<{ start: []; dirty: [dirty: boolean]; change: [] }>();
+const emit = defineEmits<{
+  start: [];
+  dirty: [dirty: boolean];
+  change: [];
+  view: [view: EditorView | null];
+}>();
 const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 const headingId = useId();
 const editor = useTemplateRef<InstanceType<typeof MarkdownEditor>>('editor');
@@ -40,6 +50,8 @@ const linkEdit = ref<LinkEdit | null>(null);
 defineExpose({
   /** The editor's text to save, or `null` when no editor is shown. */
   snapshot: (): EditorSnapshot | null => editor.value?.snapshot() ?? null,
+  /** How many top-level headings of `depth` the editor's text has now. */
+  headingCount: (depth: number): number | null => editor.value?.headingCount(depth) ?? null,
 });
 </script>
 
@@ -92,9 +104,12 @@ defineExpose({
         :label="heading"
         :link-label="linkLabel"
         :saved="saved"
+        :section-starts="sectionStarts"
+        :sections-shown="sectionsShown"
         @dirty="(dirty) => emit('dirty', dirty)"
         @change="emit('change')"
         @edit-link="(edit) => (linkEdit = edit)"
+        @view="(view) => emit('view', view)"
       />
       <LinkDialog v-if="!readOnly" :edit="linkEdit" :locale="locale" @close="linkEdit = null" />
     </div>
