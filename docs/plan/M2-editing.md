@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0–E5 done, E6 (the decisions into the PRD) awaiting approval.** See [Decided](#decided). The
+Status: **done (2026-10-29): E0–E6.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -386,6 +386,10 @@ inline syntax. The spike confirms it.
       and external changes checked on save (watching later).
     - §10: M2 marked done. §11: the visual-editing question marked decided; sidecar state
       narrowed to status.
+    - A follow-up brought in what E5b–E5d built after it was written: §7.2's visual editing
+      describes the live preview as it is (links with a chip and a dialog, hidden marks), the
+      bidi rules name the line-by-line blocks and isolated runs, and §7.4 the bytes a round trip
+      keeps. §10 mentions the live preview; §11's components question covers images too.
 
 Round-trip tests throughout: open, edit nothing, save → the file is unchanged byte for byte; an
 edit changes only the edited characters.

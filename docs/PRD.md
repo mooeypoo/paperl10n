@@ -113,18 +113,29 @@ adding a plugin, not rewriting the app.
 - Frontmatter is part of the editable text today (M2: the whole file is edited as text). Later,
   it's edited as fields, with per-field "translatable or keep as-is" rules set by the plugin.
 - Toggle between raw Markdown and a rendered preview per pane. Custom components get a placeholder
-  render.
+  render (planned).
 - RTL editing: correct caret movement with mixed-direction text, and Markdown syntax that stays
   legible. Prose lines take the pane's direction (or their own, per line), code and frontmatter
-  lines are LTR, and inline syntax is isolated so it can't reorder the sentence around it.
-- **Visual (rendered) editing (planned, soon after M2):** translators edit sections, or the full
-  page, as formatted text instead of writing Markdown by hand. Formatting and especially **links
-  are inserted with controls**, not typed syntax. This matters most in RTL: a raw
-  `[text](url)` in the middle of a Hebrew or Arabic sentence can visually reorder the sentence,
-  because of the bidi algorithm. The editor isolates link targets and inline syntax from the
-  surrounding text so that can't happen. Markdown stays the file format: visual edits become
-  minimal Markdown changes, under the same round-trip guarantee. It grows as live-preview
-  decorations on the M2 Markdown editor, not as a separate rich-text editor.
+  lines are LTR, and inline syntax is isolated so it can't reorder the sentence around it. HTML
+  and component blocks, tables, and `:::` fences read line by line; inline code, URLs, and tags
+  are each one left-to-right run.
+- **Visual editing, as live preview:** translators edit sections, or the full page, as formatted
+  text instead of writing Markdown by hand. Formatting and especially **links are inserted with
+  controls**, not typed syntax. This matters most in RTL: a raw `[text](url)` in the middle of a
+  Hebrew or Arabic sentence can visually reorder the sentence, because of the bidi algorithm. The
+  editor isolates link targets and inline syntax from the surrounding text so that can't happen.
+  Markdown stays the file format: visual edits become minimal Markdown changes, under the same
+  round-trip guarantee. It grows as live-preview decorations on the M2 Markdown editor, not as a
+  separate rich-text editor. Built so far (M2):
+  - Away from the caret, Markdown that only says how text looks is hidden: a link shows as its
+    text and a small link chip; `**`, `_`, `~~`, inline code's backticks, and a heading's `#`s are
+    hidden, and the text keeps its look. Where the caret or a selection touches an element, its
+    Markdown shows again.
+  - Links are edited in a dialog, opened from the chip or with Ctrl/Cmd+K (which also adds a
+    link): the text in the pane's language, the target always left to right. Applying changes
+    only what changed.
+  - Structure (lists, quotes, tables, code fences), HTML, and components stay as written. Images
+    and components may get previews later (see §11).
 
 ### 7.3 Message catalog editor (banana-i18n first)
 - A list or table of messages: key · source · target · status, with search and filters.
@@ -144,7 +155,8 @@ adding a plugin, not rewriting the app.
 - **Leaving with unsaved changes** (another page, project, or target language, or closing the
   window) asks first: save, don't save, or stay.
 - Round-trip guarantee: a file that wasn't edited is never rewritten. An edited file changes only
-  where it was edited. Saving text identical to the file writes nothing.
+  where it was edited, keeping its line endings, byte order mark, and final newline. Saving text
+  identical to the file writes nothing.
 - **External changes** (git pull, another editor) are checked on save: a file that changed on disk
   since editing started is never overwritten silently. Paper Lion asks: keep editing, reload the
   file (dropping the edits), or overwrite it with the edits. Watching files for changes while
@@ -187,7 +199,9 @@ Principles:
   discussion first: `docs/plan/M1-languages.md`), list pairs with status, and show a static
   split view.
 - **M2: Edit and save longform.** Seed from source, edit the target, and save with round-trip safety.
-  Done; decisions and step notes in `docs/plan/M2-editing.md`.
+  Done, including the first live-preview steps (links with a chip and a dialog; emphasis, code,
+  and heading marks hidden away from the caret). Decisions and step notes in
+  `docs/plan/M2-editing.md`.
 - **M3: Sections, changes, and hints.** Section view with per-section status and progress, the
   full-page view, source-change highlighting (needs the outdated-detection decision below),
   preservation hints, the length comparison, and loose scroll sync.
@@ -205,8 +219,8 @@ Principles:
   sections are paired, and the text within them is free.
 - **Section split level:** default to the document's top section level, but how should a document
   with uneven heading levels, or with long sections that have no subheadings, be handled?
-- **Custom components in Markdown** (Vue in VitePress, MDX-like in Astro): how much preview is
-  worth building?
+- **Custom components and images in the live preview** (Vue in VitePress, MDX-like in Astro):
+  chips, thumbnails, or a placeholder render? How much preview is worth building?
 - **Git awareness:** show diffs and branch info, or stay out of git entirely?
 - **More than one target:** a three-pane view (source + two targets) someday?
 - **Assistive translation:** an optional, pluggable MT or LLM suggestion provider behind a port, off
