@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -17,6 +17,20 @@ describe('nodeProjectOpener', () => {
     roots.push(parent);
     const opened = await nodeProjectOpener.open(parent);
     expect(opened.ok && opened.value.name).toBe(parent.split('/').at(-1));
+  });
+
+  it('locates a folder by its real path, so a link to it shares its drafts', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'paperl10n-opener-'));
+    roots.push(parent);
+    await mkdir(join(parent, 'docs'));
+    await symlink(join(parent, 'docs'), join(parent, 'link'));
+    const direct = await nodeProjectOpener.open(join(parent, 'docs'));
+    const linked = await nodeProjectOpener.open(join(parent, 'link'));
+    const real = await realpath(join(parent, 'docs'));
+    expect([direct.ok && direct.value.location, linked.ok && linked.value.location]).toEqual([
+      real,
+      real,
+    ]);
   });
 
   it.each<[string, (parent: string) => Promise<string>, string]>([

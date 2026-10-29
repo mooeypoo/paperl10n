@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type {
   ChooseTargetLocaleError,
+  DraftError,
   ListSourceDocumentsError,
   OpenProjectError,
   ReadDocumentPairError,
@@ -15,7 +16,8 @@ export type AppError =
   | ReadDocumentPairError
   | TargetLanguagesError
   | ChooseTargetLocaleError
-  | SaveDocumentError;
+  | SaveDocumentError
+  | DraftError;
 
 /** Turns a use-case error into the plain DTO the UI shows a message for. Exhaustive by lint. */
 export function toErrorDto(error: AppError): ErrorDto {
@@ -30,6 +32,7 @@ export function toErrorDto(error: AppError): ErrorDto {
     case 'workspace.config-missing':
     case 'workspace.unknown-project':
     case 'workspace.no-target-locale':
+    case 'workspace.draft-unwritable':
       return dto();
     case 'workspace.unknown-language':
     case 'workspace.target-is-source':

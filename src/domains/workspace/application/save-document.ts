@@ -2,6 +2,8 @@
 import type { FileAccessError, FormatError } from '#domains/formats';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
+import { draftKey } from './drafts.ts';
+import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import type { FileWriteError } from './ports/project-writer.ts';
 
@@ -35,9 +37,14 @@ export type SaveDocument = (
  * Saves a page's translation (for the project's target locale) atomically, creating missing
  * folders. Two guarantees (PRD §7.4): text that equals the file is never written (`written:
  * false`), and a file that changed on disk since editing started (git pull, another editor) is
- * never overwritten: that's `workspace.document-changed`, and the caller decides.
+ * never overwritten: that's `workspace.document-changed`, and the caller decides. Once the file
+ * holds the text, the page's draft is forgotten (if that fails, the draft matches the file, and
+ * reading the page drops it).
  */
-export function createSaveDocument(deps: { readonly sessions: ProjectSessions }): SaveDocument {
+export function createSaveDocument(deps: {
+  readonly sessions: ProjectSessions;
+  readonly drafts: DraftStore;
+}): SaveDocument {
   return async (projectId, { key, text, base }) => {
     const project = deps.sessions.get(projectId);
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
@@ -57,10 +64,18 @@ export function createSaveDocument(deps: { readonly sessions: ProjectSessions })
     }
     const onDisk = current.ok ? current.value : null;
     if (onDisk !== base) return err({ code: 'workspace.document-changed', path: path.value });
-    if (onDisk === text) return ok({ path: path.value, written: false });
+    const forgetDraft = async () => {
+      const draft = draftKey(project, key);
+      if (draft !== null) await deps.drafts.remove(draft);
+    };
+    if (onDisk === text) {
+      await forgetDraft();
+      return ok({ path: path.value, written: false });
+    }
 
     const written = await project.writer.writeText(path.value, text, { createFolders: true });
     if (!written.ok) return err({ code: 'workspace.document-unwritable', cause: written.error });
+    await forgetDraft();
     return ok({ path: path.value, written: true });
   };
 }

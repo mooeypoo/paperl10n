@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { InMemoryProjectFiles, type FileTree } from '#domain-testing/formats';
 import { err, ok, type Result } from '#kernel/result';
+import type { DraftStore } from '../application/ports/draft-store.ts';
 import type { FolderPicker } from '../application/ports/folder-picker.ts';
 import type {
   FolderUnavailable,
@@ -48,6 +49,14 @@ export class FakeProjectFilesOpener implements ProjectFilesOpener {
         .at(-1) ?? folder;
     const files = new InMemoryProjectFiles(tree);
     this.opened.set(folder, files);
-    return Promise.resolve(ok({ files, writer: files, name }));
+    return Promise.resolve(ok({ files, writer: files, name, location: folder }));
   }
 }
+
+/** A draft store whose storage is gone: every call fails. */
+export const unavailableDraftStore: DraftStore = {
+  get: () => Promise.resolve(err({ code: 'drafts.unavailable' })),
+  put: () => Promise.resolve(err({ code: 'drafts.unavailable' })),
+  remove: () => Promise.resolve(err({ code: 'drafts.unavailable' })),
+  documents: () => Promise.resolve(err({ code: 'drafts.unavailable' })),
+};

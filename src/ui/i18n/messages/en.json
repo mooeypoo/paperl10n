@@ -72,5 +72,6 @@
   "paperl10n-status-unsaved": "Unsaved changes",
   "paperl10n-unsaved-title": "Save your changes?",
   "paperl10n-unsaved-message": "Your changes to the translation of $1 aren't saved yet.",
-  "paperl10n-discard-changes": "Don't save"
+  "paperl10n-discard-changes": "Don't save",
+  "paperl10n-error-workspace-draft-unwritable": "Your unsaved changes couldn't be kept as a draft. They're still here: save them to keep them."
 }

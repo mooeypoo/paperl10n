@@ -15,6 +15,11 @@ export interface OpenedFolder {
   readonly writer: ProjectWriter;
   /** The folder's display name. */
   readonly name: string;
+  /**
+   * The folder's lasting identity, the same each time it's opened (its real path on disk). Drafts
+   * are kept under it. Main-process only: it never goes to the renderer.
+   */
+  readonly location: string;
 }
 
 /** Opens a folder the user chose as the project's files. */

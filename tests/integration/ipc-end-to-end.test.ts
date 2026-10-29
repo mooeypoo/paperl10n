@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FakeFolderPicker } from '#domain-testing/workspace';
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
+import { nodeDraftStore } from '#adapters/workspace/node-draft-store';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
 import type { ApiMethod, PaperLionApi } from '#ipc-contract';
 import { createAppApi } from '#app/create-app-api';
@@ -43,12 +44,26 @@ beforeAll(async () => {
 
 type Listener = (event: IpcEvent, ...args: unknown[]) => Promise<unknown>;
 
-/** The renderer's API, wired to main's handlers through a cloning "IPC". */
-function rendererApi(folder = project): { api: PaperLionApi; rejections: string[] } {
+/** A fresh app-data drafts folder (inside a temporary folder that's cleaned up). */
+async function draftsFolder(): Promise<string> {
+  const folder = await mkdtemp(join(tmpdir(), 'paperl10n-ipc-drafts-'));
+  copies.push(folder);
+  return join(folder, 'drafts');
+}
+
+/**
+ * The renderer's API, wired to main's handlers through a cloning "IPC". Each call is a new app
+ * session; passing the same drafts folder is like restarting the app.
+ */
+function rendererApi(
+  folder = project,
+  drafts = join(tmpdir(), `paperl10n-ipc-unused-${randomUUID()}`),
+): { api: PaperLionApi; rejections: string[] } {
   const app = createAppApi({
     folderPicker: new FakeFolderPicker(folder),
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(randomUUID),
+    drafts: nodeDraftStore(drafts),
     parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: (method, thrown) => {
@@ -113,8 +128,15 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
           sourcePath: 'en/guide/getting-started.md',
           targetPath: 'he/guide/getting-started.md',
           targetExists: false,
+          hasDraft: false,
         },
-        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
+        {
+          key: 'index',
+          sourcePath: 'en/index.md',
+          targetPath: 'he/index.md',
+          targetExists: true,
+          hasDraft: false,
+        },
       ],
     });
   },
@@ -187,6 +209,46 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       ok: false,
       error: { code: 'workspace.document-changed', params: { file: 'he/index.md' }, details: [] },
     });
+  },
+  saveDraft: async () => {
+    const folder = await copyOfBasic();
+    const drafts = await draftsFolder();
+    const first = rendererApi(folder, drafts).api;
+    const before = await readFile(join(folder, 'he/index.md'), 'utf8');
+    const projectId = await openBasic(first);
+    const text = `${before}טיוטה ✓\r\n`;
+    expect(await first.saveDraft({ projectId, key: 'index', text, base: before })).toEqual({
+      ok: true,
+      value: null,
+    });
+    // The project folder is untouched: drafts live in the app's data.
+    expect(await readFile(join(folder, 'he/index.md'), 'utf8')).toBe(before);
+
+    // After a restart, the page lists as drafted and opens with its draft; saving forgets it.
+    const second = rendererApi(folder, drafts).api;
+    const reopened = await openBasic(second);
+    const listed = await second.listSourceDocuments({ projectId: reopened });
+    expect(listed.ok && listed.value.map((entry) => [entry.key, entry.hasDraft])).toEqual([
+      ['guide/getting-started', false],
+      ['index', true],
+    ]);
+    const pair = await second.readDocumentPair({ projectId: reopened, key: 'index' });
+    expect(pair.ok && pair.value.draft).toEqual({ text, base: before });
+    await second.saveDocument({ projectId: reopened, key: 'index', text, base: before });
+    const after = await second.readDocumentPair({ projectId: reopened, key: 'index' });
+    expect(after.ok && after.value.draft).toBeNull();
+  },
+  discardDraft: async () => {
+    const drafts = await draftsFolder();
+    const { api } = rendererApi(project, drafts);
+    const projectId = await openBasic(api);
+    await api.saveDraft({ projectId, key: 'guide/getting-started', text: 'x', base: null });
+    expect(await api.discardDraft({ projectId, key: 'guide/getting-started' })).toEqual({
+      ok: true,
+      value: null,
+    });
+    const pair = await api.readDocumentPair({ projectId, key: 'guide/getting-started' });
+    expect(pair.ok && pair.value.draft).toBeNull();
   },
   chooseTargetLocale: async () => {
     const folder = await copyOfBasic();

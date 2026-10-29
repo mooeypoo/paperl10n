@@ -5,12 +5,15 @@ import type { MarkdownParser } from '#domains/document';
 import { createFormatRegistry, type PluginModule, type RegistryError } from '#domains/formats';
 import {
   createChooseTargetLocale,
+  createDiscardDraft,
   createListSourceDocuments,
   createOpenProject,
   createReadDocumentPair,
   createSaveDocument,
+  createSaveDraft,
   createSearchTargetLanguages,
   createSuggestTargetLanguages,
+  type DraftStore,
   type FolderPicker,
   type ProjectFilesOpener,
   type ProjectSessions,
@@ -24,6 +27,8 @@ export interface AppDependencies {
   readonly folderPicker: FolderPicker;
   readonly opener: ProjectFilesOpener;
   readonly sessions: ProjectSessions;
+  /** Where unsaved edits are kept: the app's data folder (Electron), or memory (the harness). */
+  readonly drafts: DraftStore;
   readonly parser: MarkdownParser;
   readonly plugins: readonly PluginModule[];
   readonly onUnexpected: OnUnexpected;
@@ -40,12 +45,21 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
       registry: registry.value,
       sessions: deps.sessions,
     }),
-    listSourceDocuments: createListSourceDocuments({ sessions: deps.sessions }),
-    readDocumentPair: createReadDocumentPair({ sessions: deps.sessions, parser: deps.parser }),
+    listSourceDocuments: createListSourceDocuments({
+      sessions: deps.sessions,
+      drafts: deps.drafts,
+    }),
+    readDocumentPair: createReadDocumentPair({
+      sessions: deps.sessions,
+      parser: deps.parser,
+      drafts: deps.drafts,
+    }),
     suggestTargetLanguages: createSuggestTargetLanguages({ sessions: deps.sessions }),
     searchTargetLanguages: createSearchTargetLanguages({ sessions: deps.sessions }),
     chooseTargetLocale: createChooseTargetLocale({ sessions: deps.sessions }),
-    saveDocument: createSaveDocument({ sessions: deps.sessions }),
+    saveDocument: createSaveDocument({ sessions: deps.sessions, drafts: deps.drafts }),
+    saveDraft: createSaveDraft({ sessions: deps.sessions, drafts: deps.drafts }),
+    discardDraft: createDiscardDraft({ sessions: deps.sessions, drafts: deps.drafts }),
   });
   return ok(guardApi(handlers, deps.onUnexpected));
 }

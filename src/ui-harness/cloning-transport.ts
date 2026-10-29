@@ -22,6 +22,8 @@ export function cloningTransport(api: PaperLionApi): PaperLionApi {
     searchTargetLanguages: (request) =>
       crossing(() => api.searchTargetLanguages(structuredClone(request))),
     saveDocument: (request) => crossing(() => api.saveDocument(structuredClone(request))),
+    saveDraft: (request) => crossing(() => api.saveDraft(structuredClone(request))),
+    discardDraft: (request) => crossing(() => api.discardDraft(structuredClone(request))),
     chooseTargetLocale: (request) =>
       crossing(() => api.chooseTargetLocale(structuredClone(request))),
   };

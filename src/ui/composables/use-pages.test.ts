@@ -9,6 +9,7 @@ const doc = (key: string): SourceDocumentDto => ({
   sourcePath: `docs/en/${key}.md`,
   targetPath: `docs/he/${key}.md`,
   targetExists: true,
+  hasDraft: false,
 });
 const list = [doc('index'), doc('guide/getting-started'), doc('guide/configuration'), doc('about')];
 

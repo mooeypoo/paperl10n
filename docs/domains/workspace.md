@@ -60,24 +60,27 @@ problems are reported at once (`workspace.config-invalid`, with a list of `{ fie
 
 ### `listSourceDocuments(projectId)`
 
-`createListSourceDocuments({ sessions })`. It returns each source document with its key, source
-path, target path for the project's target locale, and whether that translation file exists
-(`targetExists`). Errors: `workspace.unknown-project`, `workspace.no-target-locale` (no target
+`createListSourceDocuments({ sessions, drafts })`. It returns each source document with its key,
+source path, target path for the project's target locale, whether that translation file exists
+(`targetExists`), and whether it has a draft (`hasDraft`; drafts that can't be listed count as
+none). Errors: `workspace.unknown-project`, `workspace.no-target-locale` (no target
 chosen yet), or a `FormatError` from the layout.
 
 ### `readDocumentPair(projectId, key)`
 
-`createReadDocumentPair({ sessions, parser })`. It finds the page by key among the layout's source
+`createReadDocumentPair({ sessions, parser, drafts })`. It finds the page by key among the layout's source
 documents, reads the source and the translation, and parses both with the `MarkdownParser` port
 (`#domains/document`; `.mdx` files with MDX tolerance, and each read document says `mdx` so the
-editor parses it the same way). A translation that doesn't exist yet is `null`, not an error. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+editor parses it the same way). A translation that doesn't exist yet is `null`, not an error. The
+page's draft comes along as `draft` (`{ text, base }`), unless it holds what the file already says
+(then it's forgotten); a draft that can't be read counts as none, so the page still opens. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 `workspace.unknown-document` (the key
 isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
 file that vanished), or a `FormatError`.
 
 ### `saveDocument(projectId, { key, text, base })`
 
-`createSaveDocument({ sessions })`. Writes a page's translation, for the project's target locale,
+`createSaveDocument({ sessions, drafts })`. Writes a page's translation, for the project's target locale,
 exactly as given, through the `ProjectWriter` (atomic; missing folders created, so a new
 language's first page can be saved). `base` is the translation as it was when editing started, or
 `null` when it didn't exist (a page seeded from its source). Two guarantees from PRD §7.4:
@@ -87,9 +90,23 @@ language's first page can be saved). `base` is the translation as it was when ed
   another editor, a deleted file, or a file created since a seeded page was opened), nothing is
   written and the result is `workspace.document-changed`. The UI decides what to offer.
 
+Once the file holds the text (written, or already there), the page's draft is forgotten. A failed
+save keeps it.
+
 Errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-document`,
 `workspace.document-changed`, `workspace.document-unreadable`, `workspace.document-unwritable`
 (with the file problem), or a `FormatError`.
+
+### Drafts: `saveDraft(projectId, { key, text, base })`, `discardDraft(projectId, key)`
+
+`createSaveDraft` and `createDiscardDraft` (`{ sessions, drafts }`). A **draft** is a page's unsaved
+edits (the editor's text and the `base` it started from), kept in the app's data folder, never in
+the project, so they survive a crash or a restart (M2 decision). It's keyed by the project's
+**location** (its real folder path, from the opener; it never reaches the renderer), the target
+locale, and the page key, so it belongs to one translation of one page. The key only has to be
+well formed (`documentKey`), not listed: checking the listing would read the project on every
+autosave. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+`workspace.unknown-document` (a malformed key), `workspace.draft-unwritable`.
 
 ### Target languages: `suggestTargetLanguages`, `searchTargetLanguages`, `chooseTargetLocale`
 
@@ -131,12 +148,13 @@ the two files is workspace's job: it holds the open project's files and layout.
 | Port | Implemented by | Notes |
 |---|---|---|
 | `FolderPicker` | `createDialogFolderPicker` (`#adapters/workspace/dialog-folder-picker`, with Electron's dialog injected) | `pick(): Promise<string \| null>`; contract: `describeFolderPickerContract` |
-| `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files, a `ProjectWriter`, and the folder's display name; contract: `describeProjectFilesOpenerContract` |
+| `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files, a `ProjectWriter`, the folder's display name, and its `location` (its real path, the same every time it opens); contract: `describeProjectFilesOpenerContract` |
+| `DraftStore` | `nodeDraftStore(folder)` (`#adapters/workspace/node-draft-store`, `userData/drafts/` in Electron); `InMemoryDraftStore` (tests, UI harness) | `get`, `put`, `remove`, `documents(project, locale)`. On disk: one JSON file per draft, named by a SHA-256 of its key, written atomically, folder `0700` and files `0600`. A file that isn't a draft for the key asked for (corrupt, another version, a collision) counts as none. Contract: `describeDraftStoreContract` |
 | `ProjectWriter` | `nodeProjectWriter` (`#adapters/workspace/node-project-writer`); `InMemoryProjectFiles` (tests, UI harness) | `writeText(path, text, { createFolders })`, atomic: a temporary file next to the target, flushed, then renamed over it. Writes through a symlink only to a file inside the project; keeps an existing file's permissions. With `createFolders`, missing folders are created one at a time, each checked to be a real folder inside the project (`files.not-a-directory` when a file is in the way). Only the app writes; plugins only read. Contract: `describeProjectWriterContract` |
 | `ProjectSessions` | `InMemoryProjectSessions` (`#adapters/workspace/in-memory-project-sessions`) | random UUID ids; `update` replaces a stored project (choosing a target); contract: `describeProjectSessionsContract` |
 
-Test support (`#domain-testing/workspace`): `FakeFolderPicker`, `FakeProjectFilesOpener`, and the
-four contract suites, which run against the fakes and every real implementation. Use-case tests also use `fakeDocumentPlugin` from
+Test support (`#domain-testing/workspace`): `FakeFolderPicker`, `FakeProjectFilesOpener`, `unavailableDraftStore`, and the
+five contract suites, which run against the fakes and every real implementation. Use-case tests also use `fakeDocumentPlugin` from
 `#domain-testing/formats`.
 
 ## Invariants

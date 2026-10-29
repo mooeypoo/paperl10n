@@ -128,6 +128,10 @@ const cases: [AppError, ErrorDto][] = [
     },
   ],
   [
+    { code: 'workspace.draft-unwritable' },
+    { code: 'workspace.draft-unwritable', params: {}, details: [] },
+  ],
+  [
     { code: 'workspace.no-target-locale' },
     { code: 'workspace.no-target-locale', params: {}, details: [] },
   ],

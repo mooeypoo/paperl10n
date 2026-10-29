@@ -27,8 +27,15 @@ export const documents: readonly SourceDocumentDto[] = [
     sourcePath: 'en/guide/getting-started.md',
     targetPath: 'he/guide/getting-started.md',
     targetExists: false,
+    hasDraft: false,
   },
-  { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
+  {
+    key: 'index',
+    sourcePath: 'en/index.md',
+    targetPath: 'he/index.md',
+    targetExists: true,
+    hasDraft: false,
+  },
 ];
 
 export function error(
@@ -81,6 +88,7 @@ export function pairFor(
     key,
     source: doc(`en/${key}.md`, source),
     target: target === null ? null : doc(`he/${key}.md`, target),
+    draft: null,
   };
 }
 
@@ -97,6 +105,8 @@ export function fakeClient(
     choose?: Result<LocaleDto, ErrorDto>;
     /** The answer to saving a page (default: written to he/<key>.md). */
     save?: Result<{ path: string; written: boolean }, ErrorDto>;
+    /** The answer to keeping a draft (default: kept). */
+    saveDraft?: Result<null, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -151,6 +161,16 @@ export function fakeClient(
       return Promise.resolve(
         answers.save ?? { ok: true, value: { path: `he/${key}.md`, written: true } },
       );
+    },
+    saveDraft: ({ projectId, key, text, base }) => {
+      calls.push(
+        `saveDraft:${projectId}:${key}:${JSON.stringify(text)}:${base === null ? 'new' : JSON.stringify(base)}`,
+      );
+      return Promise.resolve(answers.saveDraft ?? { ok: true, value: null });
+    },
+    discardDraft: ({ projectId, key }) => {
+      calls.push(`discardDraft:${projectId}:${key}`);
+      return Promise.resolve({ ok: true, value: null });
     },
     chooseTargetLocale: ({ projectId, language: tag }) => {
       calls.push(`chooseTargetLocale:${projectId}:${tag}`);

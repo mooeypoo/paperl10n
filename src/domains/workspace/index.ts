@@ -61,3 +61,18 @@ export {
   type SaveDocumentRequest,
 } from './application/save-document.ts';
 export type { FileWriteError, ProjectWriter } from './application/ports/project-writer.ts';
+export type {
+  Draft,
+  DraftKey,
+  DraftStore,
+  DraftStoreError,
+} from './application/ports/draft-store.ts';
+export type { OpenedFolder } from './application/ports/project-files-opener.ts';
+export {
+  createDiscardDraft,
+  createSaveDraft,
+  type DiscardDraft,
+  type DraftError,
+  type SaveDraft,
+  type SaveDraftRequest,
+} from './application/drafts.ts';

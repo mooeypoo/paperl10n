@@ -142,6 +142,7 @@ describe('the app shell', () => {
               blocks: [{ kind: 'code', start: 0, end: 15 }],
               inline: [],
             },
+            draft: null,
           },
         },
       },

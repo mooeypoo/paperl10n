@@ -23,6 +23,7 @@ export const errorMessageParams: Readonly<Record<ErrorCode, readonly string[]>> 
   'workspace.document-unreadable': ['file', 'problem'],
   'workspace.document-changed': ['file'],
   'workspace.document-unwritable': ['file', 'problem'],
+  'workspace.draft-unwritable': [],
   'formats.invalid-options': ['formatId', 'reason'],
   'formats.unsupported-project': ['formatId', 'reason'],
   'formats.file-access': ['formatId', 'file', 'problem'],

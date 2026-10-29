@@ -3,6 +3,8 @@ import type { FileAccessError, FormatError, ProjectFiles } from '#domains/format
 import type { DocumentKey, MarkdownParser, ParsedDocument } from '#domains/document';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
+import { draftKey } from './drafts.ts';
+import type { Draft, DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 
 export interface ReadDocument {
@@ -17,6 +19,8 @@ export interface DocumentPair {
   readonly source: ReadDocument;
   /** `null` when the translation file doesn't exist yet. */
   readonly target: ReadDocument | null;
+  /** Unsaved edits to the translation, kept from an earlier session (or before a crash). */
+  readonly draft: Draft | null;
 }
 
 export type ReadDocumentPairError =
@@ -51,11 +55,14 @@ async function read(
 
 /**
  * Reads a page's source document and its translation for the project's target locale, and parses
- * both. A missing translation is `null`, not an error: it just hasn't been started.
+ * both. A missing translation is `null`, not an error: it just hasn't been started. The page's
+ * draft comes along, unless it holds what the file already says (then it's forgotten). A draft
+ * that can't be read counts as none: the page still opens.
  */
 export function createReadDocumentPair(deps: {
   readonly sessions: ProjectSessions;
   readonly parser: MarkdownParser;
+  readonly drafts: DraftStore;
 }): ReadDocumentPair {
   return async (projectId, key) => {
     const project = deps.sessions.get(projectId);
@@ -82,6 +89,14 @@ export function createReadDocumentPair(deps: {
     }
     const target = await read(project.files, targetPath.value, deps.parser);
     if (!target.ok) return target;
-    return ok({ key: document.key, source: source.value, target: target.value });
+
+    let draft: Draft | null = null;
+    const keyOfDraft = draftKey(project, document.key);
+    const kept = keyOfDraft === null ? null : await deps.drafts.get(keyOfDraft);
+    if (keyOfDraft !== null && kept?.ok === true && kept.value !== null) {
+      if (kept.value.text === target.value?.document.text) await deps.drafts.remove(keyOfDraft);
+      else draft = kept.value;
+    }
+    return ok({ key: document.key, source: source.value, target: target.value, draft });
   };
 }

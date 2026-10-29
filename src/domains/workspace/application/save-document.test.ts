@@ -5,6 +5,7 @@ import { createFormatRegistry } from '#domains/formats';
 import { detects, fakeDocumentPlugin, type FileTree } from '#domain-testing/formats';
 import { projectPath } from '#kernel/project-path';
 import { err } from '#kernel/result';
+import { InMemoryDraftStore } from '../adapters/in-memory-draft-store.ts';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
 import { createOpenProject } from './open-project.ts';
@@ -22,6 +23,7 @@ async function opened(tree: FileTree = {}, settings: object = { targetLocale: 'h
     apiVersion: 2,
   });
   if (!registry.ok) throw new Error('test setup: registry');
+  const drafts = new InMemoryDraftStore();
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opener = new FakeProjectFilesOpener({
     '/p': {
@@ -50,7 +52,8 @@ async function opened(tree: FileTree = {}, settings: object = { targetLocale: 'h
     sessions,
     files,
     read,
-    save: createSaveDocument({ sessions }),
+    save: createSaveDocument({ sessions, drafts }),
+    drafts,
   };
 }
 
@@ -208,6 +211,28 @@ describe('saveDocument', () => {
     expect(await save(projectId, { key: 'index', text: 'x', base: null })).toEqual({
       ok: false,
       error: failure,
+    });
+  });
+
+  describe('and its draft', () => {
+    const draft = { project: '/p', locale: 'he', document: 'index' };
+
+    it('forgets the draft once the file holds the text, written or already there', async () => {
+      const { projectId, save, drafts } = await opened();
+      await drafts.put(draft, { text: 'x', base: '# בית\r\n' });
+      await save(projectId, { key: 'index', text: 'x', base: '# בית\r\n' });
+      expect(await drafts.get(draft)).toEqual({ ok: true, value: null });
+      await drafts.put(draft, { text: 'x', base: 'x' });
+      expect((await save(projectId, { key: 'index', text: 'x', base: 'x' })).ok).toBe(true);
+      expect(await drafts.get(draft)).toEqual({ ok: true, value: null });
+    });
+
+    it('keeps the draft when saving fails', async () => {
+      const { projectId, save, drafts } = await opened();
+      await drafts.put(draft, { text: 'mine', base: 'stale' });
+      const refused = await save(projectId, { key: 'index', text: 'mine', base: 'stale' });
+      expect(refused.ok).toBe(false);
+      expect(await drafts.get(draft)).toEqual({ ok: true, value: { text: 'mine', base: 'stale' } });
     });
   });
 });

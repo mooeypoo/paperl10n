@@ -4,14 +4,24 @@ import { describe, expect, it } from 'vitest';
 import { createFormatRegistry, type PluginModule } from '#domains/formats';
 import { detects, fakeDocumentPlugin } from '#domain-testing/formats';
 import { err, ok } from '#kernel/result';
+import { InMemoryDraftStore } from '../adapters/in-memory-draft-store.ts';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
-import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
+import {
+  FakeFolderPicker,
+  FakeProjectFilesOpener,
+  unavailableDraftStore,
+} from '../testing/fakes.ts';
+import type { DraftStore } from './ports/draft-store.ts';
 import { createChooseTargetLocale } from './choose-target-locale.ts';
 import { createListSourceDocuments } from './list-source-documents.ts';
 import { createOpenProject } from './open-project.ts';
 
 /** Opens a project through the real use case, so the session is exactly what the app stores. */
-async function openWith(plugin: PluginModule, settings: object = { targetLocale: 'he' }) {
+async function openWith(
+  plugin: PluginModule,
+  settings: object = { targetLocale: 'he' },
+  drafts: DraftStore = new InMemoryDraftStore(),
+) {
   const registry = createFormatRegistry([plugin], { apiVersion: 2 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
@@ -30,7 +40,8 @@ async function openWith(plugin: PluginModule, settings: object = { targetLocale:
   })();
   if (!opened.ok || opened.value === null) throw new Error(`test setup: ${JSON.stringify(opened)}`);
   return {
-    listSourceDocuments: createListSourceDocuments({ sessions }),
+    listSourceDocuments: createListSourceDocuments({ sessions, drafts }),
+    drafts,
     projectId: opened.value.projectId,
     sessions,
   };
@@ -49,8 +60,15 @@ describe('listSourceDocuments', () => {
           sourcePath: 'en/guide/intro.md',
           targetPath: 'he/guide/intro.md',
           targetExists: false,
+          hasDraft: false,
         },
-        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
+        {
+          key: 'index',
+          sourcePath: 'en/index.md',
+          targetPath: 'he/index.md',
+          targetExists: true,
+          hasDraft: false,
+        },
       ],
     });
   });
@@ -126,5 +144,35 @@ describe('listSourceDocuments', () => {
       ok: false,
       error: { code: 'formats.unsupported-project', reason: 'no target', formatId: 'format-fake' },
     });
+  });
+
+  it("says which pages have a draft (this project's, in its target language)", async () => {
+    const plugin = fakeDocumentPlugin('format-fake', detects('likely'));
+    const { listSourceDocuments, projectId, drafts } = await openWith(plugin);
+    await drafts.put({ project: '/p', locale: 'he', document: 'index' }, { text: 'x', base: null });
+    await drafts.put(
+      { project: '/p', locale: 'ar', document: 'guide/intro' },
+      { text: 'x', base: null },
+    );
+    await drafts.put(
+      { project: '/q', locale: 'he', document: 'guide/intro' },
+      { text: 'x', base: null },
+    );
+    const listed = await listSourceDocuments(projectId);
+    expect(listed.ok && listed.value.map((entry) => [entry.key, entry.hasDraft])).toEqual([
+      ['guide/intro', false],
+      ['index', true],
+    ]);
+  });
+
+  it('still lists the pages when drafts cannot be listed', async () => {
+    const plugin = fakeDocumentPlugin('format-fake', detects('likely'));
+    const { listSourceDocuments, projectId } = await openWith(
+      plugin,
+      undefined,
+      unavailableDraftStore,
+    );
+    const listed = await listSourceDocuments(projectId);
+    expect(listed.ok && listed.value.map((entry) => entry.hasDraft)).toEqual([false, false]);
   });
 });

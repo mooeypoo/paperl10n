@@ -8,8 +8,14 @@ import { detects, fakeDocumentPlugin, type FileTree } from '#domain-testing/form
 import { err, ok } from '#kernel/result';
 import { localeId } from '#kernel/locale-id';
 import { projectPath } from '#kernel/project-path';
+import { InMemoryDraftStore } from '../adapters/in-memory-draft-store.ts';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
-import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
+import {
+  FakeFolderPicker,
+  FakeProjectFilesOpener,
+  unavailableDraftStore,
+} from '../testing/fakes.ts';
+import type { DraftStore } from './ports/draft-store.ts';
 import { createOpenProject } from './open-project.ts';
 import { createReadDocumentPair } from './read-document-pair.ts';
 
@@ -18,6 +24,7 @@ const config = { 'paperl10n.config.json': JSON.stringify({ targetLocale: 'he' })
 async function openWith(
   tree: FileTree,
   plugin = fakeDocumentPlugin('format-fake', detects('likely')),
+  drafts: DraftStore = new InMemoryDraftStore(),
 ) {
   const registry = createFormatRegistry([plugin], { apiVersion: 2 });
   if (!registry.ok) throw new Error('test setup');
@@ -31,7 +38,8 @@ async function openWith(
   if (!opened.ok || opened.value === null) throw new Error(`test setup: ${JSON.stringify(opened)}`);
   const parser = new FakeMarkdownParser();
   return {
-    read: createReadDocumentPair({ sessions, parser }),
+    read: createReadDocumentPair({ sessions, parser, drafts }),
+    drafts,
     parser,
     projectId: opened.value.projectId,
   };
@@ -92,6 +100,7 @@ describe('readDocumentPair', () => {
             inline: [],
           },
         },
+        draft: null,
       },
     });
   });
@@ -202,6 +211,48 @@ describe('readDocumentPair', () => {
     expect(await target.read(target.projectId, 'index')).toEqual({
       ok: false,
       error: { code: 'formats.unsupported-project', reason: 'no target', formatId: 'format-fake' },
+    });
+  });
+
+  describe('with a draft', () => {
+    const draftOf = (document: string) => ({ project: '/p', locale: 'he', document });
+    const tree = { 'en/index.md': 'Home\n', 'he/index.md': 'בית\n', 'en/about.md': 'About\n' };
+
+    it('brings the draft along: for an existing translation, and for a new one', async () => {
+      const { read, drafts, projectId } = await openWith(tree);
+      await drafts.put(draftOf('index'), { text: 'בית!\n', base: 'בית\n' });
+      await drafts.put(draftOf('about'), { text: 'אודות\n', base: null });
+      const index = await read(projectId, 'index');
+      expect(index.ok && index.value.draft).toEqual({ text: 'בית!\n', base: 'בית\n' });
+      const about = await read(projectId, 'about');
+      expect(about.ok && [about.value.target, about.value.draft]).toEqual([
+        null,
+        { text: 'אודות\n', base: null },
+      ]);
+    });
+
+    it('forgets a draft that holds what the file already says', async () => {
+      const { read, drafts, projectId } = await openWith(tree);
+      await drafts.put(draftOf('index'), { text: 'בית\n', base: 'old' });
+      const pair = await read(projectId, 'index');
+      expect(pair.ok && pair.value.draft).toBeNull();
+      expect(await drafts.get(draftOf('index'))).toEqual({ ok: true, value: null });
+    });
+
+    it("ignores another language's draft", async () => {
+      const { read, drafts, projectId } = await openWith(tree);
+      await drafts.put({ ...draftOf('index'), locale: 'ar' }, { text: 'x', base: null });
+      const pair = await read(projectId, 'index');
+      expect(pair.ok && pair.value.draft).toBeNull();
+    });
+
+    it('still opens the page when drafts cannot be read', async () => {
+      const { read, projectId } = await openWith(tree, undefined, unavailableDraftStore);
+      const pair = await read(projectId, 'index');
+      expect(pair.ok && [pair.value.target?.document.text, pair.value.draft]).toEqual([
+        'בית\n',
+        null,
+      ]);
     });
   });
 });

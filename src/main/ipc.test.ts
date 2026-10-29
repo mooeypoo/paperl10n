@@ -44,6 +44,7 @@ function setup() {
           key: request.key,
           source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
           target: null,
+          draft: null,
         }),
       );
     },
@@ -58,6 +59,14 @@ function setup() {
     saveDocument: (request) => {
       calls.push(['saveDocument', request]);
       return Promise.resolve(ok({ path: 'he/k.md', written: true }));
+    },
+    saveDraft: (request) => {
+      calls.push(['saveDraft', request]);
+      return Promise.resolve(ok(null));
+    },
+    discardDraft: (request) => {
+      calls.push(['discardDraft', request]);
+      return Promise.resolve(ok(null));
     },
     chooseTargetLocale: (request) => {
       calls.push(['chooseTargetLocale', request]);
@@ -105,6 +114,12 @@ describe('registerApi', () => {
     });
     const save = { projectId: 'p1', key: 'k', text: 'שלום', base: null };
     expect(await send('saveDocument', trusted, save)).toMatchObject({ ok: true });
+    const draft = { projectId: 'p1', key: 'k', text: 'טיוטה', base: 'x' };
+    expect(await send('saveDraft', trusted, draft)).toEqual({ ok: true, value: null });
+    expect(await send('discardDraft', trusted, { projectId: 'p1', key: 'k' })).toEqual({
+      ok: true,
+      value: null,
+    });
     expect(calls).toEqual([
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
@@ -113,6 +128,8 @@ describe('registerApi', () => {
       ['searchTargetLanguages', search],
       ['chooseTargetLocale', choose],
       ['saveDocument', save],
+      ['saveDraft', draft],
+      ['discardDraft', { projectId: 'p1', key: 'k' }],
     ]);
   });
 
@@ -241,5 +258,28 @@ describe('argumentValidators', () => {
     ['an extra argument', [save, 'more'], false],
   ])('saveDocument: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.saveDocument(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a full request', [save], true],
+    ['a new translation (no base)', [{ ...save, base: null }], true],
+    ['no base field', [{ projectId: 'abc', key: 'k', text: 'x' }], false],
+    ['an empty key', [{ ...save, key: '' }], false],
+    ['a text over the limit', [{ ...save, text: 'x'.repeat(10_000_001) }], false],
+    ['a base over the limit', [{ ...save, base: 'x'.repeat(10_000_001) }], false],
+    ['a path instead of a key', [{ ...save, path: '/etc/passwd' }], false],
+    ['an extra argument', [save, 'more'], false],
+  ])('saveDraft: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.saveDraft(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a project id and a key', [{ projectId: 'abc', key: 'guide/intro' }], true],
+    ['no key', [{ projectId: 'abc' }], false],
+    ['an empty key', [{ projectId: 'abc', key: '' }], false],
+    ['a numeric key', [{ projectId: 'abc', key: 7 }], false],
+    ['an extra field', [{ projectId: 'abc', key: 'k', text: 'x' }], false],
+  ])('discardDraft: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.discardDraft(args)).toBe(valid);
   });
 });

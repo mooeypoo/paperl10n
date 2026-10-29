@@ -302,6 +302,7 @@ describe('openProject', () => {
             ok: true,
             value: {
               name: 'x',
+              location: '/x',
               files: {
                 list: (dir) =>
                   Promise.resolve({ ok: false, error: { code: 'files.unreadable', path: dir } }),

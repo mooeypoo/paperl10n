@@ -5,6 +5,7 @@ import type { PaperLionApi } from '#ipc-contract';
 import { createAppApi } from '#app/create-app-api';
 import { builtInPlugins } from '#app/plugins';
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
+import { InMemoryDraftStore } from '#adapters/workspace/in-memory-draft-store';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
 import { mountApp } from '#ui/mount';
 import type { App as VueApp } from 'vue';
@@ -26,6 +27,8 @@ export function createHarnessApi(fixtures: Fixtures, fixture: string): PaperLion
     folderPicker: fixturePicker(fixture),
     opener: fixtureOpener(fixtures),
     sessions: new InMemoryProjectSessions(() => crypto.randomUUID()),
+    // Drafts last until the page reloads (the harness never writes to disk).
+    drafts: new InMemoryDraftStore(),
     parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: (method, thrown) => {

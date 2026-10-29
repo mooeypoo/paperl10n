@@ -241,7 +241,8 @@ And for the work ahead:
 | Edits as text splices, frontmatter fields | `document/domain/` (+ a CST-preserving YAML library in `document/adapters/`) |
 | Segmentation into sections | `document/domain/`, over the existing block model |
 | Pairing by section, status (missing/draft/translated/outdated), source-change tracking | `translation/domain/` |
-| Drafts and sidecar state storage | a port in `translation/application/`, an adapter in `translation/adapters/` |
+| Drafts (unsaved edits) | done in M2: the `DraftStore` port in `workspace/application/`, adapters in `workspace/adapters/` (the use cases that need it are workspace's, so no new domain edge) |
+| Sidecar state (status, source-change tracking) | a port in `translation/application/`, an adapter in `translation/adapters/` |
 | Placeholder/plural validation | `catalog/domain/`, using the plugin's `placeholders.scan` |
 | Atomic file writes | a `ProjectWriter` port in `formats/application/`, an adapter beside `node-project-files` |
 | File watching (external changes) | a port in `workspace/application/`, an `fs.watch` adapter |

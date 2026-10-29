@@ -13,7 +13,13 @@ const summary: ProjectSummaryDto = {
 };
 
 const documents: SourceDocumentDto[] = [
-  { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
+  {
+    key: 'index',
+    sourcePath: 'en/index.md',
+    targetPath: 'he/index.md',
+    targetExists: true,
+    hasDraft: false,
+  },
 ];
 
 function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
@@ -27,12 +33,15 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
           key,
           source: { path: 'en/a.md', mdx: false, text: 'a', blocks: [], inline: [] },
           target: null,
+          draft: null,
         },
       }),
     suggestTargetLanguages: () =>
       Promise.resolve({ ok: true, value: { inProject: [], recent: [], suggested: [] } }),
     searchTargetLanguages: () => Promise.resolve({ ok: true, value: [] }),
     saveDocument: ({ key }) => Promise.resolve({ ok: true, value: { path: key, written: true } }),
+    saveDraft: () => Promise.resolve({ ok: true, value: null }),
+    discardDraft: () => Promise.resolve({ ok: true, value: null }),
     chooseTargetLocale: ({ language }) =>
       Promise.resolve({ ok: true, value: { id: language, direction: 'rtl' } }),
     ...overrides,

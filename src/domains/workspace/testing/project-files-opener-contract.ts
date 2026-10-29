@@ -52,6 +52,15 @@ export function describeProjectFilesOpenerContract(
       });
     });
 
+    it('gives the folder the same location each time it opens (drafts are kept under it)', async () => {
+      const { opener, folder } = await make(tree, 'my-docs');
+      const first = await opener.open(folder);
+      const second = await opener.open(folder);
+      if (!first.ok || !second.ok) throw new Error('expected the folder to open');
+      expect(first.value.location).not.toBe('');
+      expect(second.value.location).toBe(first.value.location);
+    });
+
     it('reports a missing folder as unavailable (not found)', async () => {
       const { opener, missing } = await make(tree, 'my-docs');
       expect(await opener.open(missing)).toEqual({

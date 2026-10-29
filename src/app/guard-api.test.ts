@@ -20,7 +20,15 @@ describe('guardApi', () => {
         openProject: () => Promise.resolve(ok(null)),
         listSourceDocuments: ({ projectId }) =>
           Promise.resolve(
-            ok([{ key: projectId, sourcePath: 'a', targetPath: 'b', targetExists: false }]),
+            ok([
+              {
+                key: projectId,
+                sourcePath: 'a',
+                targetPath: 'b',
+                targetExists: false,
+                hasDraft: false,
+              },
+            ]),
           ),
         readDocumentPair: ({ key }) =>
           Promise.resolve(
@@ -28,6 +36,7 @@ describe('guardApi', () => {
               key,
               source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
               target: null,
+              draft: null,
             }),
           ),
         suggestTargetLanguages: () =>
@@ -37,13 +46,15 @@ describe('guardApi', () => {
         chooseTargetLocale: ({ language }) =>
           Promise.resolve(ok({ id: language, direction: 'rtl' })),
         saveDocument: ({ key }) => Promise.resolve(ok({ path: key, written: false })),
+        saveDraft: () => Promise.resolve(ok(null)),
+        discardDraft: () => Promise.resolve(ok(null)),
       },
       onUnexpected,
     );
     expect(await api.openProject()).toEqual({ ok: true, value: null });
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual({
       ok: true,
-      value: [{ key: 'p', sourcePath: 'a', targetPath: 'b', targetExists: false }],
+      value: [{ key: 'p', sourcePath: 'a', targetPath: 'b', targetExists: false, hasDraft: false }],
     });
     expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual({
       ok: true,
@@ -51,6 +62,7 @@ describe('guardApi', () => {
         key: 'k',
         source: { path: 'a', mdx: false, text: '', blocks: [], inline: [] },
         target: null,
+        draft: null,
       },
     });
     expect(
@@ -72,6 +84,10 @@ describe('guardApi', () => {
       ok: true,
       value: { path: 'k', written: false },
     });
+    expect(await api.saveDraft({ projectId: 'p', key: 'k', text: '', base: null })).toEqual(
+      ok(null),
+    );
+    expect(await api.discardDraft({ projectId: 'p', key: 'k' })).toEqual(ok(null));
     expect(calls).toEqual([]);
   });
 
@@ -100,6 +116,12 @@ describe('guardApi', () => {
         saveDocument: () => {
           throw new Error('sync boom');
         },
+        saveDraft: () => {
+          throw new Error('sync boom');
+        },
+        discardDraft: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -112,6 +134,8 @@ describe('guardApi', () => {
         searchTargetLanguages: () => Promise.reject(new Error('async boom')),
         chooseTargetLocale: () => Promise.reject(new Error('async boom')),
         saveDocument: () => Promise.reject(new Error('async boom')),
+        saveDraft: () => Promise.reject(new Error('async boom')),
+        discardDraft: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -139,6 +163,10 @@ describe('guardApi', () => {
     expect(await api.saveDocument({ projectId: 'p', key: 'k', text: '', base: null })).toEqual(
       unexpected,
     );
+    expect(await api.saveDraft({ projectId: 'p', key: 'k', text: '', base: null })).toEqual(
+      unexpected,
+    );
+    expect(await api.discardDraft({ projectId: 'p', key: 'k' })).toEqual(unexpected);
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
@@ -147,6 +175,8 @@ describe('guardApi', () => {
       'searchTargetLanguages',
       'chooseTargetLocale',
       'saveDocument',
+      'saveDraft',
+      'discardDraft',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });

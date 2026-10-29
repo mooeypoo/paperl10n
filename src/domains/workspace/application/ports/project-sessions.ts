@@ -12,6 +12,8 @@ import type { ProjectWriter } from './project-writer.ts';
 /** A project that's open in this app session. Lives in the main process only. */
 export interface OpenedProject {
   readonly name: string;
+  /** The project folder's lasting identity (`OpenedFolder.location`). Never sent to the renderer. */
+  readonly location: string;
   readonly files: ProjectFiles;
   readonly writer: ProjectWriter;
   readonly config: ProjectConfig;

@@ -1,6 +1,6 @@
 # M2 discussion: editing and saving longform
 
-Status: **decided (2026-10-29); E0 (spike), E1 (saving), E2 (the editor), and E3 (seed and save) done, E4 (drafts) next.** See [Decided](#decided). The
+Status: **decided (2026-10-29); E0–E3 and E4a (the draft store) done, E4b (drafts in the UI) next.** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
@@ -243,6 +243,29 @@ inline syntax. The spike confirms it.
       saved, the page not marked translated, the selection reset by the save, a new translation
       starting clean, and dirty checked by identity (so undo would stay dirty).
 - **E4, drafts:** a `DraftStore` port (in app data), autosave of drafts, and restore on reopen.
+  In two PRs: E4a (the store, use cases, and IPC) and E4b (autosave and restore in the UI).
+  - *E4a done-notes:* a `DraftStore` port in `workspace` (not `translation`, as the architecture
+    sketch had it: every use case that needs drafts is workspace's, so no new domain edge).
+    `nodeDraftStore` keeps one JSON file per draft in `userData/drafts/` (named by a SHA-256 of
+    the key, atomic writes, `0700`/`0600`); `InMemoryDraftStore` serves tests and the harness.
+    Both pass `describeDraftStoreContract`.
+    - **Keys:** the project's `location` (new on `OpenedFolder`/`OpenedProject`: the real folder
+      path, so a link to the folder shares its drafts; main-process only), the target locale, and
+      the page key.
+    - **Use cases:** `saveDraft` and `discardDraft` (IPC methods of the same name). The key only
+      has to be well formed, so autosave never reads the project. `readDocumentPair` returns the
+      page's `draft` and forgets one that matches the file. `listSourceDocuments` returns
+      `hasDraft`. `saveDocument` forgets the draft once the file holds the text, and keeps it when
+      saving fails. Draft reads and listings that fail count as no draft, so pages still open.
+    - **Errors:** `workspace.draft-unwritable` (with a message that says the edits are still in
+      the editor).
+    - Tests include an IPC end-to-end "restart" (a new app session over the same drafts folder).
+      The new invisible-character lint rule caught a literal BOM in the contract suite on its first
+      day.
+    - Mutation checks, each failing tests: a draft matching the file kept, the draft kept after a
+      save, the draft dropped on a conflict, drafts not listed, drafts keyed by the folder's name,
+      the key not validated, a hash collision not checked, stray copies listed, and main not
+      checking `discardDraft`'s key.
 - **E5, external changes:** the conflict flow on save.
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

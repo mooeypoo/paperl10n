@@ -45,6 +45,18 @@ export const argumentValidators: Readonly<
     isDocumentKey(request.key) &&
     isDocumentText(request.text) &&
     (request.base === null || isDocumentText(request.base)),
+  saveDraft: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'key', 'text', 'base']) &&
+    isProjectId(request.projectId) &&
+    isDocumentKey(request.key) &&
+    isDocumentText(request.text) &&
+    (request.base === null || isDocumentText(request.base)),
+  discardDraft: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'key']) &&
+    isProjectId(request.projectId) &&
+    isDocumentKey(request.key),
   chooseTargetLocale: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'language']) &&
@@ -145,6 +157,22 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
         text: request.text,
         base: request.base,
       });
+    }
+    case 'saveDraft': {
+      // checked by argumentValidators
+      const [request] = args as [
+        { projectId: string; key: string; text: string; base: string | null },
+      ];
+      return api.saveDraft({
+        projectId: request.projectId,
+        key: request.key,
+        text: request.text,
+        base: request.base,
+      });
+    }
+    case 'discardDraft': {
+      const [request] = args as [{ projectId: string; key: string }]; // checked by argumentValidators
+      return api.discardDraft({ projectId: request.projectId, key: request.key });
     }
     case 'chooseTargetLocale': {
       const [request] = args as [{ projectId: string; language: string }]; // checked by argumentValidators

@@ -3,12 +3,14 @@ import type { ParsedDocument } from '#domains/document';
 import type { Locale } from '#domains/locale';
 import type {
   ChooseTargetLocale,
+  DiscardDraft,
   LanguageEntry,
   ListSourceDocuments,
   OpenProject,
   ReadDocument,
   ReadDocumentPair,
   SaveDocument,
+  SaveDraft,
   SearchTargetLanguages,
   SuggestTargetLanguages,
 } from '#domains/workspace';
@@ -24,6 +26,8 @@ export interface UseCases {
   readonly searchTargetLanguages: SearchTargetLanguages;
   readonly chooseTargetLocale: ChooseTargetLocale;
   readonly saveDocument: SaveDocument;
+  readonly saveDraft: SaveDraft;
+  readonly discardDraft: DiscardDraft;
 }
 
 function toLocaleDto(locale: Locale): LocaleDto {
@@ -82,6 +86,7 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
           sourcePath: entry.sourcePath,
           targetPath: entry.targetPath,
           targetExists: entry.targetExists,
+          hasDraft: entry.hasDraft,
         })),
       );
     },
@@ -94,6 +99,7 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         key: pair.key,
         source: toDocumentDto(pair.source),
         target: pair.target === null ? null : toDocumentDto(pair.target),
+        draft: pair.draft === null ? null : { text: pair.draft.text, base: pair.draft.base },
       });
     },
 
@@ -125,6 +131,16 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
       const result = await useCases.saveDocument(projectId, { key, text, base });
       if (!result.ok) return err(toErrorDto(result.error));
       return ok({ path: result.value.path, written: result.value.written });
+    },
+
+    async saveDraft({ projectId, key, text, base }) {
+      const result = await useCases.saveDraft(projectId, { key, text, base });
+      return result.ok ? ok(null) : err(toErrorDto(result.error));
+    },
+
+    async discardDraft({ projectId, key }) {
+      const result = await useCases.discardDraft(projectId, key);
+      return result.ok ? ok(null) : err(toErrorDto(result.error));
     },
 
     async chooseTargetLocale({ projectId, language }) {

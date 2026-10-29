@@ -3,6 +3,7 @@ import type { FormatError } from '#domains/formats';
 import type { DocumentKey } from '#domains/document';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
+import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 
 export interface SourceDocumentEntry {
@@ -12,6 +13,8 @@ export interface SourceDocumentEntry {
   readonly targetPath: ProjectPath;
   /** Whether that translation file exists yet. */
   readonly targetExists: boolean;
+  /** Whether unsaved edits to it are kept as a draft. */
+  readonly hasDraft: boolean;
 }
 
 export type ListSourceDocumentsError =
@@ -23,9 +26,13 @@ export type ListSourceDocuments = (
   projectId: string,
 ) => Promise<Result<readonly SourceDocumentEntry[], ListSourceDocumentsError>>;
 
-/** The open project's source documents, each with its target path and whether it exists. */
+/**
+ * The open project's source documents, each with its target path, whether it exists, and whether
+ * it has a draft. Drafts that can't be listed count as none: the pages still list.
+ */
 export function createListSourceDocuments(deps: {
   readonly sessions: ProjectSessions;
+  readonly drafts: DraftStore;
 }): ListSourceDocuments {
   return async (projectId) => {
     const project = deps.sessions.get(projectId);
@@ -36,6 +43,8 @@ export function createListSourceDocuments(deps: {
     const documents = await project.layout.listSourceDocuments();
     if (!documents.ok) return documents;
 
+    const drafted = await deps.drafts.documents(project.location, target.id);
+    const withDrafts = new Set<string>(drafted.ok ? drafted.value : []);
     const entries: SourceDocumentEntry[] = [];
     for (const document of documents.value) {
       const targetPath = project.layout.targetPathFor(document, target.id);
@@ -45,6 +54,7 @@ export function createListSourceDocuments(deps: {
         sourcePath: document.path,
         targetPath: targetPath.value,
         targetExists: await project.files.exists(targetPath.value),
+        hasDraft: withDrafts.has(document.key),
       });
     }
     return ok(entries);

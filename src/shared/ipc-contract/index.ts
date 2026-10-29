@@ -48,6 +48,8 @@ export interface SourceDocumentDto {
   readonly targetPath: string;
   /** Whether the translation file exists. */
   readonly targetExists: boolean;
+  /** Whether unsaved edits to the translation are kept as a draft. */
+  readonly hasDraft: boolean;
 }
 
 /** Kept equal to the `document` domain's block kinds by a test. */
@@ -97,6 +99,15 @@ export interface DocumentPairDto {
   readonly source: DocumentTextDto;
   /** `null` when the translation file doesn't exist yet. */
   readonly target: DocumentTextDto | null;
+  /** Unsaved edits kept from an earlier session (or before a crash), to restore. */
+  readonly draft: DraftDto | null;
+}
+
+export interface DraftDto {
+  /** The editor's text, exactly. */
+  readonly text: string;
+  /** What saving must find on disk: the translation when editing started, or `null` (new). */
+  readonly base: string | null;
 }
 
 /** Every error the renderer can receive. Each one has a UI message (enforced by a test). */
@@ -116,6 +127,7 @@ export const errorCodes = [
   'workspace.document-unreadable',
   'workspace.document-changed',
   'workspace.document-unwritable',
+  'workspace.draft-unwritable',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.file-access',
@@ -175,6 +187,21 @@ export interface PaperLionApi {
     readonly text: string;
     readonly base: string | null;
   }): Promise<Result<{ readonly path: string; readonly written: boolean }, ErrorDto>>;
+  /**
+   * Keeps a page's unsaved edits as a draft in the app's data (never in the project), replacing
+   * the last one. Saving the page forgets it.
+   */
+  saveDraft(request: {
+    readonly projectId: string;
+    readonly key: string;
+    readonly text: string;
+    readonly base: string | null;
+  }): Promise<Result<null, ErrorDto>>;
+  /** Forgets a page's draft (its edits were dropped). */
+  discardDraft(request: {
+    readonly projectId: string;
+    readonly key: string;
+  }): Promise<Result<null, ErrorDto>>;
   /** Makes a language the project's target and saves it to the config; returns it with its direction. */
   chooseTargetLocale(request: {
     readonly projectId: string;
@@ -192,6 +219,8 @@ export const apiMethods = [
   'searchTargetLanguages',
   'chooseTargetLocale',
   'saveDocument',
+  'saveDraft',
+  'discardDraft',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

@@ -53,7 +53,7 @@ export function fixtureOpener(fixtures: Fixtures): ProjectFilesOpener {
       const folderName = name.split('/').at(-1) ?? name;
       // Writes (choosing a target language) stay in memory, until the page reloads.
       const files = new InMemoryProjectFiles(tree);
-      return Promise.resolve(ok({ files, writer: files, name: folderName }));
+      return Promise.resolve(ok({ files, writer: files, name: folderName, location: folder }));
     },
   };
 }

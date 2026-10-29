@@ -41,6 +41,18 @@ export function createApi(invoke: Invoke): PaperLionApi {
         text: request.text,
         base: request.base,
       }) as ReturnType<PaperLionApi['saveDocument']>,
+    saveDraft: (request) =>
+      invoke(channelFor('saveDraft'), {
+        projectId: request.projectId,
+        key: request.key,
+        text: request.text,
+        base: request.base,
+      }) as ReturnType<PaperLionApi['saveDraft']>,
+    discardDraft: (request) =>
+      invoke(channelFor('discardDraft'), {
+        projectId: request.projectId,
+        key: request.key,
+      }) as ReturnType<PaperLionApi['discardDraft']>,
     chooseTargetLocale: (request) =>
       invoke(channelFor('chooseTargetLocale'), {
         projectId: request.projectId,

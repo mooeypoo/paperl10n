@@ -72,5 +72,6 @@
   "paperl10n-status-unsaved": "יש שינויים שלא נשמרו",
   "paperl10n-unsaved-title": "לשמור את השינויים?",
   "paperl10n-unsaved-message": "השינויים בתרגום של $1 עדיין לא נשמרו.",
-  "paperl10n-discard-changes": "לא לשמור"
+  "paperl10n-discard-changes": "לא לשמור",
+  "paperl10n-error-workspace-draft-unwritable": "לא ניתן היה לשמור את השינויים כטיוטה. הם עדיין כאן: שמרו אותם כדי לא לאבד אותם."
 }

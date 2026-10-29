@@ -61,7 +61,7 @@ export function createOpenProject(deps: OpenProjectDependencies): OpenProject {
 
     const opened = await deps.opener.open(folder);
     if (!opened.ok) return opened;
-    const { files, writer, name } = opened.value;
+    const { files, writer, name, location } = opened.value;
 
     const configPath = projectPath(CONFIG_FILE_NAME);
     if (!configPath.ok) throw new Error('CONFIG_FILE_NAME must be a valid project path');
@@ -88,6 +88,7 @@ export function createOpenProject(deps: OpenProjectDependencies): OpenProject {
     const catalog = projectCatalog(bundledLanguageCatalog(), config, layout.value);
     const project = {
       name,
+      location,
       files,
       writer,
       config,

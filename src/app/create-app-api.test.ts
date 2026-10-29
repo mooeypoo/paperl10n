@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { FileTree } from '#domain-testing/formats';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '#domain-testing/workspace';
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
+import { InMemoryDraftStore } from '#adapters/workspace/in-memory-draft-store';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
 import type { PaperLionApi } from '#ipc-contract';
 import type { PluginModule } from '#domains/formats';
@@ -40,6 +41,7 @@ function appWith(
   const api = createAppApi({
     folderPicker: new FakeFolderPicker(answer),
     opener: new FakeProjectFilesOpener(folders),
+    drafts: new InMemoryDraftStore(),
     sessions: new InMemoryProjectSessions(randomUUID),
     parser: createLezerMarkdownParser(),
     plugins,
@@ -83,8 +85,15 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
           sourcePath: 'en/guide/getting-started.md',
           targetPath: 'he/guide/getting-started.md',
           targetExists: false,
+          hasDraft: false,
         },
-        { key: 'index', sourcePath: 'en/index.md', targetPath: 'he/index.md', targetExists: true },
+        {
+          key: 'index',
+          sourcePath: 'en/index.md',
+          targetPath: 'he/index.md',
+          targetExists: true,
+          hasDraft: false,
+        },
       ],
     });
   });
@@ -114,6 +123,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
           inline: [{ kind: 'markup', start: 0, end: 1 }],
         },
         target: null,
+        draft: null,
       },
     });
   });
@@ -177,6 +187,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
     const result = createAppApi({
       folderPicker: new FakeFolderPicker(null),
       opener: new FakeProjectFilesOpener({}),
+      drafts: new InMemoryDraftStore(),
       sessions: new InMemoryProjectSessions(randomUUID),
       parser: createLezerMarkdownParser(),
       plugins: [...builtInPlugins, ...builtInPlugins],
