@@ -34,6 +34,11 @@ describe('linkPreviews', () => {
       [{ link: '[docs](./guide.md "המדריך")', text: 'docs', url: './guide.md' }],
     ],
     [
+      'a link to a destination in angle brackets',
+      '[קובץ](<./my file.md>)\n',
+      [{ link: '[קובץ](<./my file.md>)', text: 'קובץ', url: './my file.md' }],
+    ],
+    [
       'a link with markup in its text',
       '[**חשוב** `x`](/a)\n',
       [{ link: '[**חשוב** `x`](/a)', text: '**חשוב** `x`', url: '/a' }],

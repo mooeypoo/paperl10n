@@ -340,9 +340,28 @@ inline syntax. The spike confirms it.
     and chip label in the component, and an E2E in Electron: in a Hebrew sentence the chip sits to
     the left of the link text, clicking it reveals the Markdown, and moving away hides it again.
     (Focus and selection can't be driven in happy-dom: it fires `selectionchange` synchronously.)
-  - Next: **E5c, a link editing popover** (click the chip or Ctrl+K: the text in the pane's
-    direction, the URL in a left-to-right field), then hiding emphasis, heading, and inline code
-    marks the same way.
+- **E5c, the link dialog:** editing a link as two fields instead of Markdown. ✅ Done.
+  - Clicking a link's chip in the translation, or Ctrl/Cmd+K with the caret in a link, opens
+    **Edit link**: the text (in the pane's language and direction) and the target (always left to
+    right, monospace), with **Update link**, **Cancel** (also Escape), and **Remove link** (keeps
+    the text). Ctrl/Cmd+K elsewhere opens **Add link** for the selected text (on one line) or at
+    the caret; without text, the target is the text.
+  - A modal `<dialog>` like the app's other questions, not a popover anchored to the chip: focus
+    is trapped and returns to the editor for free. An anchored popover can come later.
+  - The dialog is interface text: it takes the interface's language and direction, not the
+    pane's, though it sits in the pane. Only the read-only source has none (its chips reveal the
+    link, as before).
+  - Applying changes only what changed (`ui/editor/link-editing.ts`): a title, spacing, and an
+    untouched text or target stay as written. A target with spaces or unbalanced parentheses is
+    written in `<` `>`; brackets in the text are escaped unless they pair up. If the text changed
+    under the dialog (another file loaded), the answer does nothing.
+  - The editor stays Vue-free: it hands the UI a `LinkEdit` request, answered by apply, remove, or
+    cancel.
+  - Tests: table tests for writing targets and text, finding the link at a position, and the
+    changes; the command and chip click in an editor; the dialog through the whole UI (fields and
+    their directions, apply, Escape, Cancel, remove, no target); and the E2E in Electron (focus in
+    the target field, Enter applies, typing afterwards lands in the editor, Ctrl+K adds a link).
+  - Next: hiding emphasis, heading, and inline code marks the same way as links.
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 Round-trip tests throughout: open, edit nothing, save → the file is unchanged byte for byte; an

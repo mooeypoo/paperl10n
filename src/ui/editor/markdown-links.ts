@@ -3,7 +3,8 @@
 // underlined, followed by a small link chip. The URL, the brackets, and the title are hidden, so a
 // right-to-left sentence reads as prose. When the caret or a selection touches the link, its
 // Markdown comes back for editing. Only the display changes: the document is still the file's text.
-// Reference links (`[text][ref]`), autolinks, and images stay as written.
+// Reference links (`[text][ref]`), autolinks, and images stay as written. Clicking a chip edits
+// the link through a form (link-editing.ts); in read-only text, it reveals the link instead.
 import { syntaxTree } from '@codemirror/language';
 import { Facet, type EditorState, type Range, type SelectionRange } from '@codemirror/state';
 import {
@@ -23,10 +24,14 @@ export interface LinkPreview {
   /** The link text, between the brackets. */
   readonly textFrom: number;
   readonly textTo: number;
+  /** The link's destination as written, `<` and `>` included if it has them. */
+  readonly urlFrom: number;
+  readonly urlTo: number;
+  /** The destination itself (without the `<` and `>`). */
   readonly url: string;
 }
 
-/** The inline links that start between `from` and `to`, with text and a URL. */
+/** The inline links between `from` and `to` (touching them included) with a URL. */
 export function linkPreviews(state: EditorState, from: number, to: number): LinkPreview[] {
   const links: LinkPreview[] = [];
   syntaxTree(state).iterate({
@@ -56,7 +61,9 @@ export function linkPreviews(state: EditorState, from: number, to: number): Link
         to: node.to,
         textFrom: open.to,
         textTo: close.from,
-        url: state.doc.sliceString(url.from, url.to),
+        urlFrom: url.from,
+        urlTo: url.to,
+        url: state.doc.sliceString(url.from, url.to).replace(/^<(.*)>$/s, '$1'),
       });
     },
   });
@@ -116,7 +123,7 @@ class LinkChip extends WidgetType {
     return chip;
   }
 
-  // Let the editor handle clicks, so clicking the chip puts the caret in the link and reveals it.
+  // Let the editor handle clicks: link-editing.ts, or (read-only) the caret goes to the link.
   override ignoreEvent(): boolean {
     return false;
   }

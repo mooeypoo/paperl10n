@@ -82,5 +82,12 @@
   "paperl10n-conflict-keep-editing": "Button in the conflict dialog (the default): close it and keep the changes unsaved in the editor.",
   "paperl10n-conflict-reload": "Button in the conflict dialog: drop the unsaved changes and show the file as it is on disk now.",
   "paperl10n-conflict-overwrite": "Button in the conflict dialog: replace the file on disk with the changes in the editor, losing the other change.",
-  "paperl10n-link-target": "Accessible name of the small link icon the editor shows after a link's text, in place of its hidden Markdown. $1: the link's target (a URL or a path), shown as written."
+  "paperl10n-link-target": "Accessible name of the small link icon the editor shows after a link's text, in place of its hidden Markdown. $1: the link's target (a URL or a path), shown as written.",
+  "paperl10n-link-edit": "Title of the dialog that edits a link in the translation (its text and its target), opened by clicking a link's icon or with Ctrl+K.",
+  "paperl10n-link-add": "Title of the link dialog when it makes a new link (from the selected text, or at the caret), opened with Ctrl+K.",
+  "paperl10n-link-text": "Label of the link dialog's field for the link's text, as it reads in the page (in the page's language).",
+  "paperl10n-link-url": "Label of the link dialog's field for where the link goes: a web address or a path in the site.",
+  "paperl10n-link-apply": "Button in the link dialog that writes the changed text and target into the link.",
+  "paperl10n-link-add-apply": "Button in the link dialog that writes the new link into the text.",
+  "paperl10n-link-remove": "Button in the link dialog that removes the link but keeps its text in the page."
 }

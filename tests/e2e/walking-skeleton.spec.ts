@@ -318,7 +318,7 @@ test('saving over a file changed on disk asks; reload shows theirs, overwrite ke
   expect(problems.console).toEqual([]);
 });
 
-test('shows links as text and a chip away from the caret, and the Markdown in it', async () => {
+test('shows links as text and a chip away from the caret, and edits them in a dialog', async () => {
   const project = join(profile, 'basic');
   cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
   writeFileSync(
@@ -340,11 +340,40 @@ test('shows links as text and a chip away from the caret, and the Markdown in it
   const chipBox = await chip.boundingBox();
   expect(chipBox !== null && text !== null && chipBox.x + chipBox.width <= text.x + 1).toBe(true);
 
-  // Clicking the chip puts the caret in the link: its Markdown shows for editing.
-  await chip.click();
+  // The caret in the link shows its Markdown for editing.
+  await target.locator('.cm-md-link-text').click();
   await expect(line).toHaveText('ראו את [המדריך](https://example.org) כאן.');
   await page.keyboard.press('Control+Home');
   await expect(line).toHaveText('ראו את המדריך כאן.');
+
+  // Clicking the chip edits the link in a dialog, the target in a left-to-right field.
+  await chip.click();
+  const dialog = page.getByRole('dialog', { name: 'Edit link' });
+  const url = dialog.getByRole('textbox', { name: 'Link target (URL or path)' });
+  await expect(url).toBeFocused();
+  await expect(url).toHaveValue('https://example.org');
+  await expect(dialog.getByRole('textbox', { name: 'Text' })).toHaveAttribute('dir', 'rtl');
+  await url.fill('https://example.org/he');
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeHidden();
+  await expect(line).toHaveText('ראו את המדריך כאן.');
+  await expect(chip).toHaveAttribute('aria-label', 'Link to \u2068https://example.org/he\u2069');
+  // Back in the editor, where the caret was.
+  await page.keyboard.type('א');
+  await expect(target.locator('.cm-line').first()).toHaveText('א# ברוכים הבאים');
+
+  // Ctrl+K at the caret adds a link.
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Control+K');
+  const add = page.getByRole('dialog', { name: 'Add link' });
+  await expect(add.getByRole('textbox', { name: 'Text' })).toBeFocused();
+  await page.keyboard.type('עוד');
+  await add.getByRole('textbox', { name: 'Link target (URL or path)' }).fill('./more.md');
+  await page.keyboard.press('Enter');
+  await expect(add).toBeHidden();
+  await page.keyboard.press('Control+Home');
+  await expect(target.locator('.cm-line').last()).toHaveText('עוד');
+  await expect(target.locator('.cm-md-link-chip')).toHaveCount(2);
 
   expect(await problems.violations()).toEqual([]);
   expect(problems.console).toEqual([]);

@@ -1,9 +1,11 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { DocumentTextDto, LocaleDto } from '#ipc-contract';
-import { computed, useId, useTemplateRef } from 'vue';
+import { computed, ref, useId, useTemplateRef } from 'vue';
+import type { LinkEdit } from '../editor/link-editing';
 import type { EditorSnapshot } from '../editor/markdown-editor';
 import { isolated, useI18n } from '../i18n/i18n';
+import LinkDialog from './LinkDialog.vue';
 import MarkdownEditor from './MarkdownEditor.vue';
 
 withDefaults(
@@ -32,6 +34,8 @@ const linkLabel = computed(() => {
   void uiLocale.value;
   return (url: string) => t('paperl10n-link-target', isolated(url));
 });
+/** The link being edited in the link dialog. */
+const linkEdit = ref<LinkEdit | null>(null);
 
 defineExpose({
   /** The editor's text to save, or `null` when no editor is shown. */
@@ -90,7 +94,9 @@ defineExpose({
         :saved="saved"
         @dirty="(dirty) => emit('dirty', dirty)"
         @change="emit('change')"
+        @edit-link="(edit) => (linkEdit = edit)"
       />
+      <LinkDialog v-if="!readOnly" :edit="linkEdit" :locale="locale" @close="linkEdit = null" />
     </div>
   </section>
 </template>

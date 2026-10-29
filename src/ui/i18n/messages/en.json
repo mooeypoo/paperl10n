@@ -82,5 +82,12 @@
   "paperl10n-conflict-keep-editing": "Keep editing",
   "paperl10n-conflict-reload": "Reload from disk",
   "paperl10n-conflict-overwrite": "Overwrite with mine",
-  "paperl10n-link-target": "Link to $1"
+  "paperl10n-link-target": "Link to $1",
+  "paperl10n-link-edit": "Edit link",
+  "paperl10n-link-add": "Add link",
+  "paperl10n-link-text": "Text",
+  "paperl10n-link-url": "Link target (URL or path)",
+  "paperl10n-link-apply": "Update link",
+  "paperl10n-link-add-apply": "Add link",
+  "paperl10n-link-remove": "Remove link"
 }

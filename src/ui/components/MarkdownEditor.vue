@@ -9,6 +9,7 @@ import {
   type MarkdownEditor,
   type MarkdownEditorOptions,
 } from '../editor/markdown-editor';
+import type { LinkEdit } from '../editor/link-editing';
 
 const props = defineProps<{
   /** The file's exact text. */
@@ -26,8 +27,8 @@ const props = defineProps<{
   saved: boolean;
 }>();
 /** `dirty`: the text has unsaved changes (sent on mount, and whenever that changes). `change`:
- * after each edit. */
-const emit = defineEmits<{ dirty: [dirty: boolean]; change: [] }>();
+ * after each edit. `editLink`: show a form for a link, and answer through the request. */
+const emit = defineEmits<{ dirty: [dirty: boolean]; change: []; editLink: [edit: LinkEdit] }>();
 
 const host = useTemplateRef('host');
 let editor: MarkdownEditor | null = null;
@@ -46,6 +47,9 @@ const options = (): MarkdownEditorOptions => ({
   },
   onChange: () => {
     emit('change');
+  },
+  onEditLink: (edit) => {
+    emit('editLink', edit);
   },
 });
 

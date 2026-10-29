@@ -13,6 +13,7 @@ import editorStyles from './markdown-editor.css?inline';
 import { fileText, openFileText } from './file-text.ts';
 import { markdownDecorations } from './markdown-decorations.ts';
 import { markdownLanguage } from './markdown-language.ts';
+import { linkEditing, type LinkEdit } from './link-editing.ts';
 import { linkLabel, linkPreview } from './markdown-links.ts';
 import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
 
@@ -38,6 +39,8 @@ export interface MarkdownEditorOptions extends EditorPresentation {
   readonly onDirtyChange?: (dirty: boolean) => void;
   /** Called after each edit (after `onDirtyChange`). */
   readonly onChange?: () => void;
+  /** Called to edit a link through a form (Ctrl/Cmd+K, or a click on a link's chip). */
+  readonly onEditLink?: (edit: LinkEdit) => void;
 }
 
 /** The text to save, and a way to record it as saved once the save succeeded. */
@@ -66,7 +69,7 @@ const presented = ({ lang, dir, label, linkLabel: describeLink }: EditorPresenta
 
 export function editorState(options: MarkdownEditorOptions): EditorState {
   const opened = openFileText(options.file);
-  const { onDirtyChange, onChange } = options;
+  const { onDirtyChange, onChange, onEditLink } = options;
   return EditorState.create({
     doc: opened.text,
     extensions: [
@@ -75,6 +78,7 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
       markdownLanguage(options.mdx),
       markdownDecorations,
       linkPreview,
+      linkEditing((edit) => onEditLink?.(edit)),
       history(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.lineWrapping,
