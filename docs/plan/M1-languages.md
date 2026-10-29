@@ -161,7 +161,7 @@ Each is its own branch and PR, as in M0.
   - Checked in the browser harness (light, dark, Hebrew) and in Electron: a new e2e test opens a
     copy of a project without a target, finds Arabic by typing, chooses it with Enter, and checks
     the panes (`ar`/`rtl`) and the saved config.
-  - **Not done, still open (decided in round 2):** the *source* side of the header isn't a button
+  - **Not done, still open (decided in round 2; tracked in [follow-ups](follow-ups.md)):** the *source* side of the header isn't a button
     yet (changing the source changes which files are sources); unknown codes can't be named and
     given a direction from the picker yet (the no-match message says how to add them to the
     config); rows have no separate RTL marker (the autonym shows its own direction).
