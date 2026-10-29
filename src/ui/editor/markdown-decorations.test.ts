@@ -37,8 +37,19 @@ describe('markdownStyles', () => {
       ['url', 'https://example.org'],
       ['markup', ')'],
       ['markup', '<Badge text="חדש" />'],
+      ['strong', '**כאן**'],
       ['markup', '**'],
       ['markup', '**'],
+    ]);
+  });
+
+  it('styles emphasis, strong, and struck text with their marks', () => {
+    expect(
+      stylesOf('*נטוי* __מודגש__ ~~מחוק~~\n').marks.filter(([kind]) => kind !== 'markup'),
+    ).toEqual([
+      ['emphasis', '*נטוי*'],
+      ['strong', '__מודגש__'],
+      ['strikethrough', '~~מחוק~~'],
     ]);
   });
 

@@ -14,7 +14,7 @@ import {
   type LinkEdit,
 } from './link-editing.ts';
 import { markdownLanguage } from './markdown-language.ts';
-import { linkPreview } from './markdown-links.ts';
+import { livePreview } from './live-preview.ts';
 
 const stateOf = (text: string, readOnly = false) => {
   const state = EditorState.create({
@@ -146,7 +146,7 @@ describe('linkEditing', () => {
         extensions: [
           markdownLanguage(false),
           EditorState.readOnly.of(readOnly),
-          linkPreview,
+          livePreview,
           linkEditing((edit) => {
             requests.push(edit);
           }),

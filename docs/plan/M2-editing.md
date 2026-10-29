@@ -361,7 +361,23 @@ inline syntax. The spike confirms it.
     changes; the command and chip click in an editor; the dialog through the whole UI (fields and
     their directions, apply, Escape, Cancel, remove, no target); and the E2E in Electron (focus in
     the target field, Enter applies, typing afterwards lands in the editor, Ctrl+K adds a link).
-  - Next: hiding emphasis, heading, and inline code marks the same way as links.
+- **E5d, hiding the other marks:** the live preview grows past links. ✅ Done.
+  - Away from the caret, `**`/`__`, `*`/`_`, `~~`, inline code's backticks, and an ATX heading's
+    `#`s (with the space after them, and closing `#`s) are hidden (`ui/editor/markdown-marks.ts`).
+    The caret or a selection touching the element shows them: anywhere on a heading's line, or in
+    the emphasis or code span.
+  - Kept as written: list markers, quotes, table pipes, code fences, Setext underlines, HTML and
+    components, escapes, and anything in code blocks or frontmatter. A heading with no text keeps
+    its `#`.
+  - Bold, italic, and struck text are styled with their marks (`markdown-decorations.ts`), so text
+    looks the same whether its marks show or not.
+  - One view plugin for the whole live preview (`ui/editor/live-preview.ts`, links included),
+    rebuilt as the caret moves; the styles and bidi isolates still don't rebuild then.
+  - Inline code keeps its left-to-right isolation with the backticks hidden: the E2E checks a
+    command reads in order inside a Hebrew sentence.
+  - Tests: what's hidden for each element (table, including what must stay), the reveal rule, the
+    preview of an unfocused editor, and the E2E (heading mark shown on its line and hidden again,
+    bold's look, code order).
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 Round-trip tests throughout: open, edit nothing, save → the file is unchanged byte for byte; an

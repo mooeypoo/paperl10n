@@ -53,6 +53,13 @@ const markup = new Set([
   'HTMLTag',
 ]);
 
+/** Text that looks a certain way, marks included (live-preview.ts may hide the marks). */
+const textLooks: Readonly<Record<string, 'strong' | 'emphasis' | 'strikethrough'>> = {
+  StrongEmphasis: 'strong',
+  Emphasis: 'emphasis',
+  Strikethrough: 'strikethrough',
+};
+
 export interface LineStyle {
   /** The line's start. */
   readonly from: number;
@@ -63,7 +70,7 @@ export interface LineStyle {
 export interface MarkStyle {
   readonly from: number;
   readonly to: number;
-  readonly kind: 'markup' | 'url' | 'code';
+  readonly kind: 'markup' | 'url' | 'code' | 'strong' | 'emphasis' | 'strikethrough';
 }
 
 export interface MarkdownStyles {
@@ -114,7 +121,10 @@ export function markdownStyles(state: EditorState, from: number, to: number): Ma
         return;
       }
       if (node.to <= node.from) return;
-      if (node.name === 'InlineCode') {
+      const look = textLooks[node.name];
+      if (look !== undefined) {
+        marks.push({ from: node.from, to: node.to, kind: look });
+      } else if (node.name === 'InlineCode') {
         marks.push({ from: node.from, to: node.to, kind: 'code' });
         isolate(node.from, node.to);
       } else if (node.name === 'URL') {
@@ -148,6 +158,9 @@ const markDecorations = {
   markup: Decoration.mark({ class: 'cm-md-markup' }),
   url: Decoration.mark({ class: 'cm-md-url' }),
   code: Decoration.mark({ class: 'cm-md-inline-code' }),
+  strong: Decoration.mark({ class: 'cm-md-strong' }),
+  emphasis: Decoration.mark({ class: 'cm-md-emphasis' }),
+  strikethrough: Decoration.mark({ class: 'cm-md-strikethrough' }),
 };
 const isolateDecoration = Decoration.mark({
   bidiIsolate: Direction.LTR,

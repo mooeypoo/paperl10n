@@ -163,10 +163,11 @@ describe('the app shell', () => {
       'ltr',
     ]);
     const lines = [...(source?.querySelectorAll('.cm-line') ?? [])];
-    expect(lines.map((line) => line.textContent)).toEqual(['# Start', '', 'Run `x`.', '']);
+    // Away from the caret, the marks are hidden (live preview); the text is still the file's.
+    expect(lines.map((line) => line.textContent)).toEqual(['Start', '', 'Run x.', '']);
     expect(lines[0]?.classList.contains('cm-md-h1')).toBe(true);
     // Inline code is an isolated left-to-right run; punctuation-only markup isn't.
-    expect(lines[2]?.querySelector('[dir="ltr"]')?.textContent).toBe('`x`');
+    expect(lines[2]?.querySelector('[dir="ltr"]')?.textContent).toBe('x');
     // The translation can be edited, in its own language and direction.
     const targetText = target?.querySelector('.cm-content');
     expect(targetText?.hasAttribute('aria-readonly')).toBe(false);

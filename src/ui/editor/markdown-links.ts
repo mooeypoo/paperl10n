@@ -1,20 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Live preview for inline links: away from the caret, `[text](url "title")` shows as its text,
-// underlined, followed by a small link chip. The URL, the brackets, and the title are hidden, so a
-// right-to-left sentence reads as prose. When the caret or a selection touches the link, its
-// Markdown comes back for editing. Only the display changes: the document is still the file's text.
-// Reference links (`[text][ref]`), autolinks, and images stay as written. Clicking a chip edits
-// the link through a form (link-editing.ts); in read-only text, it reveals the link instead.
+// Live preview for inline links: away from the caret (live-preview.ts decides where),
+// `[text](url "title")` shows as its text, underlined, followed by a small link chip. The URL, the
+// brackets, and the title are hidden, so a right-to-left sentence reads as prose. Reference links
+// (`[text][ref]`), autolinks, and images stay as written. Clicking a chip edits the link through a
+// form (link-editing.ts); in read-only text, it reveals the link instead.
 import { syntaxTree } from '@codemirror/language';
-import { Facet, type EditorState, type Range, type SelectionRange } from '@codemirror/state';
-import {
-  Decoration,
-  EditorView,
-  ViewPlugin,
-  WidgetType,
-  type DecorationSet,
-  type ViewUpdate,
-} from '@codemirror/view';
+import { Facet, type EditorState, type Range } from '@codemirror/state';
+import { Decoration, WidgetType } from '@codemirror/view';
 import { icons } from '../components/icons.ts';
 
 export interface LinkPreview {
@@ -68,11 +60,6 @@ export function linkPreviews(state: EditorState, from: number, to: number): Link
     },
   });
   return links;
-}
-
-/** A link shows its Markdown when a caret or a selection touches it (its edges included). */
-export function linkRevealed(link: LinkPreview, ranges: readonly SelectionRange[]): boolean {
-  return ranges.some((range) => range.from <= link.to && range.to >= link.from);
 }
 
 /** The accessible name of a link chip, from its URL (in the interface's language). */
@@ -132,45 +119,12 @@ class LinkChip extends WidgetType {
 const hidden = Decoration.replace({});
 const linkText = Decoration.mark({ class: 'cm-md-link-text' });
 
-function decorate(view: EditorView): DecorationSet {
-  const { state } = view;
-  // An editor without focus shows every link as a preview: its caret isn't anywhere to be seen.
-  const ranges = view.hasFocus ? state.selection.ranges : [];
-  const label = state.facet(linkLabel);
-  const decorations: Range<Decoration>[] = [];
-  for (const link of linkPreviews(state, view.viewport.from, view.viewport.to)) {
-    if (link.textTo <= link.textFrom || linkRevealed(link, ranges)) continue;
-    decorations.push(
-      hidden.range(link.from, link.textFrom),
-      linkText.range(link.textFrom, link.textTo),
-      Decoration.replace({ widget: new LinkChip(link.url, label(link.url)) }).range(
-        link.textTo,
-        link.to,
-      ),
-    );
-  }
-  return Decoration.set(decorations, true);
+/** A link as its text and a chip (`label` names the chip); none for a link without text. */
+export function linkDecorations(link: LinkPreview, label: string): Range<Decoration>[] {
+  if (link.textTo <= link.textFrom) return [];
+  return [
+    hidden.range(link.from, link.textFrom),
+    linkText.range(link.textFrom, link.textTo),
+    Decoration.replace({ widget: new LinkChip(link.url, label) }).range(link.textTo, link.to),
+  ];
 }
-
-/** Inline links shown as their text and a chip, except where the caret is. */
-export const linkPreview = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-    constructor(view: EditorView) {
-      this.decorations = decorate(view);
-    }
-    update(update: ViewUpdate) {
-      if (
-        update.docChanged ||
-        update.viewportChanged ||
-        update.selectionSet ||
-        update.focusChanged ||
-        update.startState.facet(linkLabel) !== update.state.facet(linkLabel) ||
-        syntaxTree(update.startState) !== syntaxTree(update.state)
-      ) {
-        this.decorations = decorate(update.view);
-      }
-    }
-  },
-  { decorations: (plugin) => plugin.decorations },
-);

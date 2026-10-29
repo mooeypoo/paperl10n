@@ -14,7 +14,8 @@ import { fileText, openFileText } from './file-text.ts';
 import { markdownDecorations } from './markdown-decorations.ts';
 import { markdownLanguage } from './markdown-language.ts';
 import { linkEditing, type LinkEdit } from './link-editing.ts';
-import { linkLabel, linkPreview } from './markdown-links.ts';
+import { livePreview } from './live-preview.ts';
+import { linkLabel } from './markdown-links.ts';
 import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
 
 /** How the editable area is presented: changing it keeps the text and its history. */
@@ -77,7 +78,7 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
       savePointExtension(options.saved),
       markdownLanguage(options.mdx),
       markdownDecorations,
-      linkPreview,
+      livePreview,
       linkEditing((edit) => onEditLink?.(edit)),
       history(),
       keymap.of([...defaultKeymap, ...historyKeymap]),

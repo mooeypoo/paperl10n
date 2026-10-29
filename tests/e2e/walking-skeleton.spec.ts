@@ -301,7 +301,8 @@ test('saving over a file changed on disk asks; reload shows theirs, overwrite ke
 
   await question.getByRole('button', { name: 'Reload from disk' }).click();
   await expect(question).toBeHidden();
-  await expect(editor).toHaveText('# שלהם');
+  // Their heading (its `#` hidden away from the caret).
+  await expect(editor).toHaveText('שלהם');
   await expect(page.getByRole('status')).toHaveText('');
 
   // Again, and this time keep mine.
@@ -374,6 +375,52 @@ test('shows links as text and a chip away from the caret, and edits them in a di
   await page.keyboard.press('Control+Home');
   await expect(target.locator('.cm-line').last()).toHaveText('עוד');
   await expect(target.locator('.cm-md-link-chip')).toHaveCount(2);
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
+test('hides heading, emphasis, and code marks away from the caret, keeping code left to right', async () => {
+  const project = join(profile, 'basic');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  writeFileSync(
+    join(project, 'he/index.md'),
+    '# ברוכים הבאים\n\nהריצו `pnpm add -D x` ואז **שמרו**.\n',
+  );
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+  const target = page.getByRole('textbox', { name: 'עברית · translation' });
+  const heading = target.locator('.cm-line').first();
+  const line = target.locator('.cm-line').nth(2);
+  await expect(heading).toHaveText('ברוכים הבאים');
+  await expect(line).toHaveText('הריצו pnpm add -D x ואז שמרו.');
+
+  // The command still reads left to right inside the right-to-left sentence: "pnpm" before "x".
+  const order = await target.locator('.cm-md-inline-code').evaluate((code) => {
+    const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+    const nodes: Text[] = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+    const at = (text: string) => {
+      const node = nodes.find((candidate) => candidate.data.includes(text));
+      if (node === undefined) return null;
+      const range = document.createRange();
+      const start = node.data.indexOf(text);
+      range.setStart(node, start);
+      range.setEnd(node, start + text.length);
+      return range.getBoundingClientRect().x;
+    };
+    return { pnpm: at('pnpm'), x: at(' x') };
+  });
+  expect(order.pnpm !== null && order.x !== null && order.pnpm < order.x).toBe(true);
+
+  // The caret on the heading shows its mark; elsewhere it hides again.
+  await heading.click();
+  await expect(heading).toHaveText('# ברוכים הבאים');
+  await page.keyboard.press('Control+End');
+  await expect(heading).toHaveText('ברוכים הבאים');
+  // The bold text keeps its look either way.
+  await expect(target.locator('.cm-md-strong')).toHaveCSS('font-weight', '700');
 
   expect(await problems.violations()).toEqual([]);
   expect(problems.console).toEqual([]);

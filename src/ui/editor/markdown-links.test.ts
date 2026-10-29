@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { ensureSyntaxTree } from '@codemirror/language';
-import { EditorSelection, EditorState } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import { markdownLanguage } from './markdown-language.ts';
-import { linkPreviews, linkRevealed } from './markdown-links.ts';
+import { linkPreviews } from './markdown-links.ts';
 
 const stateOf = (text: string) => {
   const state = EditorState.create({ doc: text, extensions: [markdownLanguage(false)] });
@@ -66,26 +66,5 @@ describe('linkPreviews', () => {
     expect(previewsOf('[![לוגו](/l.png)](/home)\n')).toEqual([
       { link: '[![לוגו](/l.png)](/home)', text: '![לוגו](/l.png)', url: '/home' },
     ]);
-  });
-});
-
-describe('linkRevealed', () => {
-  const text = 'abc [link](/a) def\n';
-  const [link] = linkPreviews(stateOf(text), 0, text.length);
-  if (link === undefined) throw new Error('test setup: no link');
-
-  it.each([
-    ['a caret before it', [EditorSelection.cursor(2)], false],
-    ['a caret at its start', [EditorSelection.cursor(4)], true],
-    ['a caret in its text', [EditorSelection.cursor(6)], true],
-    ['a caret at its end', [EditorSelection.cursor(14)], true],
-    ['a caret after it', [EditorSelection.cursor(16)], false],
-    ['a selection across it', [EditorSelection.range(0, 18)], true],
-    ['a selection ending at it', [EditorSelection.range(0, 4)], true],
-    ['a selection elsewhere', [EditorSelection.range(15, 18)], false],
-    ['one of several carets', [EditorSelection.cursor(0), EditorSelection.cursor(8)], true],
-    ['no selection (an unfocused editor)', [], false],
-  ])('%s: %s', (_description, ranges, revealed) => {
-    expect(linkRevealed(link, ranges)).toBe(revealed);
   });
 });
