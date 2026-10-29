@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -65,6 +66,21 @@ describe('MarkdownEditor', () => {
     await wrapper.setProps({ file: 'Other\n' });
     expect(textOf(wrapper)).toBe('Other\n');
     expect(view.state.doc.toString()).toBe('Other\n');
+  });
+
+  it('keeps edits and undo when only the label or locale changes (the interface language)', async () => {
+    const { wrapper, view, root } = editorFor();
+    view.dispatch({ changes: { from: 0, insert: 'X' } });
+    await wrapper.setProps({ label: 'עברית · תרגום', locale: { id: 'ar', direction: 'rtl' } });
+    const content = root?.querySelector('.cm-content');
+    expect(content?.getAttribute('aria-label')).toBe('עברית · תרגום');
+    expect(content?.getAttribute('lang')).toBe('ar');
+    expect(textOf(wrapper)).toBe('X# כותרת\r\n\r\nטקסט\r\n');
+    expect(wrapper.emitted('dirty')).toEqual([[false], [true]]);
+    await wrapper.setProps({ locale: { id: 'en', direction: 'ltr' } });
+    expect(content?.getAttribute('dir')).toBe('ltr');
+    expect(undo(view)).toBe(true);
+    expect(textOf(wrapper)).toBe('# כותרת\r\n\r\nטקסט\r\n');
   });
 
   it('parses MDX files with MDX tolerance', () => {

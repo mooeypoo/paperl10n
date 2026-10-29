@@ -72,7 +72,8 @@ const type = async (element: Element, text: string) => {
 };
 const status = (element: Element) =>
   targetPane(element)?.querySelector('[role="status"]')?.textContent.trim();
-const saveButton = (element: Element) => button(targetPane(element) ?? element, 'Save');
+const saveButton = (element: Element, name = 'Save') =>
+  button(targetPane(element) ?? element, name);
 const page = (element: Element, key: string) => {
   const found = [...element.querySelectorAll('nav li button')].find(
     (candidate) => candidate.querySelector('bdi')?.textContent === key,
@@ -231,6 +232,18 @@ describe('leaving a page with unsaved changes', () => {
     button(element, "Don't save").click();
     await flushPromises();
     expect(document.querySelector<HTMLDialogElement>('dialog.picker')?.open).toBe(true);
+  });
+
+  it('keeps unsaved changes when the interface language changes', async () => {
+    const { element } = await dirtyIndex();
+    const language = element.querySelector<HTMLSelectElement>('.header-language select');
+    if (language === null) throw new Error('no interface language');
+    language.value = 'he';
+    language.dispatchEvent(new Event('change'));
+    await flushPromises();
+    expect(targetEditor(element).state.doc.toString()).toBe('בית\n!');
+    expect(pageStatus(element, 'index')).toBe('unsaved');
+    expect(saveButton(element, 'שמירה').disabled).toBe(false);
   });
 
   it('stops the window from closing and asks; a clean page closes without asking', async () => {

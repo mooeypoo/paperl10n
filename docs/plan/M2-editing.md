@@ -292,6 +292,12 @@ inline syntax. The spike confirms it.
       the pending draft, discarding a restored draft keeping its base, "Don't save" keeping the
       draft, a restored draft starting clean, drafts not marked in the list, and a saved page
       keeping its draft marker.
+- **Fix, found while checking E5 in Hebrew:** changing the interface language threw away unsaved
+  edits. The editor started over whenever its accessible label changed, and the label is in the
+  interface's language. Starting over also made the page clean, so the draft was dropped too. Now
+  only a new file (or MDX or read-only changing) starts over. The label, `lang`, and `dir` sit in
+  a CodeMirror compartment that is swapped in place, keeping the text and its undo history.
+  Mutation checks: the label restarting the editor, and the compartment never reconfigured.
 - **E5, external changes:** the conflict flow on save.
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

@@ -53,18 +53,18 @@ onMounted(() => {
 });
 // A different file (or a different way to read it) starts over: new text, new undo history.
 watch(
-  () => [
-    props.file,
-    props.mdx,
-    props.readOnly,
-    props.locale.id,
-    props.locale.direction,
-    props.label,
-  ],
+  () => [props.file, props.mdx, props.readOnly],
   () => {
     if (editor === null) return;
     editor.view.setState(editorState(options()));
     emit('dirty', editor.dirty());
+  },
+);
+// Another label (the interface's language changed) or locale keeps the text: unsaved edits stay.
+watch(
+  () => [props.locale.id, props.locale.direction, props.label],
+  () => {
+    editor?.present({ lang: props.locale.id, dir: props.locale.direction, label: props.label });
   },
 );
 onBeforeUnmount(() => {

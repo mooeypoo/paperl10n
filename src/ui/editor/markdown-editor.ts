@@ -7,7 +7,7 @@
 // stylesheet in a shadow root (which CSP doesn't govern). So the CSP stays strict, and the editor's
 // own styles join it there as another constructed sheet.
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { EditorState } from '@codemirror/state';
+import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import editorStyles from './markdown-editor.css?inline';
 import { fileText, openFileText } from './file-text.ts';
@@ -15,16 +15,20 @@ import { markdownDecorations } from './markdown-decorations.ts';
 import { markdownLanguage } from './markdown-language.ts';
 import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
 
-export interface MarkdownEditorOptions {
+/** How the editable area is presented: changing it keeps the text and its history. */
+export interface EditorPresentation {
+  /** The text's language and direction (the pane's). */
+  readonly lang: string;
+  readonly dir: 'ltr' | 'rtl';
+  /** The accessible name of the editable area (in the interface's language). */
+  readonly label: string;
+}
+
+export interface MarkdownEditorOptions extends EditorPresentation {
   /** The file's exact text. */
   readonly file: string;
   readonly mdx: boolean;
   readonly readOnly: boolean;
-  /** The text's language and direction (the pane's), for the editable area. */
-  readonly lang: string;
-  readonly dir: 'ltr' | 'rtl';
-  /** The accessible name of the editable area. */
-  readonly label: string;
   /** The text is what the file holds (false for a new translation, unsaved until saved). */
   readonly saved: boolean;
   /** Called when the document starts or stops having unsaved changes. */
@@ -46,8 +50,14 @@ export interface MarkdownEditor {
   text(): string;
   snapshot(): EditorSnapshot;
   dirty(): boolean;
+  /** Presents the same text differently (another label, say), keeping edits and undo. */
+  present(presentation: EditorPresentation): void;
   destroy(): void;
 }
+
+const presentation = new Compartment();
+const presented = ({ lang, dir, label }: EditorPresentation) =>
+  EditorView.contentAttributes.of({ lang, dir, 'aria-label': label });
 
 export function editorState(options: MarkdownEditorOptions): EditorState {
   const opened = openFileText(options.file);
@@ -65,11 +75,7 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
       // Read-only text stays focusable, so it can be navigated and selected from the keyboard.
       // (CodeMirror marks it aria-readonly.)
       EditorState.readOnly.of(options.readOnly),
-      EditorView.contentAttributes.of({
-        lang: options.lang,
-        dir: options.dir,
-        'aria-label': options.label,
-      }),
+      presentation.of(presented(options)),
       EditorView.updateListener.of((update) => {
         if (!update.docChanged && !update.transactions.some(savePointChanged)) return;
         const dirty = isDirty(update.state);
@@ -103,6 +109,9 @@ export function createMarkdownEditor(
       };
     },
     dirty: () => isDirty(view.state),
+    present: (next) => {
+      view.dispatch({ effects: presentation.reconfigure(presented(next)) });
+    },
     destroy: () => {
       view.destroy();
     },
