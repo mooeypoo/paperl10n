@@ -1,11 +1,24 @@
 # M2 discussion: editing and saving longform
 
-Status: **seed for discussion (2026-10-29).** Nothing here is decided yet. Each question has a
-recommendation to react to. Once decided, this file records the decisions and the steps, as
-[M1-languages](M1-languages.md) does.
+Status: **decided (2026-10-29), starting with the spike (E0).** See [Decided](#decided). The
+discussion follows, for context.
 
 PRD M2: "Edit and save longform. Seed from source, edit the target, and save with round-trip
 safety." PRD §11 asks for the editor decision before M2 starts.
+
+## Decided
+
+| Topic | Decision |
+|---|---|
+| Editor (PRD §11) | **CodeMirror 6, spike first.** Markdown stays the document, so the round-trip guarantee holds by construction; visual editing grows later as live-preview decorations. The E0 spike over bidi samples confirms it before E2; if CodeMirror fails it, we come back to ProseMirror/Tiptap. |
+| Dependencies | **Approved:** `@codemirror/state`, `@codemirror/view`, `@codemirror/commands`, `@codemirror/language`, `@codemirror/lang-markdown` (all MIT). |
+| Saving | **Explicit save, plus drafts in app data.** Ctrl/Cmd+S and Save write the file atomically. Unsaved edits are kept as drafts in the app's data folder (never in the project) and restored after a crash or restart. |
+| Seeding | **On first save.** "Start translating" opens a byte-for-byte copy of the source as unsaved; the file (and any missing folders) is written on save. |
+
+Taken as recommended unless the maintainer says otherwise: the whole target file is editable as
+text (frontmatter included); the source pane is a read-only CodeMirror; external changes are
+checked on save (file watching later); prose lines take the pane's direction, code and frontmatter
+lines are LTR, and inline syntax is isolated.
 
 ## Where M1 left us
 
