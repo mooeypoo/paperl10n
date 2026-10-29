@@ -81,5 +81,6 @@
   "paperl10n-conflict-message": "Body of the conflict dialog. $1: the translation file's path, like he/guide/intro.md (shown isolated). Mentions the two ways out: paperl10n-conflict-reload and paperl10n-conflict-overwrite.",
   "paperl10n-conflict-keep-editing": "Button in the conflict dialog (the default): close it and keep the changes unsaved in the editor.",
   "paperl10n-conflict-reload": "Button in the conflict dialog: drop the unsaved changes and show the file as it is on disk now.",
-  "paperl10n-conflict-overwrite": "Button in the conflict dialog: replace the file on disk with the changes in the editor, losing the other change."
+  "paperl10n-conflict-overwrite": "Button in the conflict dialog: replace the file on disk with the changes in the editor, losing the other change.",
+  "paperl10n-link-target": "Accessible name of the small link icon the editor shows after a link's text, in place of its hidden Markdown. $1: the link's target (a URL or a path), shown as written."
 }

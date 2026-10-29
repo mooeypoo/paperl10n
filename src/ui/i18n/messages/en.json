@@ -81,5 +81,6 @@
   "paperl10n-conflict-message": "$1 was changed outside Paper Lion (by git or another editor, for example) since you started editing it. Your changes aren't saved yet. Reload the file to drop them, or overwrite the file with your version.",
   "paperl10n-conflict-keep-editing": "Keep editing",
   "paperl10n-conflict-reload": "Reload from disk",
-  "paperl10n-conflict-overwrite": "Overwrite with mine"
+  "paperl10n-conflict-overwrite": "Overwrite with mine",
+  "paperl10n-link-target": "Link to $1"
 }

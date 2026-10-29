@@ -318,6 +318,38 @@ test('saving over a file changed on disk asks; reload shows theirs, overwrite ke
   expect(problems.console).toEqual([]);
 });
 
+test('shows links as text and a chip away from the caret, and the Markdown in it', async () => {
+  const project = join(profile, 'basic');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  writeFileSync(
+    join(project, 'he/index.md'),
+    '# ברוכים הבאים\n\nראו את [המדריך](https://example.org) כאן.\n',
+  );
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+  const target = page.getByRole('textbox', { name: 'עברית · translation' });
+  const line = target.locator('.cm-line').nth(2);
+  await expect(line).toHaveText('ראו את המדריך כאן.');
+
+  // Right to left, the chip follows the link text: it sits on its left.
+  const text = await target.locator('.cm-md-link-text').boundingBox();
+  // (Role queries don't look inside a textbox, so the chip is found by its class.)
+  const chip = target.locator('.cm-md-link-chip');
+  await expect(chip).toHaveAttribute('aria-label', 'Link to \u2068https://example.org\u2069');
+  const chipBox = await chip.boundingBox();
+  expect(chipBox !== null && text !== null && chipBox.x + chipBox.width <= text.x + 1).toBe(true);
+
+  // Clicking the chip puts the caret in the link: its Markdown shows for editing.
+  await chip.click();
+  await expect(line).toHaveText('ראו את [המדריך](https://example.org) כאן.');
+  await page.keyboard.press('Control+Home');
+  await expect(line).toHaveText('ראו את המדריך כאן.');
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
 test('the renderer has no Node, and the preload exposes exactly the IPC contract', async () => {
   const globals = await page.evaluate(() => ({
     require: typeof (globalThis as Record<string, unknown>).require,

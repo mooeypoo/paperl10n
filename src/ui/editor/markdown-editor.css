@@ -89,3 +89,24 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* A link away from the caret: its text, then a chip for the hidden URL (markdown-links.ts). */
+.cm-editor .cm-md-link-text {
+  color: var(--pl-color-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cm-editor .cm-md-link-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 0.15em;
+  color: var(--pl-color-link);
+  vertical-align: -0.1em;
+  cursor: text;
+}
+
+.cm-editor .cm-md-link-chip svg {
+  inline-size: 0.85em;
+  block-size: 0.85em;
+}

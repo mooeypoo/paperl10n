@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
 import type { DocumentTextDto, LocaleDto } from '#ipc-contract';
-import { useId, useTemplateRef } from 'vue';
+import { computed, useId, useTemplateRef } from 'vue';
 import type { EditorSnapshot } from '../editor/markdown-editor';
-import { useI18n } from '../i18n/i18n';
+import { isolated, useI18n } from '../i18n/i18n';
 import MarkdownEditor from './MarkdownEditor.vue';
 
 withDefaults(
@@ -27,6 +27,11 @@ const emit = defineEmits<{ start: []; dirty: [dirty: boolean]; change: [] }>();
 const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 const headingId = useId();
 const editor = useTemplateRef<InstanceType<typeof MarkdownEditor>>('editor');
+// A new function when the interface's language changes, so the editor relabels its link chips.
+const linkLabel = computed(() => {
+  void uiLocale.value;
+  return (url: string) => t('paperl10n-link-target', isolated(url));
+});
 
 defineExpose({
   /** The editor's text to save, or `null` when no editor is shown. */
@@ -81,6 +86,7 @@ defineExpose({
         :read-only="readOnly"
         :locale="locale"
         :label="heading"
+        :link-label="linkLabel"
         :saved="saved"
         @dirty="(dirty) => emit('dirty', dirty)"
         @change="emit('change')"

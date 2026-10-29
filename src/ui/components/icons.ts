@@ -29,6 +29,14 @@ export const icons = {
   search: { paths: ['M11 4a7 7 0 1 0 0 14a7 7 0 1 0 0-14z', 'M20 20l-4-4'], mirrorsInRtl: false },
   forward: { paths: ['M5 12h14', 'M13 6l6 6-6 6'], mirrorsInRtl: true },
   check: { paths: ['M5 12.5l4.5 4.5L19 7'], mirrorsInRtl: false },
+  link: {
+    paths: [
+      'M9.5 14.5l5-5',
+      'M11 6.5l1.5-1.5a3.5 3.5 0 0 1 5 5L16 11.5',
+      'M13 17.5L11.5 19a3.5 3.5 0 0 1-5-5L8 12.5',
+    ],
+    mirrorsInRtl: false,
+  },
   expand: { paths: ['M6 9l6 6 6-6'], mirrorsInRtl: false },
 } as const satisfies Record<string, IconDefinition>;
 

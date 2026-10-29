@@ -19,6 +19,8 @@ const props = defineProps<{
   locale: LocaleDto;
   /** The accessible name of the text area. */
   label: string;
+  /** The accessible name of a link chip, from its URL. */
+  linkLabel: (url: string) => string;
   /** The text is what the file holds (false for a new translation: unsaved until saved). Read
    * with each new file, so marking a save doesn't restart the editor. */
   saved: boolean;
@@ -37,6 +39,7 @@ const options = (): MarkdownEditorOptions => ({
   lang: props.locale.id,
   dir: props.locale.direction,
   label: props.label,
+  linkLabel: props.linkLabel,
   saved: props.saved,
   onDirtyChange: (dirty) => {
     emit('dirty', dirty);
@@ -62,9 +65,14 @@ watch(
 );
 // Another label (the interface's language changed) or locale keeps the text: unsaved edits stay.
 watch(
-  () => [props.locale.id, props.locale.direction, props.label],
+  () => [props.locale.id, props.locale.direction, props.label, props.linkLabel],
   () => {
-    editor?.present({ lang: props.locale.id, dir: props.locale.direction, label: props.label });
+    editor?.present({
+      lang: props.locale.id,
+      dir: props.locale.direction,
+      label: props.label,
+      linkLabel: props.linkLabel,
+    });
   },
 );
 onBeforeUnmount(() => {

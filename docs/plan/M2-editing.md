@@ -322,6 +322,27 @@ inline syntax. The spike confirms it.
       against the old base, saving after a failed read, the conflict surviving a new read, reload
       keeping the draft or not reading again, leaving or Ctrl+S during the question, no default
       focus, Escape ignored, and the restored note's warning missing or always shown.
+- **E5b, link preview (from testing on a real site):** editing a right-to-left sentence with a
+  raw `[text](url)` in it was hard: the URL is a long left-to-right run in the middle of the
+  prose. The first live-preview decorations (as planned in the editor decision above), links only.
+  ✅ Done.
+  - `ui/editor/markdown-links.ts`: away from the caret, an inline link shows as its text
+    (underlined) and a small link chip at its logical end; `[`, `](url "title")` are hidden. The
+    chip's tooltip is the URL and its accessible name is "Link to $1" (the URL isolated), from
+    the interface's language through a facet, so changing the language relabels it.
+  - A caret or selection touching the link (its edges included) shows its Markdown again.
+    Clicking the chip puts the caret there, so it reveals the link too. An editor without focus
+    shows every link as a preview.
+  - Reference links, autolinks, images, and links with empty text stay as written.
+  - Its own view plugin, rebuilt on selection changes; the styles and bidi isolates
+    (`markdown-decorations.ts`) don't rebuild when the caret moves.
+  - Tests: which links get a preview (table), when a link is revealed (table), the rendered text
+    and chip label in the component, and an E2E in Electron: in a Hebrew sentence the chip sits to
+    the left of the link text, clicking it reveals the Markdown, and moving away hides it again.
+    (Focus and selection can't be driven in happy-dom: it fires `selectionchange` synchronously.)
+  - Next: **E5c, a link editing popover** (click the chip or Ctrl+K: the text in the pane's
+    direction, the URL in a left-to-right field), then hiding emphasis, heading, and inline code
+    marks the same way.
 - **E6, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 Round-trip tests throughout: open, edit nothing, save → the file is unchanged byte for byte; an

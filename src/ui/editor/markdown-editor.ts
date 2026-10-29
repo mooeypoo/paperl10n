@@ -13,6 +13,7 @@ import editorStyles from './markdown-editor.css?inline';
 import { fileText, openFileText } from './file-text.ts';
 import { markdownDecorations } from './markdown-decorations.ts';
 import { markdownLanguage } from './markdown-language.ts';
+import { linkLabel, linkPreview } from './markdown-links.ts';
 import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
 
 /** How the editable area is presented: changing it keeps the text and its history. */
@@ -22,6 +23,8 @@ export interface EditorPresentation {
   readonly dir: 'ltr' | 'rtl';
   /** The accessible name of the editable area (in the interface's language). */
   readonly label: string;
+  /** The accessible name of a link chip, from its URL (in the interface's language). */
+  readonly linkLabel: (url: string) => string;
 }
 
 export interface MarkdownEditorOptions extends EditorPresentation {
@@ -56,8 +59,10 @@ export interface MarkdownEditor {
 }
 
 const presentation = new Compartment();
-const presented = ({ lang, dir, label }: EditorPresentation) =>
-  EditorView.contentAttributes.of({ lang, dir, 'aria-label': label });
+const presented = ({ lang, dir, label, linkLabel: describeLink }: EditorPresentation) => [
+  EditorView.contentAttributes.of({ lang, dir, 'aria-label': label }),
+  linkLabel.of(describeLink),
+];
 
 export function editorState(options: MarkdownEditorOptions): EditorState {
   const opened = openFileText(options.file);
@@ -69,6 +74,7 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
       savePointExtension(options.saved),
       markdownLanguage(options.mdx),
       markdownDecorations,
+      linkPreview,
       history(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.lineWrapping,

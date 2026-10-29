@@ -22,6 +22,7 @@ function editorFor(
       readOnly: false,
       locale: hebrew,
       label: 'x',
+      linkLabel: (url: string) => `Link to ${url}`,
       saved: true,
       ...props,
     },
@@ -91,6 +92,26 @@ describe('MarkdownEditor', () => {
     expect(root?.querySelector('.cm-md-frontmatter')?.textContent).toBe(
       "import Card from './Card.astro';",
     );
+  });
+
+  it('shows a link away from the caret as its text and a labeled chip, keeping the file text', () => {
+    const file = 'ראו את [המדריך](https://example.org) כאן.\n';
+    const { wrapper, root } = editorFor({ file });
+    const line = root?.querySelector('.cm-line');
+    expect(line?.textContent).toBe('ראו את המדריך כאן.');
+    expect(root?.querySelector('.cm-md-link-text')?.textContent).toBe('המדריך');
+    const chip = root?.querySelector('.cm-md-link-chip');
+    expect(chip?.getAttribute('aria-label')).toBe('Link to https://example.org');
+    expect(chip?.getAttribute('title')).toBe('https://example.org');
+    expect(textOf(wrapper)).toBe(file);
+  });
+
+  it('relabels link chips when the interface language changes, keeping edits', async () => {
+    const { wrapper, view, root } = editorFor({ file: '[א](/a)\n' });
+    view.dispatch({ changes: { from: 0, insert: 'X' } });
+    await wrapper.setProps({ linkLabel: (url: string) => `קישור אל ${url}` });
+    expect(root?.querySelector('.cm-md-link-chip')?.getAttribute('aria-label')).toBe('קישור אל /a');
+    expect(textOf(wrapper)).toBe('X[א](/a)\n');
   });
 
   it('is clean again after undoing back to the saved text', () => {

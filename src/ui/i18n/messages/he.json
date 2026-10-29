@@ -81,5 +81,6 @@
   "paperl10n-conflict-message": "הקובץ $1 שונה מחוץ ל־Paper Lion (למשל על ידי git או עורך אחר) מאז שהתחלתם לערוך אותו. השינויים שלכם עדיין לא נשמרו. אפשר לטעון את הקובץ מחדש ולוותר עליהם, או לדרוס את הקובץ בגרסה שלכם.",
   "paperl10n-conflict-keep-editing": "להמשיך לערוך",
   "paperl10n-conflict-reload": "טעינה מחדש מהדיסק",
-  "paperl10n-conflict-overwrite": "לדרוס בגרסה שלי"
+  "paperl10n-conflict-overwrite": "לדרוס בגרסה שלי",
+  "paperl10n-link-target": "קישור אל $1"
 }
