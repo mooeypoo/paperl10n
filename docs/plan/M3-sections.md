@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1 done, S2 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -208,6 +208,22 @@ the last step.
 - **S1, sections in the domain:** the split and pairing rules (question 3) as pure functions, with
   table tests over real-site shapes (lone title, intro, uneven levels, mismatched counts,
   headings in code and containers).
+  - *Done-notes:* `translation/domain/sections.ts`: `splitLevel`, `sectionsAt`, and
+    `pairSections` over an `OutlineBlock` list (a block's range, a heading's depth, whether it's
+    the frontmatter). The domain layer can't import `document`, so `translation/application`
+    maps a parsed document onto it (`outlineOf`, `pairDocumentSections`). The rules are in
+    [the domain doc](../domains/translation.md).
+    - **One refinement to question 3's rule 7:** when headings don't line up, only the frontmatter
+      and intro pair (they pair by place). "The pairs it can make up to the first mismatch" would
+      need a guess at where the mismatch is (an extra section near the end looks the same, by
+      count, as one near the start), so the heading sections stay unpaired and the pairing says
+      why (`count` or `level`, with both counts).
+    - A lone single heading (`# Title` and text) splits at that heading, as one heading section.
+    - Checked with the real parser over the plugin fixtures and READMEs: a `# Title` over `##`
+      sections splits at `##`, with the title in the intro.
+    - Mutation checks, each failing tests: no lone-title rule, a lone title not required to come
+      first, the intro merged into the frontmatter, the reason always `count`, pairing ignoring
+      counts, and sections leaving gaps.
 - **S2, the section view:** aligned editors (4A), per-section rows marked at their headings, the
   mismatch message, and the toggle to the full-page view. No status yet.
 - **S3, status:** the status file and its port, fingerprints, "Mark up to date" (section, page,

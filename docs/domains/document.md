@@ -56,4 +56,5 @@ Swapping the library touches only `document/adapters/` and must pass the same co
 ## Later
 
 - M2: edits as text splices, frontmatter fields (with a CST-preserving YAML library).
-- M3: sections (split at headings) and their pairing, source-change tracking on blocks.
+- M3: sections and their pairing are `translation`'s ([its doc](translation.md)), over these blocks;
+  source-change tracking on blocks.
