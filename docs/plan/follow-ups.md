@@ -53,3 +53,10 @@ it came from. When one is picked up, it moves into that milestone's plan and is 
 
 - **Frontmatter as fields:** keys read-only (always English), values editable, with clear
   direction handling for RTL values. A future brainstorm topic, recorded in UI-UX.md.
+
+## From M3: sections ([plan](M3-sections.md))
+
+- **Section status bars with a screen reader.** The bars (S3d) sit inside the translation
+  editor's text box, so a screen reader reads them with its content. Check with NVDA or Orca;
+  if it reads badly, move the status out of the text box (an `aria-hidden` bar, with the
+  buttons' names carrying the status).

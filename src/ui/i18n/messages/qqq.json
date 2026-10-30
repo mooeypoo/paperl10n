@@ -53,6 +53,8 @@
   "paperl10n-mark-existing-done": "Confirmation after paperl10n-mark-existing. $1: how many pages were marked up to date.",
   "paperl10n-sections-progress": "In the page header: how many of the page's sections are up to date. $1: up to date; $2: all of them.",
   "paperl10n-mark-page": "Button in the page header: says the whole translation matches its source as shown, now (recorded in the project's status file right away, not on save).",
+  "paperl10n-mark-section": "Button in a section's status bar, at its heading in the section view: says this section's translation matches its source as shown, now.",
+  "paperl10n-mark-section-name": "Accessible name of paperl10n-mark-section, read by screen readers. $1: the section's number on the page; $2: how many sections the page has.",
   "paperl10n-reopen-page": "Button next to an error when marking up to date failed because the source changed on disk: reads the page again (asking first about unsaved changes).",
   "paperl10n-error-workspace-no-target-locale": "Error when the UI asks for pages before the project has a translation (target) language.",
   "paperl10n-error-workspace-unknown-language": "Error when the chosen language isn't in Paper Lion's language list or the project's config. $1: the language code, e.g. \"xx-foo\". \"languages\" and \"paperl10n.config.json\" are code: don't translate them.",

@@ -12,6 +12,7 @@ import {
 } from '../editor/markdown-editor';
 import { editorPosition } from '../editor/file-text';
 import type { LinkEdit } from '../editor/link-editing';
+import type { SectionBars } from '../editor/section-status';
 
 const props = defineProps<{
   /** The file's exact text. */
@@ -35,6 +36,8 @@ const props = defineProps<{
   sectionStarts?: readonly (number | null)[] | null;
   /** Show the section view: the section marks, lined up with another editor. */
   sectionsShown?: boolean;
+  /** Each section's status bar, by pair index, in the section view. */
+  sectionBars?: SectionBars | null;
 }>();
 /** `dirty`: the text has unsaved changes (sent on mount, and whenever that changes). `change`:
  * after each edit. `editLink`: show a form for a link, and answer through the request. */
@@ -75,6 +78,7 @@ const setSectionStarts = () => {
     starts?.map((start) => (start === null ? null : editorPosition(props.file, start))) ?? null,
   );
   editor?.showSections(props.sectionsShown);
+  editor?.setSectionBars(props.sectionBars ?? null);
 };
 
 onMounted(() => {
@@ -96,6 +100,12 @@ watch(
 );
 // Section starts come with the file they're for (a new pairing keeps the text and its history).
 watch(() => props.sectionStarts, setSectionStarts);
+watch(
+  () => props.sectionBars,
+  (bars) => {
+    editor?.setSectionBars(bars ?? null);
+  },
+);
 // Switching views keeps the starts where edits moved them.
 watch(
   () => props.sectionsShown,
