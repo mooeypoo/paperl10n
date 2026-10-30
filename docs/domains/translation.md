@@ -11,6 +11,11 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
 | Split level | The heading depth a document splits into sections at. |
 | Section | A `frontmatter` row, the `intro` (the text before the first heading at the split level), or a `heading` section (a heading at the split level and everything up to the next one). |
 | Section pairing | The source's and translation's sections, side by side in order, or the reason they don't line up. |
+| Fingerprint | A 64-bit hash of a block's text, ignoring line endings and trailing whitespace: what status keeps of the source. |
+| Marking up to date | The translator saying a section (or a whole page) matches its source as it is now. Explicit, never a side effect of saving. |
+| Page record | Every source section of a page as of its last mark: each one's kind, heading fingerprint, and its blocks' fingerprints when it was marked (or none: never marked). |
+| Status file | One per target language, committed with the translations: the page records, by document key. |
+| Status | `missing`, `draft`, `translated`, or `outdated` (PRD §6), for a page and for each of its source sections. |
 
 ## Rules (sections)
 
@@ -30,7 +35,37 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
 6. **Sections cover the text:** each runs from its first block to the start of the next section,
    the last to the end, so whitespace between blocks belongs to the section before it.
 
+## Rules (status)
+
+1. **Status reads the source and its record only**, never the translation's text (except whether
+   its file exists). A page without a translation file is `missing`; a page without a record is
+   `draft`.
+2. **Fingerprints ignore line endings and whitespace at line ends.** Any other change, a typo fix
+   included, makes a block changed: whether it matters is the translator's call.
+3. **Finding a section in its record:** sections match by identity (kind, and a heading
+   section's heading fingerprint), in order, as a longest common subsequence. Between matches, an
+   unmatched source section takes the first unmatched recorded section of the same kind (a changed
+   heading). Sections left over are **new**; recorded sections left over were **removed**, and
+   belong to the source section before them (or the first one, when they came first).
+4. **A section is** `draft` when it was never marked; `translated` when it was marked and its
+   blocks' fingerprints are the same now; `outdated` when they differ, when it's new since the
+   page was recorded, or when a marked section removed after it hasn't been dealt with.
+5. **A page is** `outdated` when any section is (or every section was removed from the source
+   after being marked), `translated` when every section is, and `draft` otherwise.
+6. **Marking** records the marked sections as the source has them now, and clears the removed
+   sections they carry. The others keep what they had (an outdated section keeps its old
+   fingerprints, under its current heading); on a page's first record they're recorded as never
+   marked. A removed section that was never marked is forgotten. Marking a page records all of it.
+
+## The status file
+
+`version` (1) and `pages`: each document key's record, a list of sections. A section has `kind`,
+`heading` (heading sections only), and `blocks`, the fingerprints when it was marked (absent:
+never marked; empty: new in the source since, not marked yet). Written with pages sorted by key
+and one section per line, so diffs and merges stay small. A malformed file is an error, never
+guessed at or overwritten; a newer version is refused. Fingerprints and their normalization are
+part of the format: changing either is a new version.
+
 ## Later (M3)
 
-Status (missing, draft, translated, outdated), block fingerprints in a status file per target
-language, marking up to date, source-change highlighting, preservation hints, and the length note.
+Source-change highlighting (from the same records), preservation hints, and the length note.

@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S2 done, S3 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S2 and S3a done, S3b next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -274,7 +274,33 @@ the last step.
         for an unpaired page. One survived and was removed as redundant: choosing "full" for an
         unpaired page on open (it can't show sections anyway).
 - **S3, status:** the status file and its port, fingerprints, "Mark up to date" (section, page,
-  all existing), the four statuses in the page list, and section progress in the page header.
+  all existing), the four statuses in the page list, and section progress in the page header. In
+  three PRs:
+  - **S3a, status in the domain:** fingerprints, page records, the status rules, marking, and the
+    status file's format, pure and table-tested.
+    - *Done-notes:* `translation/domain`: `fingerprint.ts`, `sequence.ts` (a longest common
+      subsequence), `status.ts`, and `status-file.ts`; `sectionFingerprints` in
+      `translation/application` reads a parsed source. The rules and the format are in
+      [the domain doc](../domains/translation.md).
+      - **One refinement to question 1:** a page's record keeps *every* source section, each by
+        identity (kind and heading fingerprint) and, once marked, with its blocks' fingerprints.
+        Keeping the unmarked ones tells a section never marked (`draft`) from one added to the
+        source since (`outdated`), and lets a removed section show on the section before it.
+      - Status needs only the source and the record, not the translation's text, so the page
+        list can show it without parsing translations.
+      - Mutation checks, each failing tests: no line-ending or whitespace normalization, pairing
+        changed headings across kinds, a removal not shown on the section before it (marked or
+        not), new sections read as draft, an outdated section kept under its old heading, a new
+        section losing its outdated state when another is marked, marking not clearing a
+        section's removals, removed sections never marked kept, a removal shown on the wrong
+        section, all-removed pages read as translated, removals listed before additions, keys
+        sorted by locale, newer versions read, and malformed fingerprints accepted.
+  - **S3b, status in main:** reading and writing the status file (`.paperl10n/status/<locale>.json`)
+    through the project's `ProjectFiles` and `ProjectWriter` (atomic, inside the project, with
+    their contract suites) instead of a new port; status in the page list and the pair; marking
+    (sections, a page, all existing translations), refused when the source changed on disk.
+  - **S3c, status in the UI:** the four statuses in the page list, each section's status and "Mark
+    up to date", the page's progress, and the one-time "Mark all existing translations up to date".
 - **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.
 - **S5, hints and length:** preservation hints per section (with the plugin's link mapping, if
   chosen) and the length note.

@@ -12,4 +12,22 @@ export {
   type SectionPair,
   type SectionPairing,
 } from './domain/sections.ts';
+export {
+  markSections,
+  pageStatus,
+  sectionStatuses,
+  type PageRecord,
+  type PageStatus,
+  type RecordedSection,
+  type SectionFingerprints,
+  type SectionStatus,
+} from './domain/status.ts';
+export {
+  emptyStatusFile,
+  parseStatusFile,
+  serializeStatusFile,
+  type StatusFile,
+  type StatusFileError,
+} from './domain/status-file.ts';
 export { outlineOf, pairDocumentSections } from './application/document-sections.ts';
+export { sectionFingerprints } from './application/document-status.ts';
