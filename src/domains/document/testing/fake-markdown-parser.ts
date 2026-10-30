@@ -14,6 +14,7 @@ export class FakeMarkdownParser implements MarkdownParser {
       text,
       blocks: end > start ? [{ kind: 'paragraph', range: { start, end } }] : [],
       inline: [],
+      preserved: [],
     };
   }
 }
@@ -37,6 +38,6 @@ export class LineMarkdownParser extends FakeMarkdownParser {
       }
       start += line.length + 1;
     }
-    return { text, blocks, inline: [] };
+    return { text, blocks, inline: [], preserved: [] };
   }
 }

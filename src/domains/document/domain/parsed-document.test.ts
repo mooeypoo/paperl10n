@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { parsedDocumentProblems, type Block, type InlineSpan } from './parsed-document.ts';
+import {
+  parsedDocumentProblems,
+  type Block,
+  type InlineSpan,
+  type ParsedDocument,
+} from './parsed-document.ts';
 
 const block = (kind: Block['kind'], start: number, end: number, depth?: number): Block =>
   depth === undefined ? { kind, range: { start, end } } : { kind, range: { start, end }, depth };
@@ -10,10 +15,11 @@ const span = (kind: InlineSpan['kind'], start: number, end: number): InlineSpan 
 });
 
 const text = '# Title\n\nSome `code` here.\n';
-const valid = {
+const valid: ParsedDocument = {
   text,
   blocks: [block('heading', 0, 7, 1), block('paragraph', 9, 26)],
   inline: [span('markup', 0, 1), span('markup', 14, 15), span('code', 15, 19)],
+  preserved: [{ kind: 'component', range: { start: 9, end: 12 }, value: 'x' }],
 };
 
 describe('parsedDocumentProblems', () => {
@@ -22,9 +28,16 @@ describe('parsedDocumentProblems', () => {
   });
 
   it('accepts a leading BOM between blocks, and an empty document', () => {
-    const withBom = { text: '\uFEFFx', blocks: [block('paragraph', 1, 2)], inline: [] };
+    const withBom = {
+      text: '\uFEFFx',
+      blocks: [block('paragraph', 1, 2)],
+      inline: [],
+      preserved: [],
+    };
     expect(parsedDocumentProblems(withBom)).toEqual([]);
-    expect(parsedDocumentProblems({ text: '\n', blocks: [], inline: [] })).toEqual([]);
+    expect(parsedDocumentProblems({ text: '\n', blocks: [], inline: [], preserved: [] })).toEqual(
+      [],
+    );
   });
 
   it.each<[string, Partial<typeof valid>, string]>([
@@ -71,6 +84,26 @@ describe('parsedDocumentProblems', () => {
     ['overlapping spans', { inline: [span('markup', 14, 16), span('code', 15, 19)] }, 'overlaps'],
     ['an empty span', { inline: [span('code', 15, 15)] }, 'is empty'],
     ['a span outside every block', { inline: [span('markup', 7, 9)] }, "isn't inside a block"],
+    [
+      'preserved elements out of order',
+      {
+        preserved: [
+          { kind: 'link', range: { start: 14, end: 20 }, value: 'a' },
+          { kind: 'link', range: { start: 9, end: 12 }, value: 'b' },
+        ],
+      },
+      'starts before the previous one',
+    ],
+    [
+      'an empty preserved element',
+      { preserved: [{ kind: 'image', range: { start: 9, end: 9 }, value: 'a' }] },
+      'is empty',
+    ],
+    [
+      'a preserved element outside every block',
+      { preserved: [{ kind: 'link', range: { start: 6, end: 10 }, value: 'a' }] },
+      "isn't inside a block",
+    ],
   ])('reports %s', (_description, change, problem) => {
     const problems = parsedDocumentProblems({ ...valid, ...change });
     expect(

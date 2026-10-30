@@ -12,7 +12,7 @@ function parsed(...parts: [Block['kind'], string, number?][]): ParsedDocument {
     text += part;
     return depth === undefined ? { kind, range } : { kind, range, depth };
   });
-  return { text: `${text}\n`, blocks, inline: [] };
+  return { text: `${text}\n`, blocks, inline: [], preserved: [] };
 }
 
 describe('outlineOf', () => {

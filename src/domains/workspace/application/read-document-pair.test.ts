@@ -89,6 +89,7 @@ describe('readDocumentPair', () => {
             text: '# Intro\n',
             blocks: [{ kind: 'paragraph', range: { start: 0, end: 7 } }],
             inline: [],
+            preserved: [],
           },
         },
         target: {
@@ -98,6 +99,7 @@ describe('readDocumentPair', () => {
             text: '# מבוא\n',
             blocks: [{ kind: 'paragraph', range: { start: 0, end: 6 } }],
             inline: [],
+            preserved: [],
           },
         },
         draft: null,

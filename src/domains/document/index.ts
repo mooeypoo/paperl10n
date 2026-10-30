@@ -15,6 +15,8 @@ export {
   type InlineKind,
   type InlineSpan,
   type ParsedDocument,
+  type PreservedElement,
+  type PreservedKind,
 } from './domain/parsed-document.ts';
 export { findFrontmatter, type FrontmatterLocation } from './domain/frontmatter.ts';
 export type { MarkdownParseOptions, MarkdownParser } from './application/ports/markdown-parser.ts';
