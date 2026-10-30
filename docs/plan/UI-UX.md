@@ -162,8 +162,9 @@ to break the YAML or translate a key by accident.
 - **The RTL reason:** a raw `[text](url)` in the middle of a Hebrew sentence can reorder the
   sentence visually, through the bidi algorithm. The editor must keep link targets and inline
   syntax isolated from the surrounding text.
-- Open choice (PRD §11): decorations over Markdown source (CodeMirror live preview) or a rich-text
-  editor that serializes to Markdown. Round-trip safety decides it as much as UX does.
+- Decided in M2 (PRD §11): live-preview decorations over the Markdown source (CodeMirror 6), for
+  round-trip safety. Links show as their text and a chip and are edited in a dialog; emphasis,
+  code, and heading marks hide away from the caret (PRD §7.2).
 
 ### Banana-i18n helpers (catalogs, M4)
 
