@@ -241,8 +241,15 @@ test('asks before closing the window with unsaved changes, and closes on "Don\'t
     BrowserWindow.getAllWindows()[0]?.close();
   });
   const closed = page.waitForEvent('close');
-  await question.getByRole('button', { name: "Don't save" }).click();
-  await closed;
+  // The click closes the window, which can happen before Playwright's click returns: that's the
+  // click working, so its "page closed" error counts only while the page is still open.
+  const clicked = question
+    .getByRole('button', { name: "Don't save" })
+    .click()
+    .catch((error: unknown) => {
+      if (!page.isClosed()) throw error;
+    });
+  await Promise.all([closed, clicked]);
 });
 
 test('keeps unsaved edits as a draft, and restores them after a crash', async () => {
