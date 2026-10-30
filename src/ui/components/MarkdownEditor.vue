@@ -168,3 +168,13 @@ defineExpose({
 <template>
   <div ref="host" class="markdown-editor" />
 </template>
+
+<style scoped>
+/* Takes the pane's height when the pane has one (a wide window), so the editor scrolls inside. */
+.markdown-editor {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
+}
+</style>

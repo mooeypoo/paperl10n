@@ -83,10 +83,12 @@ const sectionStarts = EditorView.decorations.compute([sectionAnchors, sectionsSh
 const sectionStart = Decoration.line({ class: 'cm-section-start' });
 
 interface Spacer {
-  /** The start of the line it sits above. */
+  /** The start of the line it sits above, or the document's end for one after the last line. */
   readonly position: number;
   /** In CSS pixels. */
   readonly height: number;
+  /** After the last line, so both documents end level (and can scroll as far). */
+  readonly end?: true;
 }
 
 class SpacerWidget extends WidgetType {
@@ -118,10 +120,12 @@ const setSpacers = StateEffect.define<readonly Spacer[]>();
 
 const spacerDecorations = (list: readonly Spacer[]): DecorationSet =>
   Decoration.set(
-    list.map(({ position, height }) =>
-      Decoration.widget({ widget: new SpacerWidget(height), block: true, side: -2 }).range(
-        position,
-      ),
+    list.map(({ position, height, end }) =>
+      Decoration.widget({
+        widget: new SpacerWidget(height),
+        block: true,
+        side: end === true ? 1 : -2,
+      }).range(position),
     ),
     true,
   );
@@ -138,7 +142,10 @@ const spacers = StateField.define<{
       const { doc } = transaction.state;
       list = list.map((spacer) => ({
         ...spacer,
-        position: doc.lineAt(transaction.changes.mapPos(spacer.position, 1)).from,
+        position:
+          spacer.end === true
+            ? doc.length
+            : doc.lineAt(transaction.changes.mapPos(spacer.position, 1)).from,
       }));
     }
     for (const effect of transaction.effects) {
@@ -176,8 +183,25 @@ export const sectionView: Extension = [
   }),
 ];
 
+/** Where the document's top sits on screen with the editor scrolled to the top. */
+export const restingTop = (view: EditorView): number => view.documentTop + view.scrollDOM.scrollTop;
+
+/** The height of the spacers above a line's text (not the one after the last line). */
+const spacersAbove = (view: EditorView, line: number) =>
+  (view.state.field(spacers, false)?.list ?? [])
+    .filter((spacer) => spacer.end !== true && spacer.position <= line)
+    .reduce((sum, spacer) => sum + spacer.height, 0);
+
+/** The bottom of a line's text, above any block widgets after it (the end spacer). */
+function textBottom(view: EditorView, position: number): number {
+  const block = view.lineBlockAt(position);
+  if (!Array.isArray(block.type)) return block.bottom;
+  const parts: readonly { readonly type: unknown; readonly bottom: number }[] = block.type;
+  return parts.findLast((part) => part.type === BlockType.Text)?.bottom ?? block.bottom;
+}
+
 /** The top of a line's text, below any block widgets above it (our spacers). */
-function textTop(view: EditorView, position: number): number {
+export function textTop(view: EditorView, position: number): number {
   const block = view.lineBlockAt(position);
   if (!Array.isArray(block.type)) return block.top;
   const parts: readonly { readonly type: unknown; readonly top: number }[] = block.type;
@@ -186,11 +210,17 @@ function textTop(view: EditorView, position: number): number {
 
 /**
  * The spacers that line each pair up: walking the pairs in order, the side whose section starts
- * higher (as laid out without spacers, plus the spacers placed so far) gets the difference.
+ * higher (as laid out without spacers, plus the spacers placed so far) gets the difference. With
+ * `ends` (where each document's text ends, and its length), the side that ends higher gets one
+ * after its last line too.
  */
 export function spacersFor(
   tops: readonly (readonly [number, number] | null)[],
   positions: readonly (readonly [number, number] | null)[],
+  ends?: {
+    readonly bottoms: readonly [number, number];
+    readonly lengths: readonly [number, number];
+  },
 ): [Spacer[], Spacer[]] {
   const result: [Spacer[], Spacer[]] = [[], []];
   let shiftA = 0;
@@ -207,6 +237,14 @@ export function spacersFor(
       shiftB -= difference;
     }
   });
+  if (ends !== undefined) {
+    const difference = Math.round(ends.bottoms[1] + shiftB - (ends.bottoms[0] + shiftA));
+    if (difference > 0)
+      result[0].push({ position: ends.lengths[0], height: difference, end: true });
+    if (difference < 0) {
+      result[1].push({ position: ends.lengths[1], height: -difference, end: true });
+    }
+  }
   return result;
 }
 
@@ -217,6 +255,7 @@ const sameSpacers = (a: readonly Spacer[], b: readonly Spacer[]) =>
     return (
       other !== undefined &&
       spacer.position === other.position &&
+      spacer.end === other.end &&
       Math.abs(spacer.height - other.height) <= 1
     );
   });
@@ -274,16 +313,14 @@ class Alignment {
     )
       return [[], []];
     // Stacked panes (a narrow window) don't sit side by side: nothing to line up.
-    const boxA = a.contentDOM.getBoundingClientRect();
-    const boxB = b.contentDOM.getBoundingClientRect();
-    if (!(boxA.right <= boxB.left + 1 || boxB.right <= boxA.left + 1)) return [[], []];
+    if (!sideBySide(a, b)) return [[], []];
 
+    // Where each line would be on screen with its editor scrolled to the top (each pane scrolls
+    // on its own), without spacers.
     const natural = (view: EditorView, position: number) => {
       const line = view.state.doc.lineAt(position).from;
-      const above = (view.state.field(spacers, false)?.list ?? [])
-        .filter((spacer) => spacer.position <= line)
-        .reduce((sum, spacer) => sum + spacer.height, 0);
-      return { line, top: view.documentTop + textTop(view, line) - above };
+      const top = restingTop(view) + textTop(view, line) - spacersAbove(view, line);
+      return { line, top };
     };
     const tops: ([number, number] | null)[] = [];
     const positions: ([number, number] | null)[] = [];
@@ -301,8 +338,22 @@ class Alignment {
       tops.push([sideA.top, sideB.top]);
       positions.push([sideA.line, sideB.line]);
     }
-    return spacersFor(tops, positions);
+    const bottom = (view: EditorView) => {
+      const { length } = view.state.doc;
+      return restingTop(view) + textBottom(view, length) - spacersAbove(view, length);
+    };
+    return spacersFor(tops, positions, {
+      bottoms: [bottom(a), bottom(b)],
+      lengths: [a.state.doc.length, b.state.doc.length],
+    });
   }
+}
+
+/** Whether two editors sit side by side (not stacked, as in a narrow window). */
+export function sideBySide(a: EditorView, b: EditorView): boolean {
+  const boxA = a.contentDOM.getBoundingClientRect();
+  const boxB = b.contentDOM.getBoundingClientRect();
+  return boxA.right <= boxB.left + 1 || boxB.right <= boxA.left + 1;
 }
 
 /** Lines the editor up with its partner again (something outside its document moved it). */

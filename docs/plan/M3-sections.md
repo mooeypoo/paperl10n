@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S5 done, S6 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S6 done, S7 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -527,6 +527,36 @@ the last step.
         translation starts or after a draft is discarded, bar hints not compared when redrawing,
         and no wording for a code block without a language.
 - **S6, full-page sync:** loose scroll sync and, if needed, the per-document split level.
+  - *Done-notes:* the plan assumed each pane scrolls on its own, but the whole page scrolled (both
+    panes together, which is what kept the section view's spacers level). Decided with the
+    maintainer (2026-10-30): **each pane scrolls on its own, in both views**, kept together by one
+    mechanism.
+    - **The layout:** in a window wide enough for the panes side by side (64rem, in `App.vue` and
+      `DocumentView.vue`), the app takes the window's height, the sidebar and the page scroll on
+      their own, and each pane's editor fills what the pane's header and notes leave (notes past
+      40% of the pane scroll). Narrower, the whole window scrolls as before.
+    - **Scrolling together** (`ui/editor/scroll-sync.ts`): scrolling one editor scrolls the other
+      so that, at the lower of the two panes' tops, each pair's start (and the documents' tops and
+      ends) match, and between them by relative position. Heights are taken "at rest" (as if each
+      editor were scrolled to its top), so they don't change as the panes scroll. The editor
+      scrolled last leads when the text changes size (a ResizeObserver on both). A follow
+      doesn't echo back: the scroll it causes is recognized and skipped.
+    - **The section view stays locked:** its spacers are measured at rest too, and a spacer after
+      the shorter document's last line makes both end level, so matching heights means the same
+      scroll position all the way down.
+    - **The full page:** a "Scroll together" toggle (`aria-pressed`, on by default), shown only in
+      the full page and only in a wide window. It's kept while the app runs, not across launches.
+      A page whose sections don't pair has no pairs to match: it follows by relative position.
+    - **The per-document split level isn't built:** the default rules held on the plugin fixtures
+      and READMEs, and whether the maintainer's site needs it is open (in
+      [follow-ups](follow-ups.md)).
+    - Tests: the matching heights and the height between them (tables: pairs going back up, flat
+      stretches, past the ends), the end spacer (table), the toggle through the UI, and an E2E in
+      Electron: the section view locked after a scroll, the full page lining up a paired heading,
+      and the toggle off leaving the other pane still. Checked by eye in both views, wide and
+      narrow.
+    - Mutation checks, each failing tests: no sync in the full page, the toggle ignored, the
+      alignment measured as scrolled (not at rest), and no end spacer.
 - **S7, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 Round-trip rule throughout: marking, highlighting, and hints never change a document's text;

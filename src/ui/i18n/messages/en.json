@@ -127,6 +127,7 @@
   "paperl10n-view-label": "View",
   "paperl10n-view-sections": "Sections",
   "paperl10n-view-full": "Full page",
+  "paperl10n-scroll-together": "Scroll together",
   "paperl10n-sections-unpaired-count": "This page shows in full: its sections don't line up with the source's ($1 in the translation, $2 in the source). When they match, it opens section by section.",
   "paperl10n-sections-unpaired-level": "This page shows in full: the translation's headings are at a different level from the source's. When they match, it opens section by section.",
   "paperl10n-sections-changed": "The sections have changed since this page opened. They'll be paired again when you reopen it."

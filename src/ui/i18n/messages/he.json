@@ -127,6 +127,7 @@
   "paperl10n-view-label": "תצוגה",
   "paperl10n-view-sections": "לפי פרקים",
   "paperl10n-view-full": "עמוד מלא",
+  "paperl10n-scroll-together": "גלילה משותפת",
   "paperl10n-sections-unpaired-count": "העמוד מוצג במלואו: הפרקים שלו לא תואמים לפרקי המקור ($1 בתרגום, $2 במקור). כשיתאימו, הוא ייפתח פרק אחר פרק.",
   "paperl10n-sections-unpaired-level": "העמוד מוצג במלואו: הכותרות בתרגום ברמה אחרת מאשר במקור. כשיתאימו, הוא ייפתח פרק אחר פרק.",
   "paperl10n-sections-changed": "הפרקים השתנו מאז שהעמוד נפתח. הם יותאמו מחדש כשהעמוד ייפתח שוב."
