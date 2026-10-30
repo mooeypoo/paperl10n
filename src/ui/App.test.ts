@@ -223,17 +223,17 @@ describe('the app shell', () => {
     );
   });
 
-  it('counts the pages that have a translation, and gives each page its status', async () => {
+  it('counts the pages that are up to date, and gives each page its status', async () => {
     const element = await openedApp();
-    expect(element.querySelector('nav')?.textContent).toContain('With a translation: 1 of 2');
+    expect(element.querySelector('nav')?.textContent).toContain('Up to date: 0 of 2');
     expect(
       pageButtons(element).map((b) => b.querySelector('.visually-hidden')?.textContent.trim()),
-    ).toEqual(['Not translated yet', 'Has a translation']);
+    ).toEqual(['Not translated yet', 'Draft: never marked up to date']);
     expect(
       pageButtons(element).map((b) =>
         b.querySelector('.pages-status')?.getAttribute('data-status'),
       ),
-    ).toEqual(['missing', 'started']);
+    ).toEqual(['missing', 'draft']);
   });
 
   it('shows another page when it is chosen', async () => {

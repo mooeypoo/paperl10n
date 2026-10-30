@@ -1,21 +1,47 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
-import type { SourceDocumentDto } from '#ipc-contract';
+import type { ErrorDto, PageStatusDto, SourceDocumentDto } from '#ipc-contract';
 import { computed } from 'vue';
+import { errorMessage } from '../i18n/error-message';
 import { useI18n } from '../i18n/i18n';
 import AppIcon from './AppIcon.vue';
 
-const props = defineProps<{
-  documents: readonly SourceDocumentDto[];
-  matches: readonly SourceDocumentDto[];
-  selectedKey: string | null;
-  /** The page whose translation has unsaved changes, if any. */
-  unsavedKey: string | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    documents: readonly SourceDocumentDto[];
+    matches: readonly SourceDocumentDto[];
+    selectedKey: string | null;
+    /** The page whose translation has unsaved changes, if any. */
+    unsavedKey: string | null;
+    /** Offer to mark every existing translation up to date (the one-time start). */
+    offerExisting?: boolean;
+    /** Marking them is on its way. */
+    markingExisting?: boolean;
+    markExistingError?: ErrorDto | null;
+    /** How many pages marking existing translations marked, once it did. */
+    markedExisting?: number | null;
+  }>(),
+  {
+    offerExisting: false,
+    markingExisting: false,
+    markExistingError: null,
+    markedExisting: null,
+  },
+);
 const query = defineModel<string>('query', { required: true });
-const emit = defineEmits<{ select: [key: string] }>();
+const emit = defineEmits<{ select: [key: string]; markExisting: []; dismissExisting: [] }>();
 const { t } = useI18n();
-const withTranslation = computed(() => props.documents.filter((d) => d.targetExists).length);
+const count = (status: PageStatusDto) =>
+  props.documents.filter((document) => document.status === status).length;
+const existing = computed(() => props.documents.filter((d) => d.targetExists).length);
+const statusNames: Readonly<Record<PageStatusDto, string>> = {
+  missing: 'paperl10n-status-missing',
+  draft: 'paperl10n-status-draft',
+  translated: 'paperl10n-status-translated',
+  outdated: 'paperl10n-status-outdated',
+};
+const unsaved = (document: SourceDocumentDto) =>
+  document.key === props.unsavedKey || document.hasDraft;
 </script>
 
 <template>
@@ -30,8 +56,32 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
         }}
       </span>
     </div>
-    <p v-if="documents.length > 0" class="pages-progress">
-      {{ t('paperl10n-pages-with-translation', withTranslation, documents.length) }}
+    <div v-if="documents.length > 0" class="pages-progress">
+      <p>{{ t('paperl10n-pages-up-to-date', count('translated'), documents.length) }}</p>
+      <p v-if="count('outdated') > 0">{{ t('paperl10n-pages-outdated', count('outdated')) }}</p>
+    </div>
+    <div v-if="offerExisting && existing > 0" class="pages-existing">
+      <p>{{ t('paperl10n-mark-existing-prompt', existing) }}</p>
+      <p v-if="markExistingError !== null" class="pages-existing-error" role="alert">
+        {{ errorMessage(markExistingError, t) }}
+      </p>
+      <div class="pages-existing-actions">
+        <button
+          type="button"
+          class="pl-button"
+          data-variant="primary"
+          :disabled="markingExisting"
+          @click="emit('markExisting')"
+        >
+          {{ t('paperl10n-mark-existing') }}
+        </button>
+        <button type="button" class="pl-button" @click="emit('dismissExisting')">
+          {{ t('paperl10n-mark-existing-later') }}
+        </button>
+      </div>
+    </div>
+    <p v-if="markedExisting !== null" class="pages-progress" role="status">
+      {{ t('paperl10n-mark-existing-done', markedExisting) }}
     </p>
     <label class="pages-search">
       <span class="visually-hidden">{{ t('paperl10n-find-page') }}</span>
@@ -46,25 +96,12 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
           :aria-current="document.key === selectedKey ? 'page' : undefined"
           @click="emit('select', document.key)"
         >
-          <span
-            class="pages-status"
-            :data-status="
-              document.key === unsavedKey || document.hasDraft
-                ? 'unsaved'
-                : document.targetExists
-                  ? 'started'
-                  : 'missing'
-            "
-            aria-hidden="true"
-          ></span>
+          <span class="pages-status" :data-status="document.status" aria-hidden="true"></span>
           <!-- A key is a path, not prose in the interface language: isolate it. -->
           <bdi>{{ document.key }}</bdi>
-          <span class="visually-hidden">
-            {{
-              document.targetExists ? t('paperl10n-status-started') : t('paperl10n-status-missing')
-            }}
-          </span>
-          <span v-if="document.key === unsavedKey || document.hasDraft" class="visually-hidden">
+          <span class="visually-hidden">{{ t(statusNames[document.status]) }}</span>
+          <span v-if="unsaved(document)" class="pages-unsaved" aria-hidden="true"></span>
+          <span v-if="unsaved(document)" class="visually-hidden">
             {{ t('paperl10n-status-unsaved') }}
           </span>
         </button>
@@ -72,14 +109,11 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
     </ul>
     <p v-else class="pages-none">{{ t('paperl10n-no-matching-pages', query.trim()) }}</p>
     <ul class="pages-legend" aria-hidden="true">
-      <li>
-        <span class="pages-status" data-status="started"></span>{{ t('paperl10n-status-started') }}
-      </li>
-      <li>
-        <span class="pages-status" data-status="missing"></span>{{ t('paperl10n-status-missing') }}
+      <li v-for="(name, status) in statusNames" :key="status">
+        <span class="pages-status" :data-status="status"></span>{{ t(name) }}
       </li>
       <li v-if="unsavedKey !== null || documents.some((document) => document.hasDraft)">
-        <span class="pages-status" data-status="unsaved"></span>{{ t('paperl10n-status-unsaved') }}
+        <span class="pages-unsaved"></span>{{ t('paperl10n-status-unsaved') }}
       </li>
     </ul>
   </nav>
@@ -114,6 +148,35 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
   margin: 0;
   color: var(--pl-color-muted);
   font-size: var(--pl-text-sm);
+}
+
+.pages-progress p {
+  margin: 0;
+}
+
+.pages-existing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  padding: var(--pl-space-3);
+  border: 1px solid var(--pl-color-line);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-color-surface);
+  font-size: var(--pl-text-sm);
+}
+
+.pages-existing p {
+  margin: 0;
+}
+
+.pages-existing-error {
+  color: var(--pl-color-danger);
+}
+
+.pages-existing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-2);
 }
 
 .pages-search {
@@ -184,14 +247,36 @@ const withTranslation = computed(() => props.documents.filter((d) => d.targetExi
   border-radius: 50%;
 }
 
-.pages-status[data-status='started'] {
+/* Each status has its own shape or fill, not only its color: missing is hollow, a draft filled
+   grey, up to date filled green, and outdated a diamond. */
+.pages-status[data-status='draft'] {
   background: var(--pl-color-muted);
 }
 
-/* Unsaved changes: the accent, filled, so it stands out from both statuses. */
-.pages-status[data-status='unsaved'] {
-  border-color: var(--pl-color-accent);
+.pages-status[data-status='translated'] {
+  border-color: var(--pl-color-ok);
+  background: var(--pl-color-ok);
+}
+
+.pages-status[data-status='outdated'] {
+  border-color: var(--pl-color-warn);
+  border-radius: 1px;
+  background: var(--pl-color-warn);
+  transform: rotate(45deg);
+}
+
+/* Unsaved changes: a small accent dot at the end of the row, beside the status. */
+.pages-unsaved {
+  flex: none;
+  inline-size: 0.4rem;
+  block-size: 0.4rem;
+  margin-inline-start: auto;
+  border-radius: 50%;
   background: var(--pl-color-accent);
+}
+
+.pages-legend .pages-unsaved {
+  margin-inline: 0.05rem;
 }
 
 .pages-legend {

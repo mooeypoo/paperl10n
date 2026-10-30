@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type {
   ErrorDto,
+  PageStatusDto,
   PaperLionApi,
   ProjectSummaryDto,
   SourceDocumentDto,
@@ -26,6 +27,13 @@ export interface ProjectState {
   markTranslated(key: string): void;
   /** A page gained or lost its draft. */
   markDraft(key: string, hasDraft: boolean): void;
+  /** A page was marked up to date (so the status file exists now): its status after. */
+  setStatus(key: string, status: PageStatusDto): void;
+  /**
+   * Marks every existing translation never marked up to date (the one-time start), then lists the
+   * pages again. Returns the keys it marked, or the error.
+   */
+  markExisting(): Promise<{ readonly marked: readonly string[] } | { readonly error: ErrorDto }>;
 }
 
 const noStatusFile: SourceDocumentListDto['statusFile'] = { exists: false, problem: null };
@@ -120,6 +128,29 @@ export function useProject(client: PaperLionApi): ProjectState {
     documents.value = documents.value.map((document) => (document === entry ? changed : document));
   }
 
+  async function markExisting(): Promise<
+    { readonly marked: readonly string[] } | { readonly error: ErrorDto }
+  > {
+    const current = summary.value;
+    if (current === null) return { marked: [] };
+    const request = ++latest;
+    busy.value = true;
+    try {
+      const marked = await client.markExistingUpToDate({ projectId: current.projectId });
+      if (!marked.ok) return { error: marked.error };
+      const listed = await client.listSourceDocuments({ projectId: current.projectId });
+      if (request === latest && listed.ok) {
+        documents.value = listed.value.documents;
+        statusFile.value = listed.value.statusFile;
+      }
+      return { marked: marked.value.marked };
+    } catch {
+      return { error: transportFailed };
+    } finally {
+      if (request === latest) busy.value = false;
+    }
+  }
+
   return {
     summary,
     documents,
@@ -139,5 +170,10 @@ export function useProject(client: PaperLionApi): ProjectState {
     markDraft: (key, hasDraft) => {
       update(key, { hasDraft });
     },
+    setStatus: (key, status) => {
+      update(key, { status });
+      if (!statusFile.value.exists) statusFile.value = { ...statusFile.value, exists: true };
+    },
+    markExisting,
   };
 }

@@ -151,8 +151,11 @@ export function fakeClient(
     },
     readDocumentPair: ({ projectId, key }) => {
       calls.push(`readDocumentPair:${projectId}:${key}`);
+      // A copy, as IPC delivers: reading a page again never gives the same object.
       return Promise.resolve(
-        answers.read?.[key] ?? { ok: true, value: pairFor(key, `Source of ${key}\n`) },
+        structuredClone(
+          answers.read?.[key] ?? { ok: true, value: pairFor(key, `Source of ${key}\n`) },
+        ),
       );
     },
     suggestTargetLanguages: ({ projectId, recent, uiLanguage }) => {

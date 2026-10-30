@@ -1,6 +1,13 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
-import type { DocumentPairDto, ErrorDto, LocaleDto, SourceDocumentDto } from '#ipc-contract';
+import type {
+  DocumentPairDto,
+  DocumentStatusDto,
+  ErrorDto,
+  LocaleDto,
+  PageStatusDto,
+  SourceDocumentDto,
+} from '#ipc-contract';
 import type { EditorView } from '@codemirror/view';
 import { computed, onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import type { SaveStatus } from '../composables/use-translation-saving';
@@ -29,6 +36,11 @@ const props = defineProps<{
   isNew: boolean;
   saveStatus: SaveStatus;
   saveError: ErrorDto | null;
+  /** The page's status (from the pair, then as marking changed it). */
+  status?: DocumentStatusDto | null;
+  /** Marking the page up to date is on its way. */
+  marking?: boolean;
+  markError?: ErrorDto | null;
 }>();
 const emit = defineEmits<{
   start: [];
@@ -36,6 +48,9 @@ const emit = defineEmits<{
   change: [];
   save: [];
   discardRestored: [];
+  markPage: [];
+  /** Read the page again (its source changed on disk). */
+  reopen: [];
 }>();
 const { t } = useI18n();
 // Only the pair for this page counts: while the next page loads, the previous one isn't shown.
@@ -152,6 +167,24 @@ const changedNote = computed(
     (sectionsChanged.value || !pairable.value),
 );
 
+// Status (docs/domains/translation.md): shown once the translation has a file.
+const statusNames: Readonly<Record<PageStatusDto, string>> = {
+  missing: 'paperl10n-status-missing',
+  draft: 'paperl10n-status-draft',
+  translated: 'paperl10n-status-translated',
+  outdated: 'paperl10n-status-outdated',
+};
+const shownStatus = computed(() => {
+  const status = props.status ?? null;
+  return current.value === null || status === null || status.page === 'missing' ? null : status;
+});
+const markErrorText = computed(() =>
+  props.markError === undefined || props.markError === null ? '' : errorMessage(props.markError, t),
+);
+const sectionsUpToDate = computed(
+  () => shownStatus.value?.sections.filter((section) => section === 'translated').length ?? 0,
+);
+
 defineExpose({
   /** The translation editor's text to save, or `null` when there's no editor. */
   snapshot: (): EditorSnapshot | null => targetPane.value?.snapshot() ?? null,
@@ -191,6 +224,34 @@ defineExpose({
           </button>
         </div>
       </header>
+      <div v-if="shownStatus !== null && !waiting && error === null" class="document-status">
+        <span class="document-status-name" :data-status="shownStatus.page">
+          {{ t(statusNames[shownStatus.page]) }}
+        </span>
+        <span v-if="shownStatus.sections.length > 1" class="document-note">
+          {{ t('paperl10n-sections-progress', sectionsUpToDate, shownStatus.sections.length) }}
+        </span>
+        <button
+          v-if="shownStatus.page !== 'translated'"
+          type="button"
+          class="pl-button"
+          :disabled="marking"
+          @click="emit('markPage')"
+        >
+          {{ t('paperl10n-mark-page') }}
+        </button>
+      </div>
+      <div v-if="markErrorText !== '' && !waiting" class="document-error" role="alert">
+        <p>{{ markErrorText }}</p>
+        <button
+          v-if="markError?.code === 'workspace.source-changed'"
+          type="button"
+          class="pl-button"
+          @click="emit('reopen')"
+        >
+          {{ t('paperl10n-reopen-page') }}
+        </button>
+      </div>
       <p v-if="unpairedNote !== '' && !waiting" class="document-note document-sections-note">
         {{ unpairedNote }}
       </p>
@@ -315,6 +376,30 @@ defineExpose({
   gap: var(--pl-space-1);
 }
 
+.document-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2) var(--pl-space-3);
+}
+
+.document-status-name {
+  padding-block: 0.1rem;
+  padding-inline: var(--pl-space-2);
+  border: 1px solid var(--pl-color-line);
+  border-inline-start: 3px solid var(--pl-color-muted);
+  border-radius: var(--pl-radius-md);
+  font-size: var(--pl-text-sm);
+}
+
+.document-status-name[data-status='translated'] {
+  border-inline-start-color: var(--pl-color-ok);
+}
+
+.document-status-name[data-status='outdated'] {
+  border-inline-start-color: var(--pl-color-warn);
+}
+
 .document-title {
   margin: 0;
   font-family: var(--pl-font-text);
@@ -353,7 +438,15 @@ defineExpose({
   font-size: var(--pl-text-sm);
 }
 
+.document-error p {
+  margin: 0;
+}
+
 .document-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2) var(--pl-space-3);
   margin: 0;
   padding: var(--pl-space-3) var(--pl-space-4);
   border: 1px solid var(--pl-color-danger);

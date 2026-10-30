@@ -515,6 +515,45 @@ test('shows paired sections side by side, lined up at their headings', async () 
   expect(problems.console).toEqual([]);
 });
 
+test('marks translations up to date, and shows a source change as outdated', async () => {
+  const project = join(profile, 'basic');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  const nav = page.locator('nav');
+  const statusOf = (key: string) =>
+    nav
+      .locator('li button')
+      .filter({ has: page.locator('bdi', { hasText: new RegExp(`^${key}$`) }) })
+      .locator('.pages-status');
+
+  // Translated before Paper Lion: offered once, and marking them writes the status file.
+  await expect(nav.getByText('One page has a translation that was never marked')).toBeVisible();
+  await expect(statusOf('index')).toHaveAttribute('data-status', 'draft');
+  await nav.getByRole('button', { name: 'Mark all up to date' }).click();
+  await expect(nav.getByText('One page marked up to date.')).toBeVisible();
+  await expect(statusOf('index')).toHaveAttribute('data-status', 'translated');
+  const statusFile = join(project, '.paperl10n/status/he.json');
+  expect(readFileSync(statusFile, 'utf8')).toMatch(
+    /^\{\n {2}"version": 1,\n {2}"pages": \{\n {4}"index": \[/,
+  );
+
+  // The source changes on disk: reopened, the project lists the page as outdated.
+  writeFileSync(join(project, 'en/index.md'), '# Welcome\n\nThis is the new home page.\n');
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  await expect(statusOf('index')).toHaveAttribute('data-status', 'outdated');
+  await nav.getByText('index', { exact: true }).click();
+  await expect(page.locator('.document-status')).toContainText(
+    'Outdated: the source changed since',
+  );
+  await page.getByRole('button', { name: 'Mark page up to date' }).click();
+  await expect(page.locator('.document-status')).toContainText('Up to date');
+  await expect(statusOf('index')).toHaveAttribute('data-status', 'translated');
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
 test('runs in its own profile, not the real one', async () => {
   expect(await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'))).toBe(
     profile,

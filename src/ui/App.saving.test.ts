@@ -81,8 +81,11 @@ const page = (element: Element, key: string) => {
   if (!(found instanceof HTMLButtonElement)) throw new Error(`no page "${key}"`);
   return found;
 };
+/** A page's marker in the list: `unsaved` while it has unsaved changes, else its status. */
 const pageStatus = (element: Element, key: string) =>
-  page(element, key).querySelector('.pages-status')?.getAttribute('data-status');
+  page(element, key).querySelector('.pages-unsaved') === null
+    ? page(element, key).querySelector('.pages-status')?.getAttribute('data-status')
+    : 'unsaved';
 const unsavedDialog = () => document.querySelector<HTMLDialogElement>('dialog.unsaved');
 const pressSave = (init: KeyboardEventInit) =>
   window.dispatchEvent(new KeyboardEvent('keydown', { cancelable: true, ...init }));
@@ -107,9 +110,12 @@ describe('starting and saving a translation', () => {
     expect(saveButton(element).disabled).toBe(true);
     expect(targetPane(element)?.textContent).not.toContain('A copy of the source.');
     // The page has a translation now, and stays selected.
-    expect(pageStatus(element, 'guide/getting-started')).toBe('started');
+    expect(pageStatus(element, 'guide/getting-started')).toBe('draft');
     expect(page(element, 'guide/getting-started').getAttribute('aria-current')).toBe('page');
-    expect(element.querySelector('nav')?.textContent).toContain('With a translation: 2 of 2');
+    // A new translation is a draft, here and in the page's header.
+    expect(element.querySelector('.document-status-name')?.textContent.trim()).toBe(
+      'Draft: never marked up to date',
+    );
   });
 
   it('saves an edited translation with Ctrl+S, from any keyboard layout, against the file', async () => {
@@ -188,7 +194,7 @@ describe('leaving a page with unsaved changes', () => {
     await flushPromises();
     expect(page(element, 'guide/getting-started').getAttribute('aria-current')).toBe('page');
     expect(calls.some((call) => call.startsWith('saveDocument'))).toBe(false);
-    expect(pageStatus(element, 'index')).toBe('started');
+    expect(pageStatus(element, 'index')).toBe('draft');
   });
 
   it('saves, then leaves, on Save', async () => {
@@ -301,7 +307,7 @@ describe('drafts', () => {
     expect(calls.at(-1)).toBe('discardDraft:p-1:index');
     expect(targetEditor(element).state.doc.toString()).toBe('בית\n');
     expect(status(element)).toBe('');
-    expect(pageStatus(element, 'index')).toBe('started');
+    expect(pageStatus(element, 'index')).toBe('draft');
   });
 
   it("saves a restored draft against the draft's base, and the page's marker goes", async () => {
@@ -320,7 +326,7 @@ describe('drafts', () => {
     await flushPromises();
     expect(calls.at(-1)).toBe('saveDocument:p-1:index:"בית ועוד\\r\\n":"בית\\r\\n"');
     expect(targetPane(element)?.textContent).not.toContain('were restored');
-    expect(pageStatus(element, 'index')).toBe('started');
+    expect(pageStatus(element, 'index')).toBe('draft');
   });
 
   it('keeps edits as a draft while typing, and drops it on "Don\'t save"', async () => {
@@ -337,7 +343,7 @@ describe('drafts', () => {
     button(element, "Don't save").click();
     await flushPromises();
     expect(calls.at(-2)).toBe('discardDraft:p-1:index');
-    expect(pageStatus(element, 'index')).toBe('started');
+    expect(pageStatus(element, 'index')).toBe('draft');
   });
 });
 
@@ -425,7 +431,7 @@ describe('a translation changed on disk', () => {
     expect(targetEditor(element).state.doc.toString()).toBe('שלהם\n');
     expect(status(element)).toBe('');
     expect(targetPane(element)?.querySelector('[role="alert"]')).toBeNull();
-    expect(pageStatus(element, 'index')).toBe('started');
+    expect(pageStatus(element, 'index')).toBe('draft');
   });
 
   it('overwrites with mine, against the file as it is now', async () => {

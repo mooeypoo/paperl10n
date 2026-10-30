@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S2 and S3a–S3b done, S3c next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S2 and S3a–S3c done, S3d next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -323,8 +323,38 @@ the last step.
         read, marks not run one at a time, an invalid file read as empty, a missing translation's
         page not `missing`, section indices accepted out of order, and a saved new page not becoming
         `draft` in the list.
-  - **S3c, status in the UI:** the four statuses in the page list, each section's status and "Mark
-    up to date", the page's progress, and the one-time "Mark all existing translations up to date".
+  - **S3c, status in the UI, by page:** the four statuses in the page list, the page's status and
+    section progress in its header with "Mark page up to date", and the one-time "Mark all existing
+    translations up to date".
+    - *Done-notes:*
+      - **Page list:** each page's mark shows its status by shape as well as color (missing hollow,
+        draft grey, up to date green, outdated an orange diamond); unsaved changes are a separate
+        accent dot at the row's end. Above the list: "Up to date: 2 of 4" and, when some are, how
+        many are outdated. New tokens: `--pl-color-ok` and `--pl-color-warn`, both themes.
+      - **Marking existing translations:** offered in the page list while the language has no
+        status file and some pages have a translation; "Not now" puts it off until the project is
+        opened again. After marking, the list is read again and the open page's header updates
+        without reading the page again (unsaved edits stay).
+      - **The page's header** (sticky, with the view buttons): its status, "Sections up to date: 1
+        of 3", and "Mark page up to date" (not for a page without a translation file; a new one
+        becomes a draft when first saved). A refused mark shows why; when the source changed on
+        disk, "Reopen the page" reads it again, asking about unsaved changes first.
+      - **A status file that can't be read** is explained above the page, with its details.
+      - Tests: the list's statuses, counts, and unsaved marker; the offer (shown, done, put off, not
+        shown with a status file, a broken one, or no translations, and its error); the header
+        (progress, marking, a page without a translation, saving keeping it up to date, saving a new
+        one making it a draft); the refused mark and reopening (with and without unsaved changes);
+        and an E2E in Electron: marking all existing writes the status file, a source changed on
+        disk lists as outdated, and marking the page makes it up to date. A new test checks the two
+        copies of the dark theme define the same tokens (it caught one the first draft missed).
+      - Mutation checks, each failing tests: the offer ignoring the status file or its problem, or
+        shown without translations; the open page not updated after marking all; the list not
+        updated after marking a page; a saved new page not becoming a draft, or a saved page always
+        becoming one; reopening without asking about unsaved changes; a status shown for a page
+        without a translation; a mark's error kept on another page; and the offer kept after a page
+        is marked.
+  - **S3d, status by section:** each section's status and "Mark up to date" at its heading in the
+    section view.
 - **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.
 - **S5, hints and length:** preservation hints per section (with the plugin's link mapping, if
   chosen) and the length note.
