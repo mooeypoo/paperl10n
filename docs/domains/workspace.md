@@ -140,7 +140,7 @@ errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.un
 
 `createMarkExistingUpToDate(…)`, `markExistingUpToDate(projectId)`: records every existing
 translation without a record as up to date with its source now (the one-time start for a project
-translated before Paper Lion), and returns how many. Pages with a record keep it; nothing to mark
+translated before Paper Lion), and returns their keys. Pages with a record keep it; nothing to mark
 writes nothing.
 
 `createStatusUpdates()`: one per app. Changes to the same status file run one at a time, so two

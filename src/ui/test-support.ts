@@ -125,8 +125,8 @@ export function fakeClient(
     saveDraft?: Result<null, ErrorDto>;
     /** The answer to marking up to date (default: every section and the page translated). */
     mark?: Result<DocumentStatusDto, ErrorDto>;
-    /** The answer to marking existing translations up to date (default: one marked). */
-    markExisting?: Result<{ marked: number }, ErrorDto>;
+    /** The answer to marking existing translations up to date (default: `index` marked). */
+    markExisting?: Result<{ marked: readonly string[] }, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -204,7 +204,7 @@ export function fakeClient(
     },
     markExistingUpToDate: ({ projectId }) => {
       calls.push(`markExistingUpToDate:${projectId}`);
-      return Promise.resolve(answers.markExisting ?? { ok: true, value: { marked: 1 } });
+      return Promise.resolve(answers.markExisting ?? { ok: true, value: { marked: ['index'] } });
     },
     chooseTargetLocale: ({ projectId, language: tag }) => {
       calls.push(`chooseTargetLocale:${projectId}:${tag}`);

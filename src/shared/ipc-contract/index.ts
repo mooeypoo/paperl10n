@@ -287,11 +287,11 @@ export interface PaperLionApi {
   }): Promise<Result<DocumentStatusDto, ErrorDto>>;
   /**
    * Marks every existing translation that was never marked up to date with its source as it is
-   * now: the one-time start for a project translated before Paper Lion.
+   * now: the one-time start for a project translated before Paper Lion. Returns their keys.
    */
   markExistingUpToDate(request: {
     readonly projectId: string;
-  }): Promise<Result<{ readonly marked: number }, ErrorDto>>;
+  }): Promise<Result<{ readonly marked: readonly string[] }, ErrorDto>>;
   /** Makes a language the project's target and saves it to the config; returns it with its direction. */
   chooseTargetLocale(request: {
     readonly projectId: string;

@@ -299,7 +299,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     const projectId = await openBasic(api);
     expect(await api.markExistingUpToDate({ projectId })).toEqual({
       ok: true,
-      value: { marked: 1 },
+      value: { marked: ['index'] },
     });
     const listed = await api.listSourceDocuments({ projectId });
     expect(listed.ok && listed.value.documents.map((entry) => entry.status)).toEqual([

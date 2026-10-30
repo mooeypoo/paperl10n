@@ -55,7 +55,7 @@ describe('guardApi', () => {
         saveDraft: () => Promise.resolve(ok(null)),
         discardDraft: () => Promise.resolve(ok(null)),
         markUpToDate: () => Promise.resolve(ok({ page: 'translated', sections: ['translated'] })),
-        markExistingUpToDate: () => Promise.resolve(ok({ marked: 3 })),
+        markExistingUpToDate: () => Promise.resolve(ok({ marked: ['k'] })),
       },
       onUnexpected,
     );
@@ -113,7 +113,7 @@ describe('guardApi', () => {
     expect(
       await api.markUpToDate({ projectId: 'p', key: 'k', sourceFingerprint: 'f', sections: null }),
     ).toEqual(ok({ page: 'translated', sections: ['translated'] }));
-    expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(ok({ marked: 3 }));
+    expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(ok({ marked: ['k'] }));
     expect(calls).toEqual([]);
   });
 

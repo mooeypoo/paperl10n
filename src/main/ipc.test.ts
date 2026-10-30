@@ -76,7 +76,7 @@ function setup() {
     },
     markExistingUpToDate: (request) => {
       calls.push(['markExistingUpToDate', request]);
-      return Promise.resolve(ok({ marked: 2 }));
+      return Promise.resolve(ok({ marked: ['index', 'about'] }));
     },
     chooseTargetLocale: (request) => {
       calls.push(['chooseTargetLocale', request]);
@@ -137,7 +137,7 @@ describe('registerApi', () => {
     });
     expect(await send('markExistingUpToDate', trusted, { projectId: 'p1' })).toEqual({
       ok: true,
-      value: { marked: 2 },
+      value: { marked: ['index', 'about'] },
     });
     expect(calls).toEqual([
       ['openProject'],

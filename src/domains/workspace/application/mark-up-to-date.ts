@@ -3,7 +3,7 @@
 // effect of saving. A mark records the source as the translator saw it, in the target language's
 // status file, which is written right away.
 import type { FileAccessError, FormatError } from '#domains/formats';
-import type { MarkdownParser } from '#domains/document';
+import type { DocumentKey, MarkdownParser } from '#domains/document';
 import {
   blockFingerprint,
   markSections,
@@ -50,7 +50,7 @@ export type MarkUpToDate = (
 
 export type MarkExistingUpToDate = (
   projectId: string,
-) => Promise<Result<{ readonly marked: number }, MarkUpToDateError>>;
+) => Promise<Result<{ readonly marked: readonly DocumentKey[] }, MarkUpToDateError>>;
 
 interface Dependencies {
   readonly sessions: ProjectSessions;
@@ -117,6 +117,7 @@ export function createMarkUpToDate(deps: Dependencies): MarkUpToDate {
 /**
  * Marks every existing translation without a record up to date with its source as it is now: the
  * one-time start for a project translated before Paper Lion. Pages already recorded keep theirs.
+ * Returns the keys of the pages it marked.
  */
 export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpToDate {
   return async (projectId) => {
@@ -132,7 +133,7 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
       const status = await readStatusFile(project, locale.id);
       if (!status.ok) return status;
       const pages = new Map<string, PageRecord>(status.value.file.pages);
-      let marked = 0;
+      const marked: DocumentKey[] = [];
       for (const document of documents.value) {
         if (pages.has(document.key)) continue;
         const targetPath = project.layout.targetPathFor(document, locale.id);
@@ -142,9 +143,9 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
         if (!text.ok) return err({ code: 'workspace.document-unreadable', cause: text.error });
         const source = deps.parser.parse(text.value, parseOptions(document.path));
         pages.set(document.key, markSections(sectionFingerprints(source), null, 'all'));
-        marked++;
+        marked.push(document.key);
       }
-      if (marked === 0) return ok({ marked });
+      if (marked.length === 0) return ok({ marked });
       const written = await project.writer.writeText(path, serializeStatusFile({ pages }), {
         createFolders: true,
       });
