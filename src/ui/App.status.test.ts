@@ -26,6 +26,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** A page whose source hasn't changed since it was marked (or never was). */
+const noChanges = { blocks: [], removals: [] } as const;
+
 const entry = (key: string, status: SourceDocumentDto['status']): SourceDocumentDto => ({
   key,
   sourcePath: `en/${key}.md`,
@@ -52,7 +55,12 @@ const list = (
 /** The index page: a draft, with three sections, one of them up to date. */
 const indexPair: DocumentPairDto = {
   ...pairFor('index', 'Source\n', 'תרגום\n'),
-  status: { page: 'draft', sections: ['translated', 'draft', 'draft'], sourceFingerprint: 'fp' },
+  status: {
+    page: 'draft',
+    sections: ['translated', 'draft', 'draft'],
+    changes: noChanges,
+    sourceFingerprint: 'fp',
+  },
 };
 
 type Answers = Parameters<typeof fakeClient>[0];
@@ -222,7 +230,11 @@ describe('marking the open page up to date', () => {
     const { element, calls } = await opened({
       mark: {
         ok: true,
-        value: { page: 'translated', sections: ['translated', 'translated', 'translated'] },
+        value: {
+          page: 'translated',
+          sections: ['translated', 'translated', 'translated'],
+          changes: noChanges,
+        },
       },
     });
     await openPage(element, 'index');
@@ -249,7 +261,12 @@ describe('marking the open page up to date', () => {
   it('keeps an up-to-date page up to date when its translation is saved', async () => {
     const upToDate: DocumentPairDto = {
       ...indexPair,
-      status: { page: 'translated', sections: ['translated'], sourceFingerprint: 'fp' },
+      status: {
+        page: 'translated',
+        sections: ['translated'],
+        changes: noChanges,
+        sourceFingerprint: 'fp',
+      },
     };
     const { element, calls } = await opened({ read: { index: { ok: true, value: upToDate } } });
     await openPage(element, 'index');
@@ -337,7 +354,12 @@ describe('marking a section up to date, in the section view', () => {
         { kind: 'heading', source: range(source, '## B'), target: range(translation, '## ב') },
       ],
     },
-    status: { page: 'outdated', sections: ['translated', 'outdated'], sourceFingerprint: 'fp' },
+    status: {
+      page: 'outdated',
+      sections: ['translated', 'outdated'],
+      changes: noChanges,
+      sourceFingerprint: 'fp',
+    },
   };
   const bars = (element: Element) =>
     [
@@ -354,7 +376,10 @@ describe('marking a section up to date, in the section view', () => {
   it('shows each section’s status at its heading, and marks one', async () => {
     const { element, calls } = await opened({
       read: { index: { ok: true, value: sectioned } },
-      mark: { ok: true, value: { page: 'translated', sections: ['translated', 'translated'] } },
+      mark: {
+        ok: true,
+        value: { page: 'translated', sections: ['translated', 'translated'], changes: noChanges },
+      },
     });
     await openPage(element, 'index');
     expect(bars(element)).toEqual([
@@ -390,7 +415,10 @@ describe('marking a section up to date, in the section view', () => {
     await flushPromises();
     expect(buttons().map((item) => item.disabled)).toEqual([true]);
     expect(button(element, 'Mark page up to date').disabled).toBe(true);
-    finish({ ok: true, value: { page: 'outdated', sections: ['translated', 'outdated'] } });
+    finish({
+      ok: true,
+      value: { page: 'outdated', sections: ['translated', 'outdated'], changes: noChanges },
+    });
     await flushPromises();
     expect(buttons().map((item) => item.disabled)).toEqual([false]);
   });

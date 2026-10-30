@@ -157,6 +157,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     expect(pair.value.status).toEqual({
       page: 'draft',
       sections: ['draft'],
+      changes: { blocks: [], removals: [] },
       sourceFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) as string,
     });
   },
@@ -271,7 +272,14 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     const { sourceFingerprint } = pair.value.status;
     expect(
       await api.markUpToDate({ projectId, key: 'index', sourceFingerprint, sections: null }),
-    ).toEqual({ ok: true, value: { page: 'translated', sections: ['translated'] } });
+    ).toEqual({
+      ok: true,
+      value: {
+        page: 'translated',
+        sections: ['translated'],
+        changes: { blocks: [], removals: [] },
+      },
+    });
     const written = await readFile(join(folder, '.paperl10n/status/he.json'), 'utf8');
     expect(written).toMatch(/^\{\n {2}"version": 1,\n {2}"pages": \{\n {4}"index": \[\n/);
     const listed = await api.listSourceDocuments({ projectId });
@@ -285,6 +293,11 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     await writeFile(join(folder, 'en/index.md'), '# Welcome\n\nThis is the new home page.\n');
     const outdated = await api.readDocumentPair({ projectId, key: 'index' });
     expect(outdated.ok && outdated.value.status.page).toBe('outdated');
+    // The changed paragraph, as the real parser places it.
+    expect(outdated.ok && outdated.value.status.changes).toEqual({
+      blocks: [{ kind: 'changed', range: { start: 11, end: 37 } }],
+      removals: [],
+    });
     expect(
       await api.markUpToDate({ projectId, key: 'index', sourceFingerprint, sections: [0] }),
     ).toEqual({

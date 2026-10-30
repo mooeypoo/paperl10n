@@ -3,7 +3,8 @@ import type { Block, ParsedDocument } from '#domains/document';
 import { describe, expect, it } from 'vitest';
 import { blockFingerprint } from '../domain/fingerprint.ts';
 import { pairDocumentSections } from './document-sections.ts';
-import { sectionFingerprints } from './document-status.ts';
+import { markSections } from '../domain/status.ts';
+import { documentChanges, sectionFingerprints } from './document-status.ts';
 
 /** A parsed document from its blocks' kinds and texts, joined by blank lines. */
 function parsed(...parts: [Block['kind'], string, number?][]): ParsedDocument {
@@ -63,5 +64,70 @@ describe('sectionFingerprints', () => {
       },
     }));
     expect(sectionFingerprints({ ...crlf, blocks })).toEqual(sectionFingerprints(document));
+  });
+});
+
+describe('documentChanges', () => {
+  const marked = parsed(
+    ['heading', '# Title', 1],
+    ['paragraph', 'Intro.'],
+    ['heading', '## A', 2],
+    ['paragraph', 'One.'],
+    ['paragraph', 'Two.'],
+    ['heading', '## B', 2],
+    ['paragraph', 'Three.'],
+  );
+  const record = markSections(sectionFingerprints(marked), null, 'all');
+  const at = (document: ParsedDocument, text: string) => {
+    const start = document.text.indexOf(text);
+    return { start, end: start + text.length };
+  };
+
+  it('finds nothing for a page never recorded, or one unchanged', () => {
+    expect(documentChanges(marked, null)).toEqual({ blocks: [], removals: [] });
+    expect(documentChanges(marked, record)).toEqual({ blocks: [], removals: [] });
+  });
+
+  it('places changed and new blocks, and removals, in the source’s text', () => {
+    const now = parsed(
+      ['heading', '# Title', 1],
+      ['paragraph', 'Intro, changed.'],
+      ['heading', '## A', 2],
+      ['paragraph', 'Two.'],
+      ['paragraph', 'New.'],
+      ['heading', '## B', 2],
+    );
+    expect(documentChanges(now, record)).toEqual({
+      blocks: [
+        { kind: 'changed', range: at(now, 'Intro, changed.') },
+        { kind: 'added', range: at(now, 'New.') },
+      ],
+      removals: [
+        // "One." was before "Two.", and "Three." at the end of B.
+        { offset: at(now, 'Two.').start, side: 'before' },
+        { offset: at(now, '## B').end, side: 'after' },
+      ],
+    });
+  });
+
+  it('places a removed section at the end of the one before it', () => {
+    const now = parsed(
+      ['heading', '# Title', 1],
+      ['paragraph', 'Intro.'],
+      ['heading', '## B', 2],
+      ['paragraph', 'Three.'],
+    );
+    expect(documentChanges(now, record)).toEqual({
+      blocks: [],
+      removals: [{ offset: at(now, 'Intro.').end, side: 'after' }],
+    });
+  });
+
+  it('places a removal at the start when every section was removed', () => {
+    const empty = { text: '', blocks: [], inline: [] };
+    expect(documentChanges(empty, record)).toEqual({
+      blocks: [],
+      removals: [{ offset: 0, side: 'before' }],
+    });
   });
 });

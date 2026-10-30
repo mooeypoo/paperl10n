@@ -6,6 +6,7 @@ describe('#domains/translation public API', () => {
   it('exports exactly these runtime values', () => {
     expect(Object.keys(translation).sort()).toEqual([
       'blockFingerprint',
+      'documentChanges',
       'emptyStatusFile',
       'markSections',
       'outlineOf',

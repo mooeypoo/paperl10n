@@ -105,6 +105,7 @@ describe('readDocumentPair', () => {
         status: {
           page: 'draft',
           sections: ['draft'],
+          changes: { blocks: [], removals: [] },
           sourceFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) as string,
         },
       },

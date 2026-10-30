@@ -15,6 +15,7 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
 | Marking up to date | The translator saying a section (or a whole page) matches its source as it is now. Explicit, never a side effect of saving. |
 | Page record | Every source section of a page as of its last mark: each one's kind, heading fingerprint, and its blocks' fingerprints when it was marked (or none: never marked). |
 | Status file | One per target language, committed with the translations: the page records, by document key. |
+| Source change | A source block changed or new since its section was marked up to date, or a place where marked text was removed. |
 | Status | `missing`, `draft`, `translated`, or `outdated` (PRD §6), for a page and for each of its source sections. |
 
 ## Rules (sections)
@@ -57,6 +58,20 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
    fingerprints, under its current heading); on a page's first record they're recorded as never
    marked. A removed section that was never marked is forgotten. Marking a page records all of it.
 
+## Rules (source changes)
+
+1. **Read from the same record as status:** which source blocks changed since their section was
+   marked, never their old wording. A page never recorded, or a section never marked, shows none.
+2. **Within a marked section,** its blocks are compared with the marked fingerprints as a longest
+   common subsequence. In each gap between equal blocks, as many new blocks as were removed are
+   `changed`, the rest `added`, and removed blocks left over are a **removal** at that place.
+3. **A section new since the record** is all `added`.
+4. **A marked section removed from the source** is a removal at the end of the section before it,
+   or before the first section when it came first (or at the document's start when none are
+   left). A removed section never marked isn't shown.
+5. Places are the blocks' ranges in the source's text; a removal is before the block that
+   follows it, or after the section's last block.
+
 ## The status file
 
 `version` (1) and `pages`: each document key's record, a list of sections. A section has `kind`,
@@ -68,4 +83,4 @@ part of the format: changing either is a new version.
 
 ## Later (M3)
 
-Source-change highlighting (from the same records), preservation hints, and the length note.
+Preservation hints and the length note.

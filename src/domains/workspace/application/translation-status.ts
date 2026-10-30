@@ -5,11 +5,13 @@
 import type { FileAccessError } from '#domains/formats';
 import type { ParsedDocument } from '#domains/document';
 import {
+  documentChanges,
   emptyStatusFile,
   pageStatus,
   parseStatusFile,
   sectionFingerprints,
   sectionStatuses,
+  type DocumentChanges,
   type PageStatus,
   type SectionStatus,
   type StatusFile,
@@ -66,10 +68,24 @@ export async function readStatusFile(
     : err({ code: 'workspace.status-invalid', path, problem: parsed.error.problem });
 }
 
-/** A page's status, and each of its source sections' (in the order the section pairing uses). */
+/**
+ * A page's status, each of its source sections' (in the order the section pairing uses), and what
+ * changed in its source since it was marked.
+ */
 export interface DocumentStatus {
   readonly page: PageStatus;
   readonly sections: readonly SectionStatus[];
+  readonly changes: DocumentChanges;
+}
+
+/** Just the page's status, for the page list: see {@link documentStatus}. */
+export function documentPageStatus(
+  source: Pick<ParsedDocument, 'blocks' | 'text'>,
+  file: StatusFile,
+  key: string,
+  translationExists: boolean,
+): PageStatus {
+  return pageStatus(sectionFingerprints(source), file.pages.get(key) ?? null, translationExists);
 }
 
 /** A page's status from its parsed source, its record in `file`, and whether it's translated. */
@@ -84,6 +100,7 @@ export function documentStatus(
   return {
     page: pageStatus(current, record, translationExists),
     sections: sectionStatuses(current, record),
+    changes: documentChanges(source, record),
   };
 }
 

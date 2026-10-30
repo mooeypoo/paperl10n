@@ -96,7 +96,12 @@ export function pairFor(
     target: target === null ? null : doc(`he/${key}.md`, target),
     draft: null,
     sections: { paired: true, level: null, pairs: [] },
-    status: { page: target === null ? 'missing' : 'draft', sections: [], sourceFingerprint: 'f' },
+    status: {
+      page: target === null ? 'missing' : 'draft',
+      sections: [],
+      changes: { blocks: [], removals: [] },
+      sourceFingerprint: 'f',
+    },
   };
 }
 
@@ -202,7 +207,10 @@ export function fakeClient(
         `markUpToDate:${projectId}:${key}:${sourceFingerprint}:${sections === null ? 'page' : sections.join(',')}`,
       );
       return Promise.resolve(
-        answers.mark ?? { ok: true, value: { page: 'translated', sections: [] } },
+        answers.mark ?? {
+          ok: true,
+          value: { page: 'translated', sections: [], changes: { blocks: [], removals: [] } },
+        },
       );
     },
     markExistingUpToDate: ({ projectId }) => {

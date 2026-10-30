@@ -75,6 +75,19 @@ export interface SourceDocumentListDto {
 export interface DocumentStatusDto {
   readonly page: PageStatusDto;
   readonly sections: readonly SectionStatusDto[];
+  /** What changed in the source since its sections were marked up to date. */
+  readonly changes: SourceChangesDto;
+}
+
+/** Offsets are UTF-16 code units into the source's `text`. */
+export interface SourceChangesDto {
+  /** Source blocks that replaced marked ones (`changed`) or are new since (`added`), in order. */
+  readonly blocks: readonly {
+    readonly kind: 'changed' | 'added';
+    readonly range: TextRangeDto;
+  }[];
+  /** Where marked text was removed: before the block starting at `offset`, or after the one ending there. */
+  readonly removals: readonly { readonly offset: number; readonly side: 'before' | 'after' }[];
 }
 
 /** Kept equal to the `document` domain's block kinds by a test. */

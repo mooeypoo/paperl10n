@@ -37,7 +37,12 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
           target: null,
           draft: null,
           sections: { paired: true, level: null, pairs: [] },
-          status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
+          status: {
+            page: 'missing',
+            sections: [],
+            changes: { blocks: [], removals: [] },
+            sourceFingerprint: 'f',
+          },
         },
       }),
     suggestTargetLanguages: () =>
@@ -46,7 +51,11 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
     saveDocument: ({ key }) => Promise.resolve({ ok: true, value: { path: key, written: true } }),
     saveDraft: () => Promise.resolve({ ok: true, value: null }),
     discardDraft: () => Promise.resolve({ ok: true, value: null }),
-    markUpToDate: () => Promise.resolve({ ok: true, value: { page: 'translated', sections: [] } }),
+    markUpToDate: () =>
+      Promise.resolve({
+        ok: true,
+        value: { page: 'translated', sections: [], changes: { blocks: [], removals: [] } },
+      }),
     markExistingUpToDate: () => Promise.resolve({ ok: true, value: { marked: [] } }),
     chooseTargetLocale: ({ language }) =>
       Promise.resolve({ ok: true, value: { id: language, direction: 'rtl' } }),

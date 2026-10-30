@@ -46,7 +46,12 @@ function setup() {
           target: null,
           draft: null,
           sections: { paired: true, level: null, pairs: [] },
-          status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
+          status: {
+            page: 'missing',
+            sections: [],
+            changes: { blocks: [], removals: [] },
+            sourceFingerprint: 'f',
+          },
         }),
       );
     },
@@ -72,7 +77,9 @@ function setup() {
     },
     markUpToDate: (request) => {
       calls.push(['markUpToDate', request]);
-      return Promise.resolve(ok({ page: 'translated', sections: ['translated'] }));
+      return Promise.resolve(
+        ok({ page: 'translated', sections: ['translated'], changes: { blocks: [], removals: [] } }),
+      );
     },
     markExistingUpToDate: (request) => {
       calls.push(['markExistingUpToDate', request]);
@@ -133,7 +140,11 @@ describe('registerApi', () => {
     const mark = { projectId: 'p1', key: 'k', sourceFingerprint: 'f', sections: [0, 2] };
     expect(await send('markUpToDate', trusted, mark)).toEqual({
       ok: true,
-      value: { page: 'translated', sections: ['translated'] },
+      value: {
+        page: 'translated',
+        sections: ['translated'],
+        changes: { blocks: [], removals: [] },
+      },
     });
     expect(await send('markExistingUpToDate', trusted, { projectId: 'p1' })).toEqual({
       ok: true,
