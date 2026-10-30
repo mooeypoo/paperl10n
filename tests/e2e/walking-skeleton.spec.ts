@@ -547,7 +547,6 @@ test('scrolls the panes together: locked in the section view, at paired headings
   await stubFolderDialog(project);
   await page.getByRole('button', { name: 'Open folder…' }).click();
   await page.locator('nav').getByText('index', { exact: true }).click();
-  const source = page.getByRole('textbox', { name: 'English · source' });
   const target = page.getByRole('textbox', { name: 'עברית · translation' });
   await expect(target).toBeVisible();
 
@@ -569,16 +568,17 @@ test('scrolls the panes together: locked in the section view, at paired headings
         }),
       [sourceLine, targetLine],
     );
-  const wheelOver = async (pane: typeof source, delta: number) => {
-    const box = await pane.boundingBox();
-    if (box === null) throw new Error('no pane');
-    await page.mouse.move(box.x + box.width / 2, box.y + 100);
+  /** Turns the mouse wheel over a pane's editor (0: the source), as a person scrolls it. */
+  const wheelOver = async (index: number, delta: number) => {
+    const box = await page.locator('.markdown-editor').nth(index).boundingBox();
+    if (box === null) throw new Error('no editor');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.wheel(0, delta);
   };
 
   // The section view: scrolling the source scrolls the translation as far, so pairs stay level.
   // (Far enough to bring the third pair into view: lines far from view aren't drawn.)
-  await wheelOver(source, 1500);
+  await wheelOver(0, 1500);
   await expect
     .poll(async () => {
       const [a, b] = await panes('Use', 'שימוש');
@@ -599,26 +599,20 @@ test('scrolls the panes together: locked in the section view, at paired headings
     'aria-pressed',
     'true',
   );
-  // (Lines far from view aren't drawn: from the top, the heading is.)
-  await target.evaluate((content) => {
-    content.closest('.cm-scroller')?.scrollTo({ top: 0 });
-  });
+  // Scrolled by a person (so it leads) back to the top, where its heading is drawn (lines far
+  // from view aren't), then to the heading.
+  await wheelOver(1, -10000);
   await expect
     .poll(() =>
       target.evaluate((content) => {
-        const lines = [...content.querySelectorAll('.cm-line')];
-        const line = lines.find((candidate) => candidate.textContent === 'שימוש');
+        const line = [...content.querySelectorAll('.cm-line')].find(
+          (candidate) => candidate.textContent === 'שימוש',
+        );
         line?.scrollIntoView({ block: 'start' });
-        return JSON.stringify({
-          found: line !== undefined,
-          scrollTop: content.closest('.cm-scroller')?.scrollTop,
-          height: content.closest('.cm-scroller')?.clientHeight,
-          inner: [innerWidth, innerHeight],
-          first: lines.slice(0, 6).map((candidate) => candidate.textContent.slice(0, 20)),
-        });
+        return line !== undefined;
       }),
     )
-    .toContain('"found":true');
+    .toBe(true);
   await expect
     .poll(async () => {
       const [a, b] = await panes('Use', 'שימוש');

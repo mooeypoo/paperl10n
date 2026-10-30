@@ -538,9 +538,13 @@ the last step.
     - **Scrolling together** (`ui/editor/scroll-sync.ts`): scrolling one editor scrolls the other
       so that, at the lower of the two panes' tops, each pair's start (and the documents' tops and
       ends) match, and between them by relative position. Heights are taken "at rest" (as if each
-      editor were scrolled to its top), so they don't change as the panes scroll. The editor
-      scrolled last leads when the text changes size (a ResizeObserver on both). A follow
-      doesn't echo back: the scroll it causes is recognized and skipped.
+      editor were scrolled to its top), so they don't change as the panes scroll.
+      - **Who leads:** the editor the person last scrolled or used (wheel, pointer, key, touch),
+        the translation until then. Only the leader's scrolling is followed. An editor also
+        scrolls by itself (following, or keeping its place as it measures lines it had only
+        estimated), and following that back pulled the leader away: CI caught it, as a timing
+        race that didn't show locally. When the text changes size (typing, lines measured, the
+        spacers), the follower follows again (a ResizeObserver on both).
     - **The section view stays locked:** its spacers are measured at rest too, and a spacer after
       the shorter document's last line makes both end level, so matching heights means the same
       scroll position all the way down.
@@ -554,9 +558,11 @@ the last step.
       stretches, past the ends), the end spacer (table), the toggle through the UI, and an E2E in
       Electron: the section view locked after a scroll, the full page lining up a paired heading,
       and the toggle off leaving the other pane still. Checked by eye in both views, wide and
-      narrow.
+      narrow. CI's virtual screen is now 1920×1080 (xvfb's default, 640×480, can't hold a wide
+      window), and the test checks the width it got.
     - Mutation checks, each failing tests: no sync in the full page, the toggle ignored, the
-      alignment measured as scrolled (not at rest), and no end spacer.
+      leader not following the person's input, the alignment measured as scrolled (not at rest),
+      and no end spacer.
 - **S7, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 Round-trip rule throughout: marking, highlighting, and hints never change a document's text;

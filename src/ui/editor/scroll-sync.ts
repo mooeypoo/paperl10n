@@ -64,15 +64,17 @@ function matchesBetween(from: EditorView, to: EditorView): Match[] {
   ]);
 }
 
+/** What the person does to scroll an editor (or to move in it, which may scroll it). */
+const steering = ['wheel', 'pointerdown', 'keydown', 'touchstart'] as const;
+
 /**
- * Scrolls `a` and `b` together until the returned function is called. `a` keeps its place when
- * they start (and whenever their text changes size, until `b` is scrolled).
+ * Scrolls `a` and `b` together until the returned function is called. The one the person last
+ * scrolled or used leads (`a` until then), and the other follows it. Only the leader's scrolling
+ * is followed: an editor also scrolls by itself (following, or keeping its place as it measures
+ * lines it had only estimated), and following that back would pull the leader away.
  */
 export function scrollSync(a: EditorView, b: EditorView): () => void {
-  /** The editor scrolled last, which the other follows. */
   let leader = a;
-  /** Where an editor was scrolled to by following, so its own scroll event isn't followed back. */
-  const followed = new Map<EditorView, number>();
 
   const follow = (from: EditorView, to: EditorView) => {
     if (!sideBySide(from, to)) return;
@@ -82,35 +84,42 @@ export function scrollSync(a: EditorView, b: EditorView): () => void {
       to.scrollDOM.getBoundingClientRect().top,
     );
     const height = matchingHeight(matchesBetween(from, to), line + from.scrollDOM.scrollTop);
-    const before = to.scrollDOM.scrollTop;
     to.scrollDOM.scrollTop = height - line;
-    // (The browser keeps it within the pane's range, so it's read back.)
-    if (to.scrollDOM.scrollTop !== before) followed.set(to, to.scrollDOM.scrollTop);
   };
-  const scrolled = (view: EditorView, other: EditorView) => () => {
-    const expected = followed.get(view);
-    followed.delete(view);
-    if (expected !== undefined && Math.abs(view.scrollDOM.scrollTop - expected) < 1) return;
-    leader = view;
-    follow(view, other);
+  const followLeader = () => {
+    follow(leader, leader === a ? b : a);
   };
-  const onA = scrolled(a, b);
-  const onB = scrolled(b, a);
-  a.scrollDOM.addEventListener('scroll', onA, { passive: true });
-  b.scrollDOM.addEventListener('scroll', onB, { passive: true });
-  // Text that grows or shrinks (typing, wrapping, the section view's spacers) moves what's matched.
-  const resized =
-    typeof ResizeObserver === 'undefined'
-      ? null
-      : new ResizeObserver(() => {
-          follow(leader, leader === a ? b : a);
-        });
+  const leadA = () => {
+    leader = a;
+  };
+  const leadB = () => {
+    leader = b;
+  };
+  const scrolledA = () => {
+    if (leader === a) followLeader();
+  };
+  const scrolledB = () => {
+    if (leader === b) followLeader();
+  };
+  for (const name of steering) {
+    a.scrollDOM.addEventListener(name, leadA, { passive: true });
+    b.scrollDOM.addEventListener(name, leadB, { passive: true });
+  }
+  a.scrollDOM.addEventListener('scroll', scrolledA, { passive: true });
+  b.scrollDOM.addEventListener('scroll', scrolledB, { passive: true });
+  // Text that grows or shrinks (typing, wrapping, lines measured, the section view's spacers)
+  // moves what's matched.
+  const resized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(followLeader);
   resized?.observe(a.contentDOM);
   resized?.observe(b.contentDOM);
-  follow(a, b);
+  followLeader();
   return () => {
-    a.scrollDOM.removeEventListener('scroll', onA);
-    b.scrollDOM.removeEventListener('scroll', onB);
+    for (const name of steering) {
+      a.scrollDOM.removeEventListener(name, leadA);
+      b.scrollDOM.removeEventListener(name, leadB);
+    }
+    a.scrollDOM.removeEventListener('scroll', scrolledA);
+    b.scrollDOM.removeEventListener('scroll', scrolledB);
     resized?.disconnect();
   };
 }
