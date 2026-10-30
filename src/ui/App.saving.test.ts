@@ -426,7 +426,9 @@ describe('a translation changed on disk', () => {
     read.index = { ok: true, value: theirs };
     button(conflictDialog() ?? element, 'Reload from disk').click();
     await flushPromises();
-    expect(calls.slice(-2)).toEqual(['discardDraft:p-1:index', 'readDocumentPair:p-1:index']);
+    // (Checks of the translation's hints run alongside: they aren't part of this.)
+    const reads = calls.filter((call) => !call.startsWith('checkTranslation:'));
+    expect(reads.slice(-2)).toEqual(['discardDraft:p-1:index', 'readDocumentPair:p-1:index']);
     expect(conflictDialog()?.open).toBe(false);
     expect(targetEditor(element).state.doc.toString()).toBe('שלהם\n');
     expect(status(element)).toBe('');

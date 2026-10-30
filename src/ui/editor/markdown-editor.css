@@ -174,6 +174,13 @@
   color: var(--pl-color-ink);
 }
 
+.cm-section-bar-hints {
+  flex-basis: 100%;
+  margin: 0;
+  padding-inline-start: var(--pl-space-4);
+  color: var(--pl-color-ink);
+}
+
 .cm-section-bar-mark {
   padding-block: 0.1rem;
   padding-inline: var(--pl-space-2);

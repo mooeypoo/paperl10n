@@ -37,6 +37,7 @@ describe('section status bars in an editor', () => {
     statusLabel: status,
     mark: status === 'translated' ? null : { label: 'Mark', name: `Mark ${status}` },
     busy,
+    hints: [],
   });
   const marked: number[] = [];
   // One handler for every set of bars, as the app has.
@@ -134,5 +135,27 @@ describe('section status bars in an editor', () => {
     const a = text.indexOf('## A') + '## A'.length;
     view.dispatch({ changes: { from: a, to: text.indexOf('## B') } });
     expect(shown(view)).toEqual([['draft', 'Mark draft', '## A## B']]);
+  });
+
+  it('lists a section’s hints under its status', () => {
+    const view = editor();
+    view.dispatch({
+      effects: setSectionBars.of(
+        bars([
+          null,
+          { ...bar('draft'), hints: ['A link only in the source: /a/', 'One more'] },
+          null,
+        ]),
+      ),
+    });
+    const hints = [...view.dom.querySelectorAll('.cm-section-bar-hints li')].map(
+      (item) => item.textContent,
+    );
+    expect(hints).toEqual(['A link only in the source: /a/', 'One more']);
+    // New hints redraw the bar.
+    view.dispatch({
+      effects: setSectionBars.of(bars([null, { ...bar('draft'), hints: ['Other'] }, null])),
+    });
+    expect(view.dom.querySelector('.cm-section-bar-hints')?.textContent).toBe('Other');
   });
 });
