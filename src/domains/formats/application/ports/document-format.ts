@@ -38,4 +38,11 @@ export interface DocumentLayout {
   /** Where `document`'s counterpart in `target` lives. Pure: the file may not exist yet.
    * For the source locale itself, it's the document's own path. */
   targetPathFor(document: SourceDocument, target: LocaleId): Result<ProjectPath, PluginError>;
+  /**
+   * Optional. A link target as written in `locale`'s pages, in the form the source's pages would
+   * write it: `/he/guide/` → `/guide/` on a site whose Hebrew pages live under `/he/`. Pure. The
+   * preservation hints compare links this way, so a localized link isn't flagged as changed;
+   * without it, links compare as written. Return anything you don't recognize unchanged.
+   */
+  sourceLinkTarget?(target: string, locale: LocaleId): string;
 }

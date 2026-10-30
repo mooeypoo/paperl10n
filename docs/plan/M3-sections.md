@@ -458,6 +458,23 @@ the last step.
         missed, and either invariant dropped. One survived and was removed as redundant: sorting
         the elements (the tree is walked in order, after the frontmatter's keys).
   - **S5b, link targets in the source's form:** the optional plugin method.
+    - *Done-notes:* `DocumentLayout.sourceLinkTarget?(target, locale)`, an optional method, so the
+      API stays at version 2 (adding an optional capability isn't breaking; the export list doesn't
+      change, since it's a type). The registry's guarded layout always has it: the plugin's answer,
+      the target as written without one, or `formats.plugin-failed` if it throws. The contract kit
+      checks that it maps without failing and leaves the source locale's links as written.
+      Starlight implements it: a first path segment naming the translation's folder (ignoring case)
+      is dropped when the source is at the root, or swapped for the source's folder. Relative links,
+      other sites, and a site `base` are left as written. Details in
+      [the formats doc](../domains/formats.md) and the plugin's README.
+      - Tests: the guard (with and without the method, a throwing one), the kit against two broken
+        plugins (mapping the source locale's links, throwing), and Starlight's mapping (table: the
+        root and folder layouts, a folder named in words, fragments, queries, case, a longer
+        segment, a later segment, relative links, other sites, the source locale's own links).
+      - Mutation checks, each failing tests: the source locale's links mapped, a case-sensitive
+        folder match, no leading slash, the source's folder not added, no fallback without the
+        method, and either kit check dropped. One survived and was removed as redundant: a
+        lookahead for the segment's end (the segment pattern already stops there).
   - **S5c, hints and length in main:** comparing the preserved elements per paired section (or
     the page), the rendered length, and a use case the editor calls as the translation changes.
   - **S5d, hints and length in the UI.**

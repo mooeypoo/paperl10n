@@ -319,3 +319,36 @@ describe("format-starlight's locale folders", () => {
     });
   });
 });
+
+describe('format-starlight link targets, in the source’s form', () => {
+  it.each<[string, string, string, string]>([
+    ['the source at the root: drops the folder', 'root-locale', '/he/guide/', '/guide/'],
+    ['with a fragment', 'root-locale', '/he/guide/#install', '/guide/#install'],
+    ['the locale’s home page', 'root-locale', '/he/', '/'],
+    ['without a trailing slash', 'root-locale', '/he', '/'],
+    ['with a query', 'root-locale', '/he?x=1', '/?x=1'],
+    ['a folder named like it, ignoring case', 'root-locale', '/HE/guide/', '/guide/'],
+    ['only a whole first segment', 'root-locale', '/help/', '/help/'],
+    ['not a later segment', 'root-locale', '/docs/he/guide/', '/docs/he/guide/'],
+    ['a link already in the source’s form', 'root-locale', '/guide/', '/guide/'],
+    ['a relative link', 'root-locale', '../guide/', '../guide/'],
+    ['another site', 'root-locale', 'https://example.org/he/x/', 'https://example.org/he/x/'],
+    [
+      'the source in its own folder: swaps the folder',
+      'folder-locales',
+      '/he/guides/intro/',
+      '/en/guides/intro/',
+    ],
+    ['a folder named in words', 'named-folders', '/hebrew/guide/', '/guide/'],
+  ])('%s', async (_description, name, target, expected) => {
+    const layout = await layoutOf(name);
+    expect(layout.sourceLinkTarget?.(target, locale('he'))).toBe(expected);
+  });
+
+  it('leaves the source locale’s links as written', async () => {
+    const layout = await layoutOf('folder-locales');
+    for (const target of ['/en/guides/intro/', '/en', '/en?x=1']) {
+      expect(layout.sourceLinkTarget?.(target, locale('en'))).toBe(target);
+    }
+  });
+});

@@ -69,6 +69,8 @@ const goodLayout: DocumentLayout = {
   ],
   listSourceDocuments: () => Promise.resolve(ok([doc('a', 'en/a.md'), doc('b', 'en/b.md')])),
   targetPathFor: (document, target) => ok(path(`${target}/${document.key}.md`)),
+  sourceLinkTarget: (target, locale) =>
+    locale === 'he' ? target.replace(/^\/he(?=\/|$)/, '') || '/' : target,
 };
 
 const goodFormat: DocumentFormat = {
@@ -203,6 +205,19 @@ describe('the plugin contract kit', () => {
     [
       "lists the project's locales once each, the source locale included, where its documents are",
       withLayout({ locales: [{ locale: locale('en'), folder: path('docs/en') }] }),
+    ],
+    [
+      "maps link targets without failing, and leaves the source locale's as written",
+      withLayout({ sourceLinkTarget: (target) => target.replace(/^\/[a-z]{2}\//, '/') }),
+    ],
+    [
+      "maps link targets without failing, and leaves the source locale's as written",
+      withLayout({
+        sourceLinkTarget: (target, locale) => {
+          if (locale === 'he') throw new Error('boom');
+          return target;
+        },
+      }),
     ],
     [
       "maps documents into each listed locale's folder",

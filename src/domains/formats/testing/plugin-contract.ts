@@ -202,6 +202,34 @@ export const fixtureChecks: Readonly<
         expect(inFolder(source?.folder ?? '', document.path), document.path).toBe(true);
       }
     },
+  "maps link targets without failing, and leaves the source locale's as written": async (
+    plugin,
+    subject,
+  ) => {
+    const layout = await openLayout(plugin, subject);
+    const samples = [
+      '/guide/',
+      '/he/guide/#top',
+      'guide.md',
+      '../x/',
+      'https://example.org/a',
+      '#top',
+      '',
+    ];
+    const sourceLocale = parseLocale(subject.fixture.sourceLocale);
+    for (const sample of samples) {
+      expect(expectOk(layout.sourceLinkTarget(sample, sourceLocale), 'sourceLinkTarget')).toBe(
+        sample,
+      );
+      for (const raw of subject.fixture.targetLocales) {
+        const mapped = expectOk(
+          layout.sourceLinkTarget(sample, parseLocale(raw)),
+          'sourceLinkTarget',
+        );
+        expect(typeof mapped).toBe('string');
+      }
+    }
+  },
   "maps documents into each listed locale's folder": async (plugin, subject) => {
     const layout = await openLayout(plugin, subject);
     const documents = expectOk(await layout.listSourceDocuments(), 'listSourceDocuments');
