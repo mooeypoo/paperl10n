@@ -542,6 +542,8 @@ test('scrolls the panes together: locked in the section view, at paired headings
     `# ברוכים הבאים\n\nמבוא.\n\n## התקנה\n\nקצר.\n\n## שימוש\n\n${`${longHe}\n\n`.repeat(6)}## הגדרות\n\n${`${longHe}\n\n`.repeat(6)}`,
   );
   await page.setViewportSize({ width: 1500, height: 900 });
+  // Each pane scrolls on its own only in a wide window (the screen must allow one).
+  expect(await page.evaluate(() => innerWidth)).toBe(1500);
   await stubFolderDialog(project);
   await page.getByRole('button', { name: 'Open folder…' }).click();
   await page.locator('nav').getByText('index', { exact: true }).click();

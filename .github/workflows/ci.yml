@@ -69,7 +69,8 @@ jobs:
           node scripts/print-apparmor-profile.ts | sudo tee /etc/apparmor.d/paperl10n-electron
           sudo apparmor_parser -r /etc/apparmor.d/paperl10n-electron
       - name: End-to-end tests
-        run: xvfb-run --auto-servernum pnpm test:e2e
+        # xvfb's default screen (640x480) is narrower than tests that need a wide window can ask for.
+        run: xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' pnpm test:e2e
       - name: Tests and build leave the checkout as it was
         # A test that writes into the repository (say, into a fixture) fails here.
         run: git status --porcelain && test -z "$(git status --porcelain)"
