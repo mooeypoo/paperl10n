@@ -3,6 +3,7 @@
 import type {
   DocumentPairDto,
   DocumentStatusDto,
+  TranslationCheckDto,
   ErrorDto,
   LanguageDto,
   LanguageSuggestionsDto,
@@ -132,6 +133,8 @@ export function fakeClient(
     mark?: Result<DocumentStatusDto, ErrorDto>;
     /** The answer to marking existing translations up to date (default: `index` marked). */
     markExisting?: Result<{ marked: readonly string[] }, ErrorDto>;
+    /** The answer to checking a translation (default: no hints, the same length). */
+    check?: Result<TranslationCheckDto, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -201,6 +204,15 @@ export function fakeClient(
     discardDraft: ({ projectId, key }) => {
       calls.push(`discardDraft:${projectId}:${key}`);
       return Promise.resolve({ ok: true, value: null });
+    },
+    checkTranslation: ({ projectId, key, text }) => {
+      calls.push(`checkTranslation:${projectId}:${key}:${JSON.stringify(text)}`);
+      return Promise.resolve(
+        answers.check ?? {
+          ok: true,
+          value: { page: [], sections: null, length: { source: 10, translation: 10 } },
+        },
+      );
     },
     markUpToDate: ({ projectId, key, sourceFingerprint, sections }) => {
       calls.push(

@@ -59,6 +59,8 @@ describe('guardApi', () => {
         saveDocument: ({ key }) => Promise.resolve(ok({ path: key, written: false })),
         saveDraft: () => Promise.resolve(ok(null)),
         discardDraft: () => Promise.resolve(ok(null)),
+        checkTranslation: () =>
+          Promise.resolve(ok({ page: [], sections: null, length: { source: 3, translation: 2 } })),
         markUpToDate: () =>
           Promise.resolve(
             ok({
@@ -127,6 +129,9 @@ describe('guardApi', () => {
       ok(null),
     );
     expect(await api.discardDraft({ projectId: 'p', key: 'k' })).toEqual(ok(null));
+    expect(await api.checkTranslation({ projectId: 'p', key: 'k', text: 'x' })).toEqual(
+      ok({ page: [], sections: null, length: { source: 3, translation: 2 } }),
+    );
     expect(
       await api.markUpToDate({ projectId: 'p', key: 'k', sourceFingerprint: 'f', sections: null }),
     ).toEqual(
@@ -173,6 +178,9 @@ describe('guardApi', () => {
         markExistingUpToDate: () => {
           throw new Error('sync boom');
         },
+        checkTranslation: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -189,6 +197,7 @@ describe('guardApi', () => {
         discardDraft: () => Promise.reject(new Error('async boom')),
         markUpToDate: () => Promise.reject(new Error('async boom')),
         markExistingUpToDate: () => Promise.reject(new Error('async boom')),
+        checkTranslation: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -224,6 +233,7 @@ describe('guardApi', () => {
       await api.markUpToDate({ projectId: 'p', key: 'k', sourceFingerprint: 'f', sections: [0] }),
     ).toEqual(unexpected);
     expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(unexpected);
+    expect(await api.checkTranslation({ projectId: 'p', key: 'k', text: 'x' })).toEqual(unexpected);
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
@@ -236,6 +246,7 @@ describe('guardApi', () => {
       'discardDraft',
       'markUpToDate',
       'markExistingUpToDate',
+      'checkTranslation',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });

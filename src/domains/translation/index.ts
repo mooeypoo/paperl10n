@@ -31,6 +31,8 @@ export {
   type StatusFileError,
 } from './domain/status-file.ts';
 export { outlineOf, pairDocumentSections } from './application/document-sections.ts';
+export { hintKinds, type HintKind, type PreservationHint } from './domain/hints.ts';
+export { checkTranslation, type TranslationCheck } from './application/translation-check.ts';
 export {
   documentChanges,
   sectionFingerprints,

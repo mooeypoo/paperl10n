@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type { ParsedDocument } from '#domains/document';
 import type { Locale } from '#domains/locale';
-import type { Section, SectionPairing } from '#domains/translation';
+import type { PreservationHint, Section, SectionPairing } from '#domains/translation';
 import type {
+  CheckTranslation,
   ChooseTargetLocale,
   DiscardDraft,
   DocumentStatus,
@@ -41,6 +42,7 @@ export interface UseCases {
   readonly discardDraft: DiscardDraft;
   readonly markUpToDate: MarkUpToDate;
   readonly markExistingUpToDate: MarkExistingUpToDate;
+  readonly checkTranslation: CheckTranslation;
 }
 
 function toLocaleDto(locale: Locale): LocaleDto {
@@ -209,6 +211,23 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
     async markExistingUpToDate({ projectId }) {
       const result = await useCases.markExistingUpToDate(projectId);
       return result.ok ? ok({ marked: [...result.value.marked] }) : err(toErrorDto(result.error));
+    },
+
+    async checkTranslation({ projectId, key, text }) {
+      const result = await useCases.checkTranslation(projectId, { key, text });
+      if (!result.ok) return err(toErrorDto(result.error));
+      const { page, sections, length } = result.value;
+      const hints = (list: readonly PreservationHint[]) =>
+        list.map(({ kind, missing, extra }) => ({
+          kind,
+          missing: [...missing],
+          extra: [...extra],
+        }));
+      return ok({
+        page: hints(page),
+        sections: sections === null ? null : sections.map(hints),
+        length: { source: length.source, translation: length.translation },
+      });
     },
 
     async chooseTargetLocale({ projectId, language }) {

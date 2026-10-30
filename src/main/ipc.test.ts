@@ -75,6 +75,12 @@ function setup() {
       calls.push(['discardDraft', request]);
       return Promise.resolve(ok(null));
     },
+    checkTranslation: (request) => {
+      calls.push(['checkTranslation', request]);
+      return Promise.resolve(
+        ok({ page: [], sections: null, length: { source: 3, translation: 2 } }),
+      );
+    },
     markUpToDate: (request) => {
       calls.push(['markUpToDate', request]);
       return Promise.resolve(
@@ -150,6 +156,11 @@ describe('registerApi', () => {
       ok: true,
       value: { marked: ['index', 'about'] },
     });
+    const check = { projectId: 'p1', key: 'k', text: 'שלום' };
+    expect(await send('checkTranslation', trusted, check)).toEqual({
+      ok: true,
+      value: { page: [], sections: null, length: { source: 3, translation: 2 } },
+    });
     expect(calls).toEqual([
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
@@ -162,6 +173,7 @@ describe('registerApi', () => {
       ['discardDraft', { projectId: 'p1', key: 'k' }],
       ['markUpToDate', mark],
       ['markExistingUpToDate', { projectId: 'p1' }],
+      ['checkTranslation', check],
     ]);
   });
 
@@ -313,6 +325,20 @@ describe('argumentValidators', () => {
     ['an extra field', [{ projectId: 'abc', key: 'k', text: 'x' }], false],
   ])('discardDraft: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.discardDraft(args)).toBe(valid);
+  });
+
+  const check = { projectId: 'abc', key: 'guide/intro', text: 'שלום' };
+  it.each<[string, unknown[], boolean]>([
+    ['a project id, a key, and the text', [check], true],
+    ['an empty text', [{ ...check, text: '' }], true],
+    ['no text', [{ projectId: 'abc', key: 'k' }], false],
+    ['a numeric text', [{ ...check, text: 7 }], false],
+    ['a text over the limit', [{ ...check, text: 'x'.repeat(10_000_001) }], false],
+    ['an empty key', [{ ...check, key: '' }], false],
+    ['an extra field', [{ ...check, base: null }], false],
+    ['an extra argument', [check, 'more'], false],
+  ])('checkTranslation: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.checkTranslation(args)).toBe(valid);
   });
 
   const mark = { projectId: 'abc', key: 'k', sourceFingerprint: '0123456789abcdef', sections: [0] };
