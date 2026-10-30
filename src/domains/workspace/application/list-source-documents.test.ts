@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createFormatRegistry, type PluginModule } from '#domains/formats';
 import { detects, fakeDocumentPlugin } from '#domain-testing/formats';
+import { LineMarkdownParser } from '#domain-testing/document';
 import { err, ok } from '#kernel/result';
 import { InMemoryDraftStore } from '../adapters/in-memory-draft-store.ts';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
@@ -40,7 +41,11 @@ async function openWith(
   })();
   if (!opened.ok || opened.value === null) throw new Error(`test setup: ${JSON.stringify(opened)}`);
   return {
-    listSourceDocuments: createListSourceDocuments({ sessions, drafts }),
+    listSourceDocuments: createListSourceDocuments({
+      sessions,
+      drafts,
+      parser: new LineMarkdownParser(),
+    }),
     drafts,
     projectId: opened.value.projectId,
     sessions,
@@ -48,28 +53,33 @@ async function openWith(
 }
 
 describe('listSourceDocuments', () => {
-  it('lists source documents with their target paths, and whether each translation exists', async () => {
+  it('lists source documents with their target paths, whether each translation exists, and status', async () => {
     const { listSourceDocuments, projectId } = await openWith(
       fakeDocumentPlugin('format-fake', detects('likely')),
     );
     expect(await listSourceDocuments(projectId)).toEqual({
       ok: true,
-      value: [
-        {
-          key: 'guide/intro',
-          sourcePath: 'en/guide/intro.md',
-          targetPath: 'he/guide/intro.md',
-          targetExists: false,
-          hasDraft: false,
-        },
-        {
-          key: 'index',
-          sourcePath: 'en/index.md',
-          targetPath: 'he/index.md',
-          targetExists: true,
-          hasDraft: false,
-        },
-      ],
+      value: {
+        documents: [
+          {
+            key: 'guide/intro',
+            sourcePath: 'en/guide/intro.md',
+            targetPath: 'he/guide/intro.md',
+            targetExists: false,
+            hasDraft: false,
+            status: 'missing',
+          },
+          {
+            key: 'index',
+            sourcePath: 'en/index.md',
+            targetPath: 'he/index.md',
+            targetExists: true,
+            hasDraft: false,
+            status: 'draft',
+          },
+        ],
+        statusFile: { exists: false, problem: null },
+      },
     });
   });
 
@@ -99,7 +109,7 @@ describe('listSourceDocuments', () => {
     const { listSourceDocuments, projectId, sessions } = await openWith(plugin, {});
     expect((await createChooseTargetLocale({ sessions })(projectId, 'ar')).ok).toBe(true);
     const listed = await listSourceDocuments(projectId);
-    expect(listed.ok && listed.value.map((entry) => entry.targetPath)).toEqual([
+    expect(listed.ok && listed.value.documents.map((entry) => entry.targetPath)).toEqual([
       'ar/guide/intro.md',
       'ar/index.md',
     ]);
@@ -159,10 +169,12 @@ describe('listSourceDocuments', () => {
       { text: 'x', base: null },
     );
     const listed = await listSourceDocuments(projectId);
-    expect(listed.ok && listed.value.map((entry) => [entry.key, entry.hasDraft])).toEqual([
-      ['guide/intro', false],
-      ['index', true],
-    ]);
+    expect(listed.ok && listed.value.documents.map((entry) => [entry.key, entry.hasDraft])).toEqual(
+      [
+        ['guide/intro', false],
+        ['index', true],
+      ],
+    );
   });
 
   it('still lists the pages when drafts cannot be listed', async () => {
@@ -173,6 +185,9 @@ describe('listSourceDocuments', () => {
       unavailableDraftStore,
     );
     const listed = await listSourceDocuments(projectId);
-    expect(listed.ok && listed.value.map((entry) => entry.hasDraft)).toEqual([false, false]);
+    expect(listed.ok && listed.value.documents.map((entry) => entry.hasDraft)).toEqual([
+      false,
+      false,
+    ]);
   });
 });

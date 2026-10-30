@@ -3,6 +3,7 @@ import type {
   ChooseTargetLocaleError,
   DraftError,
   ListSourceDocumentsError,
+  MarkUpToDateError,
   OpenProjectError,
   ReadDocumentPairError,
   SaveDocumentError,
@@ -17,7 +18,8 @@ export type AppError =
   | TargetLanguagesError
   | ChooseTargetLocaleError
   | SaveDocumentError
-  | DraftError;
+  | DraftError
+  | MarkUpToDateError;
 
 /** Turns a use-case error into the plain DTO the UI shows a message for. Exhaustive by lint. */
 export function toErrorDto(error: AppError): ErrorDto {
@@ -51,7 +53,15 @@ export function toErrorDto(error: AppError): ErrorDto {
     case 'workspace.document-unwritable':
       return dto({ file: error.cause.path, problem: error.cause.code });
     case 'workspace.document-changed':
+    case 'workspace.source-changed':
       return dto({ file: error.path });
+    case 'workspace.status-unreadable':
+    case 'workspace.status-unwritable':
+      return dto({ file: error.cause.path, problem: error.cause.code });
+    case 'workspace.status-invalid':
+      return dto({ file: error.path }, [error.problem]);
+    case 'workspace.status-unsupported':
+      return dto({ file: error.path, version: String(error.version) });
     case 'workspace.unknown-document-format':
       return dto({ formatId: error.formatId });
     case 'workspace.no-document-format':

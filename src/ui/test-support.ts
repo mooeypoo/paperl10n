@@ -2,6 +2,7 @@
 // Shared fixtures for UI tests: a fake client with scripted answers.
 import type {
   DocumentPairDto,
+  DocumentStatusDto,
   ErrorDto,
   LanguageDto,
   LanguageSuggestionsDto,
@@ -9,6 +10,7 @@ import type {
   PaperLionApi,
   ProjectSummaryDto,
   SourceDocumentDto,
+  SourceDocumentListDto,
 } from '#ipc-contract';
 import type { Result } from '#kernel/result';
 
@@ -28,6 +30,7 @@ export const documents: readonly SourceDocumentDto[] = [
     targetPath: 'he/guide/getting-started.md',
     targetExists: false,
     hasDraft: false,
+    status: 'missing',
   },
   {
     key: 'index',
@@ -35,6 +38,7 @@ export const documents: readonly SourceDocumentDto[] = [
     targetPath: 'he/index.md',
     targetExists: true,
     hasDraft: false,
+    status: 'draft',
   },
 ];
 
@@ -47,7 +51,8 @@ export function error(
 }
 
 type OpenAnswer = Result<ProjectSummaryDto | null, ErrorDto>;
-type ListAnswer = Result<readonly SourceDocumentDto[], ErrorDto>;
+/** Just the pages: listed with a status file that exists and reads fine. */
+type ListAnswer = Result<readonly SourceDocumentDto[] | SourceDocumentListDto, ErrorDto>;
 type ReadAnswer = Result<DocumentPairDto, ErrorDto>;
 type SaveAnswer = Result<{ path: string; written: boolean }, ErrorDto>;
 
@@ -91,8 +96,14 @@ export function pairFor(
     target: target === null ? null : doc(`he/${key}.md`, target),
     draft: null,
     sections: { paired: true, level: null, pairs: [] },
+    status: { page: target === null ? 'missing' : 'draft', sections: [], sourceFingerprint: 'f' },
   };
 }
+
+const asList = (answer: ListAnswer): Result<SourceDocumentListDto, ErrorDto> =>
+  answer.ok && Array.isArray(answer.value)
+    ? { ok: true, value: { documents: answer.value, statusFile: { exists: true, problem: null } } }
+    : (answer as Result<SourceDocumentListDto, ErrorDto>);
 
 /** A client whose answers are queued up front; it records what it was asked. */
 export function fakeClient(
@@ -112,6 +123,10 @@ export function fakeClient(
     save?: SaveAnswer | SaveAnswer[];
     /** The answer to keeping a draft (default: kept). */
     saveDraft?: Result<null, ErrorDto>;
+    /** The answer to marking up to date (default: every section and the page translated). */
+    mark?: Result<DocumentStatusDto, ErrorDto>;
+    /** The answer to marking existing translations up to date (default: one marked). */
+    markExisting?: Result<{ marked: number }, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -132,7 +147,7 @@ export function fakeClient(
       const next = list.shift();
       return next === undefined
         ? Promise.reject(new Error('no scripted answer'))
-        : Promise.resolve(next);
+        : Promise.resolve(asList(next));
     },
     readDocumentPair: ({ projectId, key }) => {
       calls.push(`readDocumentPair:${projectId}:${key}`);
@@ -178,6 +193,18 @@ export function fakeClient(
     discardDraft: ({ projectId, key }) => {
       calls.push(`discardDraft:${projectId}:${key}`);
       return Promise.resolve({ ok: true, value: null });
+    },
+    markUpToDate: ({ projectId, key, sourceFingerprint, sections }) => {
+      calls.push(
+        `markUpToDate:${projectId}:${key}:${sourceFingerprint}:${sections === null ? 'page' : sections.join(',')}`,
+      );
+      return Promise.resolve(
+        answers.mark ?? { ok: true, value: { page: 'translated', sections: [] } },
+      );
+    },
+    markExistingUpToDate: ({ projectId }) => {
+      calls.push(`markExistingUpToDate:${projectId}`);
+      return Promise.resolve(answers.markExisting ?? { ok: true, value: { marked: 1 } });
     },
     chooseTargetLocale: ({ projectId, language: tag }) => {
       calls.push(`chooseTargetLocale:${projectId}:${tag}`);

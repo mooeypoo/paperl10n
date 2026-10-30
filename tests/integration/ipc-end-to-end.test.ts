@@ -4,7 +4,7 @@
 // adapter and format-stub, over a copy of its "basic" fixture on disk (choosing a target writes to
 // the config). Only the folder dialog is faked.
 import { randomUUID } from 'node:crypto';
-import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -122,22 +122,27 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     const projectId = await openBasic(api);
     expect(await api.listSourceDocuments({ projectId })).toEqual({
       ok: true,
-      value: [
-        {
-          key: 'guide/getting-started',
-          sourcePath: 'en/guide/getting-started.md',
-          targetPath: 'he/guide/getting-started.md',
-          targetExists: false,
-          hasDraft: false,
-        },
-        {
-          key: 'index',
-          sourcePath: 'en/index.md',
-          targetPath: 'he/index.md',
-          targetExists: true,
-          hasDraft: false,
-        },
-      ],
+      value: {
+        documents: [
+          {
+            key: 'guide/getting-started',
+            sourcePath: 'en/guide/getting-started.md',
+            targetPath: 'he/guide/getting-started.md',
+            targetExists: false,
+            hasDraft: false,
+            status: 'missing',
+          },
+          {
+            key: 'index',
+            sourcePath: 'en/index.md',
+            targetPath: 'he/index.md',
+            targetExists: true,
+            hasDraft: false,
+            status: 'draft',
+          },
+        ],
+        statusFile: { exists: false, problem: null },
+      },
     });
   },
   readDocumentPair: async () => {
@@ -149,6 +154,11 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     expect(pair.value.source.blocks[0]).toEqual({ kind: 'heading', start: 0, end: 9, depth: 1 });
     expect(pair.value.target?.path).toBe('he/index.md');
     expect(pair.value.target?.text.length).toBeGreaterThan(0);
+    expect(pair.value.status).toEqual({
+      page: 'draft',
+      sections: ['draft'],
+      sourceFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) as string,
+    });
   },
   suggestTargetLanguages: async () => {
     const { api } = rendererApi();
@@ -228,10 +238,12 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     const second = rendererApi(folder, drafts).api;
     const reopened = await openBasic(second);
     const listed = await second.listSourceDocuments({ projectId: reopened });
-    expect(listed.ok && listed.value.map((entry) => [entry.key, entry.hasDraft])).toEqual([
-      ['guide/getting-started', false],
-      ['index', true],
-    ]);
+    expect(listed.ok && listed.value.documents.map((entry) => [entry.key, entry.hasDraft])).toEqual(
+      [
+        ['guide/getting-started', false],
+        ['index', true],
+      ],
+    );
     const pair = await second.readDocumentPair({ projectId: reopened, key: 'index' });
     expect(pair.ok && pair.value.draft).toEqual({ text, base: before });
     await second.saveDocument({ projectId: reopened, key: 'index', text, base: before });
@@ -250,6 +262,66 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     const pair = await api.readDocumentPair({ projectId, key: 'guide/getting-started' });
     expect(pair.ok && pair.value.draft).toBeNull();
   },
+  markUpToDate: async () => {
+    const folder = await copyOfBasic();
+    const { api } = rendererApi(folder);
+    const projectId = await openBasic(api);
+    const pair = await api.readDocumentPair({ projectId, key: 'index' });
+    if (!pair.ok) throw new Error(`expected a pair: ${JSON.stringify(pair)}`);
+    const { sourceFingerprint } = pair.value.status;
+    expect(
+      await api.markUpToDate({ projectId, key: 'index', sourceFingerprint, sections: null }),
+    ).toEqual({ ok: true, value: { page: 'translated', sections: ['translated'] } });
+    const written = await readFile(join(folder, '.paperl10n/status/he.json'), 'utf8');
+    expect(written).toMatch(/^\{\n {2}"version": 1,\n {2}"pages": \{\n {4}"index": \[\n/);
+    const listed = await api.listSourceDocuments({ projectId });
+    expect(listed.ok && listed.value.statusFile).toEqual({ exists: true, problem: null });
+    expect(listed.ok && listed.value.documents.map((entry) => entry.status)).toEqual([
+      'missing',
+      'translated',
+    ]);
+
+    // The source changes on disk: the page is outdated, and marking the old version is refused.
+    await writeFile(join(folder, 'en/index.md'), '# Welcome\n\nThis is the new home page.\n');
+    const outdated = await api.readDocumentPair({ projectId, key: 'index' });
+    expect(outdated.ok && outdated.value.status.page).toBe('outdated');
+    expect(
+      await api.markUpToDate({ projectId, key: 'index', sourceFingerprint, sections: [0] }),
+    ).toEqual({
+      ok: false,
+      error: { code: 'workspace.source-changed', params: { file: 'en/index.md' }, details: [] },
+    });
+    expect(await readFile(join(folder, '.paperl10n/status/he.json'), 'utf8')).toBe(written);
+  },
+  markExistingUpToDate: async () => {
+    const folder = await copyOfBasic();
+    const { api } = rendererApi(folder);
+    const projectId = await openBasic(api);
+    expect(await api.markExistingUpToDate({ projectId })).toEqual({
+      ok: true,
+      value: { marked: 1 },
+    });
+    const listed = await api.listSourceDocuments({ projectId });
+    expect(listed.ok && listed.value.documents.map((entry) => entry.status)).toEqual([
+      'missing',
+      'translated',
+    ]);
+    // A broken status file (a merge conflict) lists pages as never marked, says why, and is
+    // never overwritten.
+    const conflicted = '<<<<<<< HEAD\n{}\n=======\n{}\n>>>>>>> theirs\n';
+    await writeFile(join(folder, '.paperl10n/status/he.json'), conflicted);
+    const broken = await api.listSourceDocuments({ projectId });
+    expect(broken.ok && broken.value.documents.map((entry) => entry.status)).toEqual([
+      'missing',
+      'draft',
+    ]);
+    expect(broken.ok && broken.value.statusFile.problem?.code).toBe('workspace.status-invalid');
+    expect(await api.markExistingUpToDate({ projectId })).toMatchObject({
+      ok: false,
+      error: { code: 'workspace.status-invalid', params: { file: '.paperl10n/status/he.json' } },
+    });
+    expect(await readFile(join(folder, '.paperl10n/status/he.json'), 'utf8')).toBe(conflicted);
+  },
   chooseTargetLocale: async () => {
     const folder = await copyOfBasic();
     const { api } = rendererApi(folder);
@@ -259,7 +331,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       value: { id: 'ar', direction: 'rtl' },
     });
     const listed = await api.listSourceDocuments({ projectId });
-    expect(listed.ok && listed.value.map((entry) => entry.targetPath)).toEqual([
+    expect(listed.ok && listed.value.documents.map((entry) => entry.targetPath)).toEqual([
       'ar/guide/getting-started.md',
       'ar/index.md',
     ]);

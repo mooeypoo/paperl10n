@@ -35,7 +35,7 @@ function setup() {
     },
     listSourceDocuments: (request) => {
       calls.push(['listSourceDocuments', request]);
-      return Promise.resolve(ok([]));
+      return Promise.resolve(ok({ documents: [], statusFile: { exists: false, problem: null } }));
     },
     readDocumentPair: (request) => {
       calls.push(['readDocumentPair', request]);
@@ -46,6 +46,7 @@ function setup() {
           target: null,
           draft: null,
           sections: { paired: true, level: null, pairs: [] },
+          status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
         }),
       );
     },
@@ -68,6 +69,14 @@ function setup() {
     discardDraft: (request) => {
       calls.push(['discardDraft', request]);
       return Promise.resolve(ok(null));
+    },
+    markUpToDate: (request) => {
+      calls.push(['markUpToDate', request]);
+      return Promise.resolve(ok({ page: 'translated', sections: ['translated'] }));
+    },
+    markExistingUpToDate: (request) => {
+      calls.push(['markExistingUpToDate', request]);
+      return Promise.resolve(ok({ marked: 2 }));
     },
     chooseTargetLocale: (request) => {
       calls.push(['chooseTargetLocale', request]);
@@ -99,7 +108,7 @@ describe('registerApi', () => {
     expect(await send('openProject', trusted)).toEqual({ ok: true, value: null });
     expect(await send('listSourceDocuments', trusted, { projectId: 'p1' })).toEqual({
       ok: true,
-      value: [],
+      value: { documents: [], statusFile: { exists: false, problem: null } },
     });
     expect(await send('readDocumentPair', trusted, { projectId: 'p1', key: 'k' })).toMatchObject({
       ok: true,
@@ -121,6 +130,15 @@ describe('registerApi', () => {
       ok: true,
       value: null,
     });
+    const mark = { projectId: 'p1', key: 'k', sourceFingerprint: 'f', sections: [0, 2] };
+    expect(await send('markUpToDate', trusted, mark)).toEqual({
+      ok: true,
+      value: { page: 'translated', sections: ['translated'] },
+    });
+    expect(await send('markExistingUpToDate', trusted, { projectId: 'p1' })).toEqual({
+      ok: true,
+      value: { marked: 2 },
+    });
     expect(calls).toEqual([
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
@@ -131,6 +149,8 @@ describe('registerApi', () => {
       ['saveDocument', save],
       ['saveDraft', draft],
       ['discardDraft', { projectId: 'p1', key: 'k' }],
+      ['markUpToDate', mark],
+      ['markExistingUpToDate', { projectId: 'p1' }],
     ]);
   });
 
@@ -282,5 +302,36 @@ describe('argumentValidators', () => {
     ['an extra field', [{ projectId: 'abc', key: 'k', text: 'x' }], false],
   ])('discardDraft: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.discardDraft(args)).toBe(valid);
+  });
+
+  const mark = { projectId: 'abc', key: 'k', sourceFingerprint: '0123456789abcdef', sections: [0] };
+  it.each<[string, unknown[], boolean]>([
+    ['some sections', [mark], true],
+    ['the whole page', [{ ...mark, sections: null }], true],
+    ['sections in order', [{ ...mark, sections: [0, 3, 7] }], true],
+    ['no sections', [{ ...mark, sections: [] }], false],
+    ['sections out of order', [{ ...mark, sections: [2, 1] }], false],
+    ['a section twice', [{ ...mark, sections: [1, 1] }], false],
+    ['a negative section', [{ ...mark, sections: [-1] }], false],
+    ['a fractional section', [{ ...mark, sections: [0.5] }], false],
+    ['a section as text', [{ ...mark, sections: ['0'] }], false],
+    ['too many sections', [{ ...mark, sections: [...Array(10_001).keys()] }], false],
+    ['no fingerprint', [{ projectId: 'abc', key: 'k', sections: null }], false],
+    ['a numeric fingerprint', [{ ...mark, sourceFingerprint: 7 }], false],
+    ['a fingerprint over the limit', [{ ...mark, sourceFingerprint: 'x'.repeat(101) }], false],
+    ['an empty key', [{ ...mark, key: '' }], false],
+    ['an extra field', [{ ...mark, text: 'x' }], false],
+    ['an extra argument', [mark, 'more'], false],
+  ])('markUpToDate: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.markUpToDate(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a project id', [{ projectId: 'abc' }], true],
+    ['no project id', [{}], false],
+    ['an extra field', [{ projectId: 'abc', key: 'k' }], false],
+    ['an extra argument', [{ projectId: 'abc' }, 'more'], false],
+  ])('markExistingUpToDate: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.markExistingUpToDate(args)).toBe(valid);
   });
 });

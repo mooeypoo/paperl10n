@@ -19,13 +19,15 @@ const documents: SourceDocumentDto[] = [
     targetPath: 'he/index.md',
     targetExists: true,
     hasDraft: false,
+    status: 'draft',
   },
 ];
+const listed = { documents, statusFile: { exists: true, problem: null } };
 
 function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
   return {
     openProject: () => Promise.resolve({ ok: true, value: summary }),
-    listSourceDocuments: () => Promise.resolve({ ok: true, value: documents }),
+    listSourceDocuments: () => Promise.resolve({ ok: true, value: listed }),
     readDocumentPair: ({ key }) =>
       Promise.resolve({
         ok: true,
@@ -35,6 +37,7 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
           target: null,
           draft: null,
           sections: { paired: true, level: null, pairs: [] },
+          status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
         },
       }),
     suggestTargetLanguages: () =>
@@ -43,6 +46,8 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
     saveDocument: ({ key }) => Promise.resolve({ ok: true, value: { path: key, written: true } }),
     saveDraft: () => Promise.resolve({ ok: true, value: null }),
     discardDraft: () => Promise.resolve({ ok: true, value: null }),
+    markUpToDate: () => Promise.resolve({ ok: true, value: { page: 'translated', sections: [] } }),
+    markExistingUpToDate: () => Promise.resolve({ ok: true, value: { marked: 0 } }),
     chooseTargetLocale: ({ language }) =>
       Promise.resolve({ ok: true, value: { id: language, direction: 'rtl' } }),
     ...overrides,
@@ -56,9 +61,9 @@ describe('cloningTransport', () => {
     expect(opened).toEqual({ ok: true, value: summary });
     expect(opened.ok && opened.value).not.toBe(summary);
 
-    const listed = await transport.listSourceDocuments({ projectId: 'p-1' });
-    expect(listed).toEqual({ ok: true, value: documents });
-    expect(listed.ok && listed.value).not.toBe(documents);
+    const answer = await transport.listSourceDocuments({ projectId: 'p-1' });
+    expect(answer).toEqual({ ok: true, value: listed });
+    expect(answer.ok && answer.value).not.toBe(listed);
   });
 
   it('sends a copy of the request', async () => {
@@ -68,7 +73,7 @@ describe('cloningTransport', () => {
       api({
         listSourceDocuments: (sent) => {
           received = sent;
-          return Promise.resolve({ ok: true, value: [] });
+          return Promise.resolve({ ok: true, value: listed });
         },
       }),
     );

@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import type { ErrorDto, PaperLionApi, ProjectSummaryDto, SourceDocumentDto } from '#ipc-contract';
+import type {
+  ErrorDto,
+  PaperLionApi,
+  ProjectSummaryDto,
+  SourceDocumentDto,
+  SourceDocumentListDto,
+} from '#ipc-contract';
 import { ref, shallowRef, type Ref, type ShallowRef } from 'vue';
 
 export interface ProjectState {
   readonly summary: ShallowRef<ProjectSummaryDto | null>;
   readonly documents: ShallowRef<readonly SourceDocumentDto[]>;
+  /** The target language's status file, as last listed. */
+  readonly statusFile: ShallowRef<SourceDocumentListDto['statusFile']>;
   readonly error: ShallowRef<ErrorDto | null>;
   readonly busy: Ref<boolean>;
   /** Asks for a folder and opens it. Cancelling the dialog leaves everything as it was. */
@@ -14,18 +22,20 @@ export interface ProjectState {
    * Returns the error when it fails; the project stays as it was.
    */
   chooseTarget(language: string): Promise<ErrorDto | null>;
-  /** A page's translation was saved: its file exists now, and it has no draft. */
+  /** A page's translation was saved: its file exists now (a new one is a draft), and it has no draft. */
   markTranslated(key: string): void;
   /** A page gained or lost its draft. */
   markDraft(key: string, hasDraft: boolean): void;
 }
 
+const noStatusFile: SourceDocumentListDto['statusFile'] = { exists: false, problem: null };
 const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, details: [] };
 
 /** The open project, its documents, and the last error. Only the newest request may update them. */
 export function useProject(client: PaperLionApi): ProjectState {
   const summary = shallowRef<ProjectSummaryDto | null>(null);
   const documents = shallowRef<readonly SourceDocumentDto[]>([]);
+  const statusFile = shallowRef<SourceDocumentListDto['statusFile']>(noStatusFile);
   const error = shallowRef<ErrorDto | null>(null);
   const busy = ref(false);
   let latest = 0;
@@ -46,6 +56,7 @@ export function useProject(client: PaperLionApi): ProjectState {
         error.value = null;
         summary.value = opened.value;
         documents.value = [];
+        statusFile.value = noStatusFile;
         return;
       }
       const listed = await client.listSourceDocuments({ projectId: opened.value.projectId });
@@ -56,7 +67,8 @@ export function useProject(client: PaperLionApi): ProjectState {
       }
       error.value = null;
       summary.value = opened.value;
-      documents.value = listed.value;
+      documents.value = listed.value.documents;
+      statusFile.value = listed.value.statusFile;
     } catch {
       // The app's API never rejects (ADR 0007); a rejection means the transport itself broke.
       if (request === latest) error.value = transportFailed;
@@ -78,10 +90,12 @@ export function useProject(client: PaperLionApi): ProjectState {
       summary.value = { ...current, targetLocale: chosen.value };
       if (listed.ok) {
         error.value = null;
-        documents.value = listed.value;
+        documents.value = listed.value.documents;
+        statusFile.value = listed.value.statusFile;
       } else {
         error.value = listed.error;
         documents.value = [];
+        statusFile.value = noStatusFile;
       }
       return null;
     } catch {
@@ -96,19 +110,31 @@ export function useProject(client: PaperLionApi): ProjectState {
     const entry = documents.value.find((document) => document.key === key);
     if (entry === undefined) return;
     const changed = { ...entry, ...change };
-    if (changed.targetExists === entry.targetExists && changed.hasDraft === entry.hasDraft) return;
+    if (
+      changed.targetExists === entry.targetExists &&
+      changed.hasDraft === entry.hasDraft &&
+      changed.status === entry.status
+    ) {
+      return;
+    }
     documents.value = documents.value.map((document) => (document === entry ? changed : document));
   }
 
   return {
     summary,
     documents,
+    statusFile,
     error,
     busy,
     open,
     chooseTarget,
     markTranslated: (key) => {
-      update(key, { targetExists: true, hasDraft: false });
+      const entry = documents.value.find((document) => document.key === key);
+      update(key, {
+        targetExists: true,
+        hasDraft: false,
+        status: entry === undefined || entry.status === 'missing' ? 'draft' : entry.status,
+      });
     },
     markDraft: (key, hasDraft) => {
       update(key, { hasDraft });

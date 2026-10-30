@@ -7,6 +7,8 @@ import type {
   DiscardDraft,
   LanguageEntry,
   ListSourceDocuments,
+  MarkExistingUpToDate,
+  MarkUpToDate,
   OpenProject,
   ReadDocument,
   ReadDocumentPair,
@@ -35,6 +37,8 @@ export interface UseCases {
   readonly saveDocument: SaveDocument;
   readonly saveDraft: SaveDraft;
   readonly discardDraft: DiscardDraft;
+  readonly markUpToDate: MarkUpToDate;
+  readonly markExistingUpToDate: MarkExistingUpToDate;
 }
 
 function toLocaleDto(locale: Locale): LocaleDto {
@@ -106,15 +110,21 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
     async listSourceDocuments({ projectId }) {
       const result = await useCases.listSourceDocuments(projectId);
       if (!result.ok) return err(toErrorDto(result.error));
-      return ok(
-        result.value.map((entry) => ({
+      const { documents, statusFile } = result.value;
+      return ok({
+        documents: documents.map((entry) => ({
           key: entry.key,
           sourcePath: entry.sourcePath,
           targetPath: entry.targetPath,
           targetExists: entry.targetExists,
           hasDraft: entry.hasDraft,
+          status: entry.status,
         })),
-      );
+        statusFile: {
+          exists: statusFile.exists,
+          problem: statusFile.problem === null ? null : toErrorDto(statusFile.problem),
+        },
+      });
     },
 
     async readDocumentPair({ projectId, key }) {
@@ -127,6 +137,11 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         target: pair.target === null ? null : toDocumentDto(pair.target),
         draft: pair.draft === null ? null : { text: pair.draft.text, base: pair.draft.base },
         sections: toSectionPairingDto(pair.sections),
+        status: {
+          page: pair.status.page,
+          sections: [...pair.status.sections],
+          sourceFingerprint: pair.status.sourceFingerprint,
+        },
       });
     },
 
@@ -168,6 +183,17 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
     async discardDraft({ projectId, key }) {
       const result = await useCases.discardDraft(projectId, key);
       return result.ok ? ok(null) : err(toErrorDto(result.error));
+    },
+
+    async markUpToDate({ projectId, key, sourceFingerprint, sections }) {
+      const result = await useCases.markUpToDate(projectId, { key, sourceFingerprint, sections });
+      if (!result.ok) return err(toErrorDto(result.error));
+      return ok({ page: result.value.page, sections: [...result.value.sections] });
+    },
+
+    async markExistingUpToDate({ projectId }) {
+      const result = await useCases.markExistingUpToDate(projectId);
+      return result.ok ? ok({ marked: result.value.marked }) : err(toErrorDto(result.error));
     },
 
     async chooseTargetLocale({ projectId, language }) {

@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S2 and S3a done, S3b next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S2 and S3a–S3b done, S3c next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -299,6 +299,30 @@ the last step.
     through the project's `ProjectFiles` and `ProjectWriter` (atomic, inside the project, with
     their contract suites) instead of a new port; status in the page list and the pair; marking
     (sections, a page, all existing translations), refused when the source changed on disk.
+    - *Done-notes:* `workspace/application/translation-status.ts` (the file's place, reading it,
+      a page's status, one change at a time per file) and `mark-up-to-date.ts` (`markUpToDate`,
+      `markExistingUpToDate`). The IPC contract: `listSourceDocuments` returns `{ documents,
+      statusFile }` (each document with its `status`; the file's `exists` and `problem`), the
+      pair has `status` (the page's, each source section's, and `sourceFingerprint`), and two new
+      methods. Five new error codes, with messages in en, he, and qqq. The details are in
+      [the workspace doc](../domains/workspace.md#status).
+      - **No new port** (a refinement of question 9): the existing `ProjectFiles` and
+        `ProjectWriter` ports already write atomically inside the project and have contract suites;
+        a second store would repeat them.
+      - **A broken status file never stops work:** pages list as never recorded, the list says why
+        (for a merge conflict, say), and marking is refused, so it's never overwritten.
+      - **Speed** (PRD §9): listing a project with 1,000 recorded pages (12 sections each) takes
+        about 0.7 s on the maintainer's machine; with nothing recorded, 16 ms (sources aren't read).
+        Good enough for now; caching by source fingerprint is the next step if it isn't.
+      - Tests: every use case's success path and errors (the source changed, an index past the
+        sections, an unreadable, invalid, or newer file never overwritten, an unwritable folder, two
+        marks at once), and every IPC method end to end with the real parser and disk (marking, the
+        source changing, a merge conflict in the file).
+      - Mutation checks, each failing tests: no fingerprint check, no index check, recorded pages
+        marked again by "all existing", a write with nothing marked, sources of unrecorded pages
+        read, marks not run one at a time, an invalid file read as empty, a missing translation's
+        page not `missing`, section indices accepted out of order, and a saved new page not becoming
+        `draft` in the list.
   - **S3c, status in the UI:** the four statuses in the page list, each section's status and "Mark
     up to date", the page's progress, and the one-time "Mark all existing translations up to date".
 - **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.

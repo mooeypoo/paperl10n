@@ -25,7 +25,7 @@ describe('createElectronAppApi', () => {
     expect(opened.value.projectId).toMatch(/^[0-9a-f-]{36}$/);
 
     const documents = await api.value.listSourceDocuments({ projectId: opened.value.projectId });
-    expect(documents.ok && documents.value.map((d) => d.targetPath)).toEqual([
+    expect(documents.ok && documents.value.documents.map((d) => d.targetPath)).toEqual([
       'he/guide/getting-started.md',
       'he/index.md',
     ]);

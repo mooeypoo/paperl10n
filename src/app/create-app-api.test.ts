@@ -79,22 +79,27 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
 
     expect(cloned(await api.listSourceDocuments({ projectId: opened.value.projectId }))).toEqual({
       ok: true,
-      value: [
-        {
-          key: 'guide/getting-started',
-          sourcePath: 'en/guide/getting-started.md',
-          targetPath: 'he/guide/getting-started.md',
-          targetExists: false,
-          hasDraft: false,
-        },
-        {
-          key: 'index',
-          sourcePath: 'en/index.md',
-          targetPath: 'he/index.md',
-          targetExists: true,
-          hasDraft: false,
-        },
-      ],
+      value: {
+        documents: [
+          {
+            key: 'guide/getting-started',
+            sourcePath: 'en/guide/getting-started.md',
+            targetPath: 'he/guide/getting-started.md',
+            targetExists: false,
+            hasDraft: false,
+            status: 'missing',
+          },
+          {
+            key: 'index',
+            sourcePath: 'en/index.md',
+            targetPath: 'he/index.md',
+            targetExists: true,
+            hasDraft: false,
+            status: 'draft',
+          },
+        ],
+        statusFile: { exists: false, problem: null },
+      },
     });
   });
 
@@ -132,6 +137,11 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
             { kind: 'heading', source: { start: 0, end: 38 }, target: { start: 0, end: 38 } },
           ],
         },
+        status: {
+          page: 'missing',
+          sections: ['draft'],
+          sourceFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) as string,
+        },
       },
     });
   });
@@ -158,10 +168,12 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
     });
 
     const listed = cloned(await api.listSourceDocuments({ projectId: opened.value.projectId }));
-    expect(listed.ok && listed.value.map((d) => [d.key, d.targetExists])).toEqual([
-      ['guides/getting-started', true],
-      ['index', true],
-      ['reference/api', false],
+    expect(
+      listed.ok && listed.value.documents.map((d) => [d.key, d.targetExists, d.status]),
+    ).toEqual([
+      ['guides/getting-started', true, 'draft'],
+      ['index', true, 'draft'],
+      ['reference/api', false, 'missing'],
     ]);
 
     const pair = cloned(

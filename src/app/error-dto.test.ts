@@ -128,6 +128,56 @@ const cases: [AppError, ErrorDto][] = [
     },
   ],
   [
+    { code: 'workspace.source-changed', path: 'en/index.md' as ProjectPath },
+    { code: 'workspace.source-changed', params: { file: 'en/index.md' }, details: [] },
+  ],
+  [
+    {
+      code: 'workspace.status-unreadable',
+      cause: { code: 'files.not-utf8', path: '.paperl10n/status/he.json' as ProjectPath },
+    },
+    {
+      code: 'workspace.status-unreadable',
+      params: { file: '.paperl10n/status/he.json', problem: 'files.not-utf8' },
+      details: [],
+    },
+  ],
+  [
+    {
+      code: 'workspace.status-invalid',
+      path: '.paperl10n/status/he.json' as ProjectPath,
+      problem: 'must be a JSON object',
+    },
+    {
+      code: 'workspace.status-invalid',
+      params: { file: '.paperl10n/status/he.json' },
+      details: ['must be a JSON object'],
+    },
+  ],
+  [
+    {
+      code: 'workspace.status-unsupported',
+      path: '.paperl10n/status/he.json' as ProjectPath,
+      version: 2,
+    },
+    {
+      code: 'workspace.status-unsupported',
+      params: { file: '.paperl10n/status/he.json', version: '2' },
+      details: [],
+    },
+  ],
+  [
+    {
+      code: 'workspace.status-unwritable',
+      cause: { code: 'files.unwritable', path: '.paperl10n/status/he.json' as ProjectPath },
+    },
+    {
+      code: 'workspace.status-unwritable',
+      params: { file: '.paperl10n/status/he.json', problem: 'files.unwritable' },
+      details: [],
+    },
+  ],
+  [
     { code: 'workspace.draft-unwritable' },
     { code: 'workspace.draft-unwritable', params: {}, details: [] },
   ],

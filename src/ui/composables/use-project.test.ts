@@ -123,7 +123,11 @@ describe('useProject', () => {
     const client: PaperLionApi = {
       ...fakeClient().client,
       openProject: () => new Promise((resolve) => resolvers.push(resolve)),
-      listSourceDocuments: () => Promise.resolve({ ok: true, value: documents }),
+      listSourceDocuments: () =>
+        Promise.resolve({
+          ok: true,
+          value: { documents, statusFile: { exists: true, problem: null } },
+        }),
       readDocumentPair: () => Promise.reject(new Error('unused')),
     };
     const project = useProject(client);
@@ -198,8 +202,24 @@ describe('useProject', () => {
     });
   });
 
+  it('keeps the status file’s state from the list', async () => {
+    const problem = error('workspace.status-invalid', { file: '.paperl10n/status/he.json' });
+    const { client } = fakeClient({
+      open: [{ ok: true, value: summary }],
+      list: [{ ok: true, value: { documents, statusFile: { exists: true, problem } } }],
+    });
+    const project = useProject(client);
+    expect(project.statusFile.value).toEqual({ exists: false, problem: null });
+    await project.open();
+    expect(project.statusFile.value).toEqual({ exists: true, problem });
+  });
+
   it('marks a page translated once its first save created the file', async () => {
-    const untranslated = documents.map((document) => ({ ...document, targetExists: false }));
+    const untranslated = documents.map((document) => ({
+      ...document,
+      targetExists: false,
+      status: 'missing' as const,
+    }));
     const { client } = fakeClient({
       open: [{ ok: true, value: summary }],
       list: [{ ok: true, value: untranslated }],
@@ -208,9 +228,20 @@ describe('useProject', () => {
     await project.open();
     const key = untranslated[0]?.key ?? '';
     project.markTranslated(key);
+    // A new translation is a draft: never marked up to date.
     expect(
-      project.documents.value.map((document) => [document.key, document.targetExists]),
-    ).toEqual(untranslated.map((document) => [document.key, document.key === key]));
+      project.documents.value.map((document) => [
+        document.key,
+        document.targetExists,
+        document.status,
+      ]),
+    ).toEqual(
+      untranslated.map((document) => [
+        document.key,
+        document.key === key,
+        document.key === key ? 'draft' : 'missing',
+      ]),
+    );
     // Already translated (or unknown): the list stays the same object.
     const before = project.documents.value;
     project.markTranslated(key);

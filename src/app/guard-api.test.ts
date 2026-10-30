@@ -20,15 +20,19 @@ describe('guardApi', () => {
         openProject: () => Promise.resolve(ok(null)),
         listSourceDocuments: ({ projectId }) =>
           Promise.resolve(
-            ok([
-              {
-                key: projectId,
-                sourcePath: 'a',
-                targetPath: 'b',
-                targetExists: false,
-                hasDraft: false,
-              },
-            ]),
+            ok({
+              documents: [
+                {
+                  key: projectId,
+                  sourcePath: 'a',
+                  targetPath: 'b',
+                  targetExists: false,
+                  hasDraft: false,
+                  status: 'missing',
+                },
+              ],
+              statusFile: { exists: false, problem: null },
+            }),
           ),
         readDocumentPair: ({ key }) =>
           Promise.resolve(
@@ -38,6 +42,7 @@ describe('guardApi', () => {
               target: null,
               draft: null,
               sections: { paired: true, level: null, pairs: [] },
+              status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
             }),
           ),
         suggestTargetLanguages: () =>
@@ -49,13 +54,27 @@ describe('guardApi', () => {
         saveDocument: ({ key }) => Promise.resolve(ok({ path: key, written: false })),
         saveDraft: () => Promise.resolve(ok(null)),
         discardDraft: () => Promise.resolve(ok(null)),
+        markUpToDate: () => Promise.resolve(ok({ page: 'translated', sections: ['translated'] })),
+        markExistingUpToDate: () => Promise.resolve(ok({ marked: 3 })),
       },
       onUnexpected,
     );
     expect(await api.openProject()).toEqual({ ok: true, value: null });
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual({
       ok: true,
-      value: [{ key: 'p', sourcePath: 'a', targetPath: 'b', targetExists: false, hasDraft: false }],
+      value: {
+        documents: [
+          {
+            key: 'p',
+            sourcePath: 'a',
+            targetPath: 'b',
+            targetExists: false,
+            hasDraft: false,
+            status: 'missing',
+          },
+        ],
+        statusFile: { exists: false, problem: null },
+      },
     });
     expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual({
       ok: true,
@@ -65,6 +84,7 @@ describe('guardApi', () => {
         target: null,
         draft: null,
         sections: { paired: true, level: null, pairs: [] },
+        status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
       },
     });
     expect(
@@ -90,6 +110,10 @@ describe('guardApi', () => {
       ok(null),
     );
     expect(await api.discardDraft({ projectId: 'p', key: 'k' })).toEqual(ok(null));
+    expect(
+      await api.markUpToDate({ projectId: 'p', key: 'k', sourceFingerprint: 'f', sections: null }),
+    ).toEqual(ok({ page: 'translated', sections: ['translated'] }));
+    expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(ok({ marked: 3 }));
     expect(calls).toEqual([]);
   });
 
@@ -124,6 +148,12 @@ describe('guardApi', () => {
         discardDraft: () => {
           throw new Error('sync boom');
         },
+        markUpToDate: () => {
+          throw new Error('sync boom');
+        },
+        markExistingUpToDate: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -138,6 +168,8 @@ describe('guardApi', () => {
         saveDocument: () => Promise.reject(new Error('async boom')),
         saveDraft: () => Promise.reject(new Error('async boom')),
         discardDraft: () => Promise.reject(new Error('async boom')),
+        markUpToDate: () => Promise.reject(new Error('async boom')),
+        markExistingUpToDate: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -169,6 +201,10 @@ describe('guardApi', () => {
       unexpected,
     );
     expect(await api.discardDraft({ projectId: 'p', key: 'k' })).toEqual(unexpected);
+    expect(
+      await api.markUpToDate({ projectId: 'p', key: 'k', sourceFingerprint: 'f', sections: [0] }),
+    ).toEqual(unexpected);
+    expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(unexpected);
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
@@ -179,6 +215,8 @@ describe('guardApi', () => {
       'saveDocument',
       'saveDraft',
       'discardDraft',
+      'markUpToDate',
+      'markExistingUpToDate',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });

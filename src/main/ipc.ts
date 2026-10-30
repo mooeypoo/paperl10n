@@ -57,6 +57,16 @@ export const argumentValidators: Readonly<
     hasExactly(request, ['projectId', 'key']) &&
     isProjectId(request.projectId) &&
     isDocumentKey(request.key),
+  markUpToDate: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'key', 'sourceFingerprint', 'sections']) &&
+    isProjectId(request.projectId) &&
+    isDocumentKey(request.key) &&
+    typeof request.sourceFingerprint === 'string' &&
+    request.sourceFingerprint.length <= 100 &&
+    (request.sections === null || isSectionList(request.sections)),
+  markExistingUpToDate: ([request, ...rest]) =>
+    rest.length === 0 && hasExactly(request, ['projectId']) && isProjectId(request.projectId),
   chooseTargetLocale: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'language']) &&
@@ -85,6 +95,22 @@ function isDocumentKey(value: unknown): value is string {
 /** A page's text: generous, but bounded (10 million UTF-16 code units, about 20 MB). */
 function isDocumentText(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 10_000_000;
+}
+
+/** Section indices: whole numbers, in order, none twice, and not absurdly many. */
+function isSectionList(value: unknown): value is readonly number[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.length <= 10_000 &&
+    value.every(
+      (index: unknown, at) =>
+        typeof index === 'number' &&
+        Number.isSafeInteger(index) &&
+        index >= 0 &&
+        (at === 0 || index > (value[at - 1] as number)),
+    )
+  );
 }
 
 /** A language code as the renderer sends it. Its meaning is checked by the use case. */
@@ -173,6 +199,22 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
     case 'discardDraft': {
       const [request] = args as [{ projectId: string; key: string }]; // checked by argumentValidators
       return api.discardDraft({ projectId: request.projectId, key: request.key });
+    }
+    case 'markUpToDate': {
+      // checked by argumentValidators
+      const [request] = args as [
+        { projectId: string; key: string; sourceFingerprint: string; sections: number[] | null },
+      ];
+      return api.markUpToDate({
+        projectId: request.projectId,
+        key: request.key,
+        sourceFingerprint: request.sourceFingerprint,
+        sections: request.sections === null ? null : [...request.sections],
+      });
+    }
+    case 'markExistingUpToDate': {
+      const [request] = args as [{ projectId: string }]; // checked by argumentValidators
+      return api.markExistingUpToDate({ projectId: request.projectId });
     }
     case 'chooseTargetLocale': {
       const [request] = args as [{ projectId: string; language: string }]; // checked by argumentValidators

@@ -31,7 +31,22 @@ export {
   type ListSourceDocuments,
   type ListSourceDocumentsError,
   type SourceDocumentEntry,
+  type SourceDocumentList,
 } from './application/list-source-documents.ts';
+export {
+  createMarkExistingUpToDate,
+  createMarkUpToDate,
+  type MarkExistingUpToDate,
+  type MarkUpToDate,
+  type MarkUpToDateError,
+  type MarkUpToDateRequest,
+} from './application/mark-up-to-date.ts';
+export {
+  createStatusUpdates,
+  type DocumentStatus,
+  type StatusReadError,
+  type StatusUpdates,
+} from './application/translation-status.ts';
 export {
   createReadDocumentPair,
   type DocumentPair,

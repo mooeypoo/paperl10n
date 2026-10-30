@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import {
-  documentKey,
-  type Block,
-  type ParsedDocument,
-  type SourceDocument,
-} from '#domains/document';
+import { documentKey, type SourceDocument } from '#domains/document';
 import { createFormatRegistry, type PluginModule } from '#domains/formats';
-import { FakeMarkdownParser } from '#domain-testing/document';
+import { FakeMarkdownParser, LineMarkdownParser } from '#domain-testing/document';
 import { detects, fakeDocumentPlugin, type FileTree } from '#domain-testing/formats';
 import { err, ok } from '#kernel/result';
 import { localeId } from '#kernel/locale-id';
@@ -107,6 +102,11 @@ describe('readDocumentPair', () => {
         },
         draft: null,
         sections: expect.objectContaining({ paired: true }) as unknown,
+        status: {
+          page: 'draft',
+          sections: ['draft'],
+          sourceFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) as string,
+        },
       },
     });
   });
@@ -221,27 +221,7 @@ describe('readDocumentPair', () => {
   });
 
   describe('pairs sections with the text the translation opens with', () => {
-    /** Each line is a block; lines starting with `#`s and a space are headings. */
-    class HeadingParser extends FakeMarkdownParser {
-      override parse(text: string): ParsedDocument {
-        const blocks: Block[] = [];
-        let start = 0;
-        for (const line of text.split('\n')) {
-          const depth = /^(#+) /.exec(line)?.[1]?.length;
-          const range = { start, end: start + line.length };
-          if (line !== '') {
-            blocks.push(
-              depth === undefined
-                ? { kind: 'paragraph', range }
-                : { kind: 'heading', range, depth },
-            );
-          }
-          start += line.length + 1;
-        }
-        return { text, blocks, inline: [] };
-      }
-    }
-    const headingParser = new HeadingParser();
+    const headingParser = new LineMarkdownParser();
     const source = '## A\na\n## B\nb\n';
     const counts = async (tree: FileTree, draft?: string) => {
       const drafts = new InMemoryDraftStore();

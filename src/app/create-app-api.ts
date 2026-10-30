@@ -7,11 +7,14 @@ import {
   createChooseTargetLocale,
   createDiscardDraft,
   createListSourceDocuments,
+  createMarkExistingUpToDate,
+  createMarkUpToDate,
   createOpenProject,
   createReadDocumentPair,
   createSaveDocument,
   createSaveDraft,
   createSearchTargetLanguages,
+  createStatusUpdates,
   createSuggestTargetLanguages,
   type DraftStore,
   type FolderPicker,
@@ -38,6 +41,8 @@ export interface AppDependencies {
 export function createAppApi(deps: AppDependencies): Result<PaperLionApi, RegistryError> {
   const registry = createFormatRegistry(deps.plugins, { apiVersion: 2 });
   if (!registry.ok) return registry;
+  const statusUpdates = createStatusUpdates();
+  const marking = { sessions: deps.sessions, parser: deps.parser, updates: statusUpdates };
   const handlers = createApiHandlers({
     openProject: createOpenProject({
       folderPicker: deps.folderPicker,
@@ -48,6 +53,7 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
     listSourceDocuments: createListSourceDocuments({
       sessions: deps.sessions,
       drafts: deps.drafts,
+      parser: deps.parser,
     }),
     readDocumentPair: createReadDocumentPair({
       sessions: deps.sessions,
@@ -60,6 +66,8 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
     saveDocument: createSaveDocument({ sessions: deps.sessions, drafts: deps.drafts }),
     saveDraft: createSaveDraft({ sessions: deps.sessions, drafts: deps.drafts }),
     discardDraft: createDiscardDraft({ sessions: deps.sessions, drafts: deps.drafts }),
+    markUpToDate: createMarkUpToDate(marking),
+    markExistingUpToDate: createMarkExistingUpToDate(marking),
   });
   return ok(guardApi(handlers, deps.onUnexpected));
 }

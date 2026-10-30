@@ -53,6 +53,17 @@ export function createApi(invoke: Invoke): PaperLionApi {
         projectId: request.projectId,
         key: request.key,
       }) as ReturnType<PaperLionApi['discardDraft']>,
+    markUpToDate: (request) =>
+      invoke(channelFor('markUpToDate'), {
+        projectId: request.projectId,
+        key: request.key,
+        sourceFingerprint: request.sourceFingerprint,
+        sections: request.sections === null ? null : [...request.sections],
+      }) as ReturnType<PaperLionApi['markUpToDate']>,
+    markExistingUpToDate: (request) =>
+      invoke(channelFor('markExistingUpToDate'), { projectId: request.projectId }) as ReturnType<
+        PaperLionApi['markExistingUpToDate']
+      >,
     chooseTargetLocale: (request) =>
       invoke(channelFor('chooseTargetLocale'), {
         projectId: request.projectId,

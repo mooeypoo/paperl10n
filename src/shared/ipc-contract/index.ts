@@ -50,6 +50,31 @@ export interface SourceDocumentDto {
   readonly targetExists: boolean;
   /** Whether unsaved edits to the translation are kept as a draft. */
   readonly hasDraft: boolean;
+  readonly status: PageStatusDto;
+}
+
+/**
+ * `missing`: no translation file; `draft`: never marked up to date (or only some sections);
+ * `translated`: marked, and the source is unchanged since; `outdated`: the source changed since.
+ */
+export type PageStatusDto = 'missing' | 'draft' | 'translated' | 'outdated';
+export type SectionStatusDto = Exclude<PageStatusDto, 'missing'>;
+
+export interface SourceDocumentListDto {
+  readonly documents: readonly SourceDocumentDto[];
+  /** The target language's status file (`.paperl10n/status/<locale>.json`). */
+  readonly statusFile: {
+    /** `false`: nothing was ever marked up to date in this language. */
+    readonly exists: boolean;
+    /** Why it can't be read: pages then list as never marked, and marking is refused. */
+    readonly problem: ErrorDto | null;
+  };
+}
+
+/** A page's status, and each source section's, in the order of the pairing's source sides. */
+export interface DocumentStatusDto {
+  readonly page: PageStatusDto;
+  readonly sections: readonly SectionStatusDto[];
 }
 
 /** Kept equal to the `document` domain's block kinds by a test. */
@@ -106,6 +131,8 @@ export interface DocumentPairDto {
    * else the file, else a copy of the source). Decided when the page opens, not as it's edited.
    */
   readonly sections: SectionPairingDto;
+  /** Its status as the page opens. `sourceFingerprint` names this source when marking it. */
+  readonly status: DocumentStatusDto & { readonly sourceFingerprint: string };
 }
 
 /** Offsets are UTF-16 code units into the document's `text`; `end` is exclusive. */
@@ -167,6 +194,11 @@ export const errorCodes = [
   'workspace.document-changed',
   'workspace.document-unwritable',
   'workspace.draft-unwritable',
+  'workspace.source-changed',
+  'workspace.status-unreadable',
+  'workspace.status-invalid',
+  'workspace.status-unsupported',
+  'workspace.status-unwritable',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.file-access',
@@ -191,9 +223,10 @@ export interface ErrorDto {
 export interface PaperLionApi {
   /** Shows the folder picker, then opens the project. `null` means the user cancelled. */
   openProject(): Promise<Result<ProjectSummaryDto | null, ErrorDto>>;
+  /** The project's pages, each with its translation's state and status. */
   listSourceDocuments(request: {
     readonly projectId: string;
-  }): Promise<Result<readonly SourceDocumentDto[], ErrorDto>>;
+  }): Promise<Result<SourceDocumentListDto, ErrorDto>>;
   /** A page's source and its translation, read and parsed. */
   readDocumentPair(request: {
     readonly projectId: string;
@@ -241,6 +274,24 @@ export interface PaperLionApi {
     readonly projectId: string;
     readonly key: string;
   }): Promise<Result<null, ErrorDto>>;
+  /**
+   * Marks a page's source sections (by index, in order; `null`: the whole page) up to date with
+   * the source the page showed, and returns its status after. The status file is written right
+   * away. Refused when the source changed on disk since (`workspace.source-changed`).
+   */
+  markUpToDate(request: {
+    readonly projectId: string;
+    readonly key: string;
+    readonly sourceFingerprint: string;
+    readonly sections: readonly number[] | null;
+  }): Promise<Result<DocumentStatusDto, ErrorDto>>;
+  /**
+   * Marks every existing translation that was never marked up to date with its source as it is
+   * now: the one-time start for a project translated before Paper Lion.
+   */
+  markExistingUpToDate(request: {
+    readonly projectId: string;
+  }): Promise<Result<{ readonly marked: number }, ErrorDto>>;
   /** Makes a language the project's target and saves it to the config; returns it with its direction. */
   chooseTargetLocale(request: {
     readonly projectId: string;
@@ -260,6 +311,8 @@ export const apiMethods = [
   'saveDocument',
   'saveDraft',
   'discardDraft',
+  'markUpToDate',
+  'markExistingUpToDate',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

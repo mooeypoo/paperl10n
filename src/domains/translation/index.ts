@@ -12,6 +12,7 @@ export {
   type SectionPair,
   type SectionPairing,
 } from './domain/sections.ts';
+export { blockFingerprint } from './domain/fingerprint.ts';
 export {
   markSections,
   pageStatus,

@@ -160,8 +160,10 @@ The walking skeleton is one slice through every layer. Clicking **Open folder…
 6. The result (a `ProjectSummary`, or a domain error) is mapped to DTOs (`app/error-dto.ts`:
    an exhaustive `switch`, so every error has a code, and every code has a UI message).
 7. Back in the UI, `useProject` stores the summary and calls `listSourceDocuments({ projectId })`,
-   which goes the same way to the layout's `listSourceDocuments()` and `targetPathFor()`, and
-   checks which translations exist. The Pages sidebar lists them and selects the first.
+   which goes the same way to the layout's `listSourceDocuments()` and `targetPathFor()`,
+   checks which translations exist, and reads each page's status from the language's status file
+   (`.paperl10n/status/<locale>.json`, [`domains/translation.md`](domains/translation.md)). The
+   Pages sidebar lists them and selects the first.
 
 ## Data flow: reading a page
 

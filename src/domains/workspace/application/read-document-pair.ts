@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type { FileAccessError, FormatError, ProjectFiles } from '#domains/formats';
 import type { DocumentKey, MarkdownParser, ParsedDocument } from '#domains/document';
-import { pairDocumentSections, type SectionPairing } from '#domains/translation';
+import {
+  blockFingerprint,
+  emptyStatusFile,
+  pairDocumentSections,
+  type SectionPairing,
+} from '#domains/translation';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import { draftKey } from './drafts.ts';
 import type { Draft, DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
+import { documentStatus, readStatusFile, type DocumentStatus } from './translation-status.ts';
 
 export interface ReadDocument {
   readonly path: ProjectPath;
@@ -28,6 +34,12 @@ export interface DocumentPair {
    * when the page opens; edits don't re-pair it (docs/plan/M3-sections.md).
    */
   readonly sections: SectionPairing;
+  /**
+   * The page's status and each source section's (in the order of the pairing's source sides),
+   * as if never recorded when the status file can't be read. `sourceFingerprint` identifies the
+   * source as read, for marking it up to date.
+   */
+  readonly status: DocumentStatus & { readonly sourceFingerprint: string };
 }
 
 export type ReadDocumentPairError =
@@ -109,6 +121,23 @@ export function createReadDocumentPair(deps: {
         ? (target.value?.document ?? source.value.document)
         : deps.parser.parse(draft.text, parseOptions(targetPath.value));
     const sections = pairDocumentSections(source.value.document, opened);
-    return ok({ key: document.key, source: source.value, target: target.value, draft, sections });
+    const statusFile = await readStatusFile(project, targetLocale.id);
+    const status = {
+      ...documentStatus(
+        source.value.document,
+        statusFile.ok ? statusFile.value.file : emptyStatusFile,
+        document.key,
+        target.value !== null,
+      ),
+      sourceFingerprint: blockFingerprint(source.value.document.text),
+    };
+    return ok({
+      key: document.key,
+      source: source.value,
+      target: target.value,
+      draft,
+      sections,
+      status,
+    });
   };
 }

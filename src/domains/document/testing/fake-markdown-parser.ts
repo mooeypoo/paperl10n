@@ -17,3 +17,26 @@ export class FakeMarkdownParser implements MarkdownParser {
     };
   }
 }
+
+/**
+ * A parser for use-case tests that need sections: each non-blank line is a block, a heading when
+ * it starts with `#`s and a space, a paragraph otherwise. Records each call.
+ */
+export class LineMarkdownParser extends FakeMarkdownParser {
+  override parse(text: string, options: MarkdownParseOptions): ParsedDocument {
+    super.parse(text, options);
+    const blocks: ParsedDocument['blocks'][number][] = [];
+    let start = 0;
+    for (const line of text.split('\n')) {
+      const depth = /^(#{1,6}) /.exec(line)?.[1]?.length;
+      const range = { start, end: start + line.trimEnd().length };
+      if (line.trim() !== '') {
+        blocks.push(
+          depth === undefined ? { kind: 'paragraph', range } : { kind: 'heading', range, depth },
+        );
+      }
+      start += line.length + 1;
+    }
+    return { text, blocks, inline: [] };
+  }
+}

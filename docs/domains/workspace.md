@@ -60,10 +60,13 @@ problems are reported at once (`workspace.config-invalid`, with a list of `{ fie
 
 ### `listSourceDocuments(projectId)`
 
-`createListSourceDocuments({ sessions, drafts })`. It returns each source document with its key,
+`createListSourceDocuments({ sessions, drafts, parser })`. It returns each source document with its key,
 source path, target path for the project's target locale, whether that translation file exists
-(`targetExists`), and whether it has a draft (`hasDraft`; drafts that can't be listed count as
-none). Errors: `workspace.unknown-project`, `workspace.no-target-locale` (no target
+(`targetExists`), whether it has a draft (`hasDraft`; drafts that can't be listed count as
+none), and its `status` (see [Status](#status)). Only recorded pages with a translation have
+their source read and parsed. Alongside the documents, `statusFile` says whether the language's
+status file exists and, if it can't be read, why (`problem`): the pages then list as never
+recorded. Errors: `workspace.unknown-project`, `workspace.no-target-locale` (no target
 chosen yet), or a `FormatError` from the layout.
 
 ### `readDocumentPair(projectId, key)`
@@ -76,7 +79,9 @@ page's draft comes along as `draft` (`{ text, base }`), unless it holds what the
 (then it's forgotten); a draft that can't be read counts as none, so the page still opens. The
 pair's `sections` pairs the source's sections with those of the text the translation opens with
 (the draft, else the file, else a copy of the source: what starting a translation makes), through
-`#domains/translation`; it's decided when the page opens. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+`#domains/translation`; it's decided when the page opens. Its `status` is the page's and each
+source section's (as if never recorded when the status file can't be read), with the source's
+`sourceFingerprint` for marking it. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 `workspace.unknown-document` (the key
 isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
 file that vanished), or a `FormatError`.
@@ -113,6 +118,33 @@ locale, and the page key, so it belongs to one translation of one page. The key 
 well formed (`documentKey`), not listed: checking the listing would read the project on every
 autosave. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 `workspace.unknown-document` (a malformed key), `workspace.draft-unwritable`.
+
+### Status
+
+A target language's **status file** is `.paperl10n/status/<locale>.json` in the project,
+committed with the translations (its format and the status rules:
+[`translation.md`](translation.md)). It's read through the project's `ProjectFiles` and written
+through its `ProjectWriter`, like the config: atomically, only inside the project, missing
+folders created. A missing file is an empty status. A file that can't be read, isn't valid, or
+comes from a newer Paper Lion (`workspace.status-unreadable`, `workspace.status-invalid`,
+`workspace.status-unsupported`) is never written: marking is refused until it's fixed.
+
+`createMarkUpToDate({ sessions, parser, updates })`, `markUpToDate(projectId, { key,
+sourceFingerprint, sections })`: marks a page's source sections (indices in order, or `null` for
+the whole page) up to date and returns the page's status after. It reads the source again and
+refuses with `workspace.source-changed` when its fingerprint isn't the one the page showed (or an
+index is past its sections), so a version the translator hasn't read is never marked. Other
+errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-document`,
+`workspace.document-unreadable`, `workspace.status-unwritable`, the read errors above, or a
+`FormatError`.
+
+`createMarkExistingUpToDate(…)`, `markExistingUpToDate(projectId)`: records every existing
+translation without a record as up to date with its source now (the one-time start for a project
+translated before Paper Lion), and returns how many. Pages with a record keep it; nothing to mark
+writes nothing.
+
+`createStatusUpdates()`: one per app. Changes to the same status file run one at a time, so two
+marks made at once can't both read the old file and lose one.
 
 ### Target languages: `suggestTargetLanguages`, `searchTargetLanguages`, `chooseTargetLocale`
 
@@ -161,7 +193,7 @@ the two files is workspace's job: it holds the open project's files and layout.
 
 Test support (`#domain-testing/workspace`): `FakeFolderPicker`, `FakeProjectFilesOpener`, `unavailableDraftStore`, and the
 five contract suites, which run against the fakes and every real implementation. Use-case tests also use `fakeDocumentPlugin` from
-`#domain-testing/formats`.
+`#domain-testing/formats`, and `LineMarkdownParser` (each line a block) from `#domain-testing/document` where they need headings.
 
 ## Invariants
 
