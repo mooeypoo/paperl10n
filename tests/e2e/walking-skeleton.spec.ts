@@ -609,14 +609,16 @@ test('scrolls the panes together: locked in the section view, at paired headings
         const lines = [...content.querySelectorAll('.cm-line')];
         const line = lines.find((candidate) => candidate.textContent === 'שימוש');
         line?.scrollIntoView({ block: 'start' });
-        return {
+        return JSON.stringify({
           found: line !== undefined,
           scrollTop: content.closest('.cm-scroller')?.scrollTop,
+          height: content.closest('.cm-scroller')?.clientHeight,
+          inner: [innerWidth, innerHeight],
           first: lines.slice(0, 6).map((candidate) => candidate.textContent.slice(0, 20)),
-        };
+        });
       }),
     )
-    .toMatchObject({ found: true });
+    .toContain('"found":true');
   await expect
     .poll(async () => {
       const [a, b] = await panes('Use', 'שימוש');
