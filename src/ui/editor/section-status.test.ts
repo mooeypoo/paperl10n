@@ -39,19 +39,28 @@ describe('section status bars in an editor', () => {
     busy,
   });
   const marked: number[] = [];
+  // One handler for every set of bars, as the app has.
+  const onMark = (index: number) => {
+    marked.push(index);
+  };
   const bars = (list: (SectionBar | null)[]): SectionBars => ({
     bars: list,
-    onMark: (index) => marked.push(index),
+    onMark,
     lang: 'en',
     dir: 'ltr',
   });
-  /** Each bar as its status and button, with the line after it. */
+  /** Each bar as its status and button, with the line after it (`editor`: the first line's bar,
+   * which sits just above the editor). */
   const shown = (view: EditorView) =>
-    [...view.contentDOM.querySelectorAll<HTMLElement>('.cm-section-bar')].map((element) => [
-      element.dataset.status,
-      element.querySelector('button')?.getAttribute('aria-label') ?? null,
-      element.nextElementSibling?.textContent,
-    ]);
+    [...(view.dom.parentElement?.querySelectorAll<HTMLElement>('.cm-section-bar') ?? [])].map(
+      (element) => [
+        element.dataset.status,
+        element.querySelector('button')?.getAttribute('aria-label') ?? null,
+        element.nextElementSibling === view.dom
+          ? 'editor'
+          : element.nextElementSibling?.textContent,
+      ],
+    );
 
   it('shows a bar above each section with one, with its button while it isn’t up to date', () => {
     const view = editor();
@@ -59,11 +68,31 @@ describe('section status bars in an editor', () => {
       effects: setSectionBars.of(bars([bar('draft'), null, bar('translated')])),
     });
     expect(shown(view)).toEqual([
-      ['draft', 'Mark draft', 'Intro'],
+      ['draft', 'Mark draft', 'editor'],
       ['translated', null, '## B'],
     ]);
     const element = view.contentDOM.querySelector<HTMLElement>('.cm-section-bar');
     expect([element?.lang, element?.dir, element?.contentEditable]).toEqual(['en', 'ltr', 'false']);
+  });
+
+  it('puts the first line’s bar above the editor, outside its text, and takes it away', () => {
+    const view = editor();
+    view.dispatch({ effects: setSectionBars.of(bars([bar('outdated'), null, null])) });
+    const first = view.dom.previousElementSibling;
+    expect(first?.classList.contains('cm-section-bar-first')).toBe(true);
+    expect(view.contentDOM.querySelector('.cm-section-bar')).toBeNull();
+    expect([first?.getAttribute('lang'), first?.getAttribute('dir')]).toEqual(['en', 'ltr']);
+    // Unchanged bars keep their element; a new status replaces it; none removes it.
+    view.dispatch({ effects: setSectionBars.of(bars([bar('outdated'), null, null])) });
+    expect(view.dom.previousElementSibling).toBe(first);
+    view.dispatch({ effects: setSectionBars.of(bars([bar('translated'), null, null])) });
+    expect(view.dom.previousElementSibling?.getAttribute('data-status')).toBe('translated');
+    view.dispatch({ effects: showSections.of(false) });
+    expect(view.dom.previousElementSibling).toBeNull();
+    view.dispatch({ effects: showSections.of(true) });
+    view.destroy();
+    expect(document.querySelector('.cm-section-bar-first')).toBeNull();
+    views = views.filter((other) => other !== view);
   });
 
   it('marks the section of its pair when its button is clicked, unless a mark is on its way', () => {

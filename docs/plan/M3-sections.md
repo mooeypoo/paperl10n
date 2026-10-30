@@ -360,11 +360,16 @@ the last step.
       section's status and, unless it's up to date, "Mark up to date". The alignment spacer goes
       above the bar (spacers now sit at side −2), so the bar stays with its heading and the headings
       still line up: the bar counts as the section's own height. The bar takes the section's rule.
+      - **The first line's bar sits just above the editor**, outside its text: as a block widget at
+        the document's very start, it sometimes left Chromium without a caret when the editor got
+        focus back (the link-dialog E2E failed 4 times in 20; `main` passed 20 of 20). Above the
+        editor, it still counts in the alignment (it moves the editor down), and the link test
+        passed 30 of 30. Tab therefore reaches it before the editor, and the others after.
       - **Interface text in the document's pane:** the bar carries the interface's `lang` and
         `dir`, and isn't editable. Each button's accessible name says which section it marks ("Mark
         section 2 of 4 up to date").
       - **Keyboard:** checked in Electron. Tab from the translation editor reaches each section's
-        button in order, then leaves; Enter marks it. The E2E covers it.
+        button that follows in order, then leaves; Enter marks it. The E2E covers it.
       - **Screen readers:** the bars are inside the editor's text box, so they're read with its
         content. A check with a real screen reader is in [follow-ups](follow-ups.md).
       - **The index sent** is the section's among the source's sections, not the pair's (a pair with

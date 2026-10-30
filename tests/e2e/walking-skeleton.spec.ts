@@ -504,11 +504,10 @@ test('shows paired sections side by side, lined up at their headings', async () 
   await page.getByRole('button', { name: 'Sections' }).click();
   await expect.poll(linedUp).toBe(true);
 
-  // Each section's status sits at its heading in the translation; from the keyboard, Tab leaves
-  // the editor through the sections' buttons, in order.
+  // Each section's status sits at its heading in the translation (the first section's just above
+  // the editor); from the keyboard, Tab leaves the editor through the next sections' buttons.
   const target = page.getByRole('textbox', { name: 'עברית · translation' });
   await target.click();
-  await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
   const second = page.getByRole('button', { name: 'Mark section 2 of 4 up to date' });
   await expect(second).toBeFocused();

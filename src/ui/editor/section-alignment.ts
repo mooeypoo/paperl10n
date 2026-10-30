@@ -305,6 +305,11 @@ class Alignment {
   }
 }
 
+/** Lines the editor up with its partner again (something outside its document moved it). */
+export function realign(view: EditorView): void {
+  alignments.get(view)?.schedule();
+}
+
 /** Lines up two editors' sections, until the returned function is called. */
 export function alignSections(a: EditorView, b: EditorView): () => void {
   alignments.get(a)?.destroy();

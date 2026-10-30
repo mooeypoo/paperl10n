@@ -3,9 +3,13 @@
 // section's first line, with "Mark up to date" while it isn't. It sits where the section's anchor
 // is (section-alignment.ts), so it follows edits, and below the alignment spacer, so the bar and
 // its heading stay together while the headings line up.
-import { RangeSet, StateEffect, StateField, type Range } from '@codemirror/state';
-import { Decoration, EditorView, WidgetType } from '@codemirror/view';
-import { sectionAnchors, sectionsShown } from './section-alignment.ts';
+//
+// The bar of a section on the document's first line goes just above the editor instead, outside
+// its text: a block widget at the very start of the document can leave the browser without a
+// caret when the editor gets focus back (seen in Chromium, with the editor in a shadow root).
+import { RangeSet, StateEffect, StateField, type EditorState, type Range } from '@codemirror/state';
+import { Decoration, EditorView, ViewPlugin, WidgetType, type ViewUpdate } from '@codemirror/view';
+import { realign, sectionAnchors, sectionsShown } from './section-alignment.ts';
 
 /** One section's bar, with its text in the interface's language. */
 export interface SectionBar {
@@ -97,21 +101,35 @@ class SectionBarWidget extends WidgetType {
   }
 }
 
-/** The bars, in the section view, above each section's first line. */
+/** Each shown bar, with its pair index and the start of the line it's above, in order. */
+function shownBars(
+  state: EditorState,
+): { readonly bar: SectionBar; readonly index: number; readonly line: number }[] {
+  const bars = state.field(sectionBars);
+  const anchors = state.field(sectionAnchors);
+  if (bars === null || anchors === null || !state.field(sectionsShown)) return [];
+  const shown: { bar: SectionBar; index: number; line: number }[] = [];
+  const seen = new Set<number>();
+  anchors.forEach((position, index) => {
+    const bar = bars.bars[index] ?? null;
+    if (position === null || bar === null) return;
+    const line = state.doc.lineAt(position).from;
+    if (seen.has(line)) return;
+    seen.add(line);
+    shown.push({ bar, index, line });
+  });
+  return shown;
+}
+
+/** The bars, in the section view, above each section's first line (but the document's first). */
 const barDecorations = EditorView.decorations.compute(
   [sectionBars, sectionAnchors, sectionsShown],
   (state) => {
     const bars = state.field(sectionBars);
-    const anchors = state.field(sectionAnchors);
-    if (bars === null || anchors === null || !state.field(sectionsShown)) return Decoration.none;
+    if (bars === null) return Decoration.none;
     const widgets: Range<Decoration>[] = [];
-    const seen = new Set<number>();
-    anchors.forEach((position, index) => {
-      const bar = bars.bars[index] ?? null;
-      if (position === null || bar === null) return;
-      const line = state.doc.lineAt(position).from;
-      if (seen.has(line)) return;
-      seen.add(line);
+    for (const { bar, index, line } of shownBars(state)) {
+      if (line === 0) continue;
       widgets.push(
         Decoration.widget({
           widget: new SectionBarWidget(bar, index, bars),
@@ -119,9 +137,45 @@ const barDecorations = EditorView.decorations.compute(
           side: -1,
         }).range(line),
       );
-    });
+    }
     return RangeSet.of(widgets, true);
   },
 );
 
-export const sectionStatus = [sectionBars, barDecorations];
+/** The bar of a section on the document's first line, just above the editor. */
+const firstBar = ViewPlugin.fromClass(
+  class {
+    readonly view: EditorView;
+    widget: SectionBarWidget | null = null;
+    element: HTMLElement | null = null;
+    constructor(view: EditorView) {
+      this.view = view;
+      this.sync();
+    }
+    update(update: ViewUpdate): void {
+      if (update.docChanged || update.transactions.some((t) => t.effects.length > 0)) this.sync();
+    }
+    sync(): void {
+      const bars = this.view.state.field(sectionBars);
+      const first = shownBars(this.view.state).find(({ line }) => line === 0);
+      const widget =
+        bars === null || first === undefined
+          ? null
+          : new SectionBarWidget(first.bar, first.index, bars);
+      if (widget === null ? this.widget === null : this.widget?.eq(widget) === true) return;
+      this.element?.remove();
+      this.widget = widget;
+      this.element = widget?.toDOM() ?? null;
+      if (this.element !== null) {
+        this.element.classList.add('cm-section-bar-first');
+        this.view.dom.before(this.element);
+      }
+      realign(this.view);
+    }
+    destroy(): void {
+      this.element?.remove();
+    }
+  },
+);
+
+export const sectionStatus = [sectionBars, barDecorations, firstBar];

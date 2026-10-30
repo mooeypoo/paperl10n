@@ -134,8 +134,9 @@
 }
 
 /* A section's status bar (section-status.ts): it takes the section's rule, so the heading under it
-   sits right below. Interface text, in the interface's font. */
-.cm-editor .cm-section-bar {
+   sits right below. Interface text, in the interface's font. The first line's bar sits just above
+   the editor, outside it (section-status.ts says why). */
+.cm-section-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -155,21 +156,21 @@
   border-block-start: 0;
 }
 
-.cm-editor .cm-section-bar-status {
+.cm-section-bar-status {
   padding-inline-start: var(--pl-space-2);
   border-inline-start: 3px solid var(--pl-color-muted);
 }
 
-.cm-editor .cm-section-bar[data-status='translated'] .cm-section-bar-status {
+.cm-section-bar[data-status='translated'] .cm-section-bar-status {
   border-inline-start-color: var(--pl-color-ok);
 }
 
-.cm-editor .cm-section-bar[data-status='outdated'] .cm-section-bar-status {
+.cm-section-bar[data-status='outdated'] .cm-section-bar-status {
   border-inline-start-color: var(--pl-color-warn);
   color: var(--pl-color-ink);
 }
 
-.cm-editor .cm-section-bar-mark {
+.cm-section-bar-mark {
   padding-block: 0.1rem;
   padding-inline: var(--pl-space-2);
   border: 1px solid var(--pl-color-line);
@@ -180,16 +181,16 @@
   cursor: pointer;
 }
 
-.cm-editor .cm-section-bar-mark:hover {
+.cm-section-bar-mark:hover {
   background: var(--pl-color-chip);
 }
 
-.cm-editor .cm-section-bar-mark:focus-visible {
+.cm-section-bar-mark:focus-visible {
   outline: 2px solid var(--pl-color-focus);
   outline-offset: 1px;
 }
 
-.cm-editor .cm-section-bar-mark:disabled {
+.cm-section-bar-mark:disabled {
   cursor: default;
   opacity: 0.6;
 }
