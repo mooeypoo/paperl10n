@@ -23,6 +23,7 @@
   /* Status: up to date, and outdated (the source changed since). */
   --pl-color-ok: #2f7a4b;
   --pl-color-warn: #b04a0c;
+  --pl-color-warn-surface: #fbeadc;
   /* Markdown as written: dimmed syntax (≥4.5:1 on both surfaces), code surfaces, link targets. */
   --pl-color-markup: #5f6779;
   --pl-color-code-surface: #f3ecdd;
@@ -80,6 +81,7 @@
     --pl-color-danger-surface: #2e1a1c;
     --pl-color-ok: #7fd1a0;
     --pl-color-warn: #ffae7a;
+    --pl-color-warn-surface: #33231b;
     --pl-color-markup: #8f97a8;
     --pl-color-code-surface: #121927;
     --pl-color-link: #f9c25b;
@@ -107,6 +109,7 @@
   --pl-color-danger-surface: #2e1a1c;
   --pl-color-ok: #7fd1a0;
   --pl-color-warn: #ffae7a;
+  --pl-color-warn-surface: #33231b;
   --pl-color-markup: #8f97a8;
   --pl-color-code-surface: #121927;
   --pl-color-link: #f9c25b;

@@ -552,16 +552,32 @@ test('marks translations up to date, and shows a source change as outdated', asy
   );
 
   // The source changes on disk: reopened, the project lists the page as outdated.
-  writeFileSync(join(project, 'en/index.md'), '# Welcome\n\nThis is the new home page.\n');
+  writeFileSync(
+    join(project, 'en/index.md'),
+    '# Welcome\n\nThis is the new home page.\n\nAnd a new paragraph.\n',
+  );
   await page.getByRole('button', { name: 'Open folder…' }).click();
   await expect(statusOf('index')).toHaveAttribute('data-status', 'outdated');
   await nav.getByText('index', { exact: true }).click();
   await expect(page.locator('.document-status')).toContainText(
     'Outdated: the source changed since',
   );
+  // The source pane shows what changed: a changed paragraph, a new one, and its section's note.
+  const sourcePane = page.locator('.pane').first();
+  await expect(sourcePane.locator(".cm-source-change[data-change='changed']")).toHaveText(
+    'This is the new home page.',
+  );
+  await expect(sourcePane.locator(".cm-source-change[data-change='added']")).toHaveText(
+    'And a new paragraph.',
+  );
+  await expect(sourcePane.locator('.cm-section-bar')).toHaveText('Changed since marked up to date');
+  await expect(page.locator('.document-changes-note')).toBeVisible();
   await page.getByRole('button', { name: 'Mark page up to date' }).click();
   await expect(page.locator('.document-status')).toContainText('Up to date');
   await expect(statusOf('index')).toHaveAttribute('data-status', 'translated');
+  // Up to date: nothing is highlighted any more.
+  await expect(sourcePane.locator('.cm-source-change')).toHaveCount(0);
+  await expect(sourcePane.locator('.cm-section-bar')).toHaveCount(0);
 
   expect(await problems.violations()).toEqual([]);
   expect(problems.console).toEqual([]);

@@ -444,3 +444,104 @@ describe('marking a section up to date, in the section view', () => {
     expect(bars(element)).toEqual([]);
   });
 });
+
+describe('what changed in the source, in the source pane', () => {
+  // A file with a BOM and CRLF line endings: main's offsets are into the file as read.
+  const source = '\ufeff## A\r\n\r\na\r\n\r\n## B\r\n\r\nb2\r\n';
+  const translation = '## א\n\nא\n\n## ב\n\nב\n';
+  const offset = (text: string, part: string) => text.indexOf(part);
+  const changed: DocumentPairDto = {
+    ...pairFor('index', source, translation),
+    sections: {
+      paired: true,
+      level: 2,
+      pairs: [
+        {
+          kind: 'heading',
+          source: { start: offset(source, '## A'), end: offset(source, '## B') },
+          target: { start: 0, end: offset(translation, '## ב') },
+        },
+        {
+          kind: 'heading',
+          source: { start: offset(source, '## B'), end: source.length },
+          target: { start: offset(translation, '## ב'), end: translation.length },
+        },
+      ],
+    },
+    status: {
+      page: 'outdated',
+      sections: ['draft', 'outdated'],
+      changes: {
+        blocks: [
+          {
+            kind: 'changed',
+            range: { start: offset(source, 'b2'), end: offset(source, 'b2') + 2 },
+          },
+        ],
+        removals: [{ offset: offset(source, 'b2') + 2, side: 'after' }],
+      },
+      sourceFingerprint: 'fp',
+    },
+  };
+  const sourceEditor = (element: Element) =>
+    element.querySelectorAll('section[lang]')[0]?.querySelector('.markdown-editor')?.shadowRoot;
+  /** The source pane's lines with a mark, its removal markers, and its section bars. */
+  const marked = (element: Element) =>
+    [
+      ...(sourceEditor(element)?.querySelectorAll<HTMLElement>(
+        '.cm-source-change, .cm-source-removed, .cm-section-bar',
+      ) ?? []),
+    ].map((part) =>
+      part.classList.contains('cm-source-change')
+        ? `${part.dataset.change ?? ''}: ${part.textContent}`
+        : `${part.className.replace(/^cm-/, '').split(' ')[0] ?? ''}: ${part.textContent.trim()}`,
+    );
+
+  it('marks the changes where they are, with a bar at each changed section’s heading', async () => {
+    const { element } = await opened({ read: { index: { ok: true, value: changed } } });
+    await openPage(element, 'index');
+    expect(marked(element)).toEqual([
+      'section-bar: Changed since marked up to date',
+      'changed: b2',
+      'source-removed: Text removed here',
+    ]);
+    // The bar is above section B's heading (section A, never marked, has none).
+    const bar = sourceEditor(element)?.querySelector('.cm-section-bar');
+    expect(bar?.nextElementSibling?.textContent).toBe('B');
+    expect(header(element)).toBe(
+      'Outdated: the source changed since | Sections up to date: 0 of 2 | ' +
+        "The source's changes since it was marked up to date are highlighted. | " +
+        'Mark page up to date',
+    );
+  });
+
+  it('keeps the changes in the full page, without the section bars', async () => {
+    const { element } = await opened({ read: { index: { ok: true, value: changed } } });
+    await openPage(element, 'index');
+    button(element, 'Full page').click();
+    await flushPromises();
+    expect(marked(element)).toEqual(['changed: b2', 'source-removed: Text removed here']);
+  });
+
+  it('clears them once the page is marked up to date', async () => {
+    const { element } = await opened({
+      read: { index: { ok: true, value: changed } },
+      mark: {
+        ok: true,
+        value: { page: 'translated', sections: ['translated', 'translated'], changes: noChanges },
+      },
+    });
+    await openPage(element, 'index');
+    button(element, 'Mark page up to date').click();
+    await flushPromises();
+    expect(marked(element)).toEqual([]);
+    expect(header(element)).toBe('Up to date | Sections up to date: 2 of 2');
+  });
+
+  it('shows nothing for a page without changes', async () => {
+    const { element } = await opened();
+    await openPage(element, 'index');
+    expect(marked(element)).toEqual([]);
+    expect(element.querySelector('.document-changes-note')).toBeNull();
+  });
+});

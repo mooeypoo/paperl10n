@@ -6,6 +6,7 @@ import type {
   ErrorDto,
   LocaleDto,
   PageStatusDto,
+  SectionStatusDto,
   SourceDocumentDto,
 } from '#ipc-contract';
 import type { EditorView } from '@codemirror/view';
@@ -13,7 +14,8 @@ import { computed, onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } fro
 import type { SaveStatus } from '../composables/use-translation-saving';
 import type { EditorSnapshot } from '../editor/markdown-editor';
 import { alignSections } from '../editor/section-alignment';
-import type { SectionBars } from '../editor/section-status';
+import type { SectionBar, SectionBars } from '../editor/section-status';
+import type { SourceChangeMarks } from '../editor/source-changes';
 import { errorMessage } from '../i18n/error-message';
 import { isolated, useI18n } from '../i18n/i18n';
 import { autonym } from '../i18n/language-name';
@@ -189,7 +191,11 @@ const onMarkSection = (pairIndex: number) => {
   const index = pairing.pairs.slice(0, pairIndex).filter((pair) => pair.source !== null).length;
   emit('markSection', index);
 };
-const sectionBars = computed((): SectionBars | null => {
+/** Bars by pair index, from each source section's status and its index among them. */
+const barsBySection = (
+  bar: (section: SectionStatusDto, index: number, count: number) => SectionBar | null,
+  onMark: (pairIndex: number) => void,
+): SectionBars | null => {
   const status = shownStatus.value;
   const pairing = sections.value;
   if (status === null || pairing?.paired !== true) return null;
@@ -200,21 +206,51 @@ const sectionBars = computed((): SectionBars | null => {
       if (pair.source === null) return null;
       index++;
       const section = status.sections[index];
-      if (section === undefined) return null;
-      return {
-        status: section,
-        statusLabel: t(statusNames[section]),
-        mark:
-          section === 'translated'
-            ? null
-            : {
-                label: t('paperl10n-mark-section'),
-                name: t('paperl10n-mark-section-name', String(index + 1), String(count)),
-              },
-        busy: props.marking ?? false,
-      };
+      return section === undefined ? null : bar(section, index, count);
     }),
-    onMark: onMarkSection,
+    onMark,
+    lang: uiLocale.value,
+    dir: uiDirection.value,
+  };
+};
+const sectionBars = computed(() =>
+  barsBySection(
+    (section, index, count) => ({
+      status: section,
+      statusLabel: t(statusNames[section]),
+      mark:
+        section === 'translated'
+          ? null
+          : {
+              label: t('paperl10n-mark-section'),
+              name: t('paperl10n-mark-section-name', String(index + 1), String(count)),
+            },
+      busy: props.marking ?? false,
+    }),
+    onMarkSection,
+  ),
+);
+// In the source pane, at the heading of each section whose source changed since it was marked.
+const noMark = () => undefined;
+const sourceBars = computed(() =>
+  barsBySection(
+    (section) =>
+      section === 'outdated'
+        ? { status: section, statusLabel: t('paperl10n-source-changed'), mark: null, busy: false }
+        : null,
+    noMark,
+  ),
+);
+// What changed in the source since it was marked: highlighted in the source pane, in both views.
+const sourceChanges = computed((): SourceChangeMarks | null => {
+  const changes = shownStatus.value?.changes;
+  if (changes === undefined || (changes.blocks.length === 0 && changes.removals.length === 0)) {
+    return null;
+  }
+  return {
+    blocks: changes.blocks.map(({ kind, range }) => ({ kind, from: range.start, to: range.end })),
+    removals: changes.removals.map(({ offset, side }) => ({ at: offset, side })),
+    removedLabel: t('paperl10n-source-removed'),
     lang: uiLocale.value,
     dir: uiDirection.value,
   };
@@ -272,6 +308,9 @@ defineExpose({
         <span v-if="shownStatus.sections.length > 1" class="document-note">
           {{ t('paperl10n-sections-progress', sectionsUpToDate, shownStatus.sections.length) }}
         </span>
+        <span v-if="sourceChanges !== null" class="document-note document-changes-note">
+          {{ t('paperl10n-source-changes-note') }}
+        </span>
         <button
           v-if="shownStatus.page !== 'translated'"
           type="button"
@@ -312,6 +351,8 @@ defineExpose({
         :loading="waiting"
         :section-starts="sourceStarts"
         :sections-shown="sectionView"
+        :section-bars="sourceBars"
+        :source-changes="sourceChanges"
         read-only
         @view="(view) => (sourceView = view)"
       />

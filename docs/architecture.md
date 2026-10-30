@@ -243,9 +243,9 @@ And for the work ahead:
 | VitePress layout rules | `src/plugins/format-vitepress/` (Starlight's are in `format-starlight/`) |
 | Edits as text splices, frontmatter fields | `document/domain/` (+ a CST-preserving YAML library in `document/adapters/`) |
 | Segmentation into sections | `document/domain/`, over the existing block model |
-| Pairing by section, status (missing/draft/translated/outdated), source-change tracking | `translation/domain/` |
+| Pairing by section, status (missing/draft/translated/outdated), source-change tracking | done in M3: `translation/domain/`, read from the project by `workspace` |
 | Drafts (unsaved edits) | done in M2: the `DraftStore` port in `workspace/application/`, adapters in `workspace/adapters/` (the use cases that need it are workspace's, so no new domain edge) |
-| Sidecar state (status, source-change tracking) | a port in `translation/application/`, an adapter in `translation/adapters/` |
+| Sidecar state (status, source-change tracking) | done in M3: the status file (`.paperl10n/status/<locale>.json`), read and written through `workspace`'s `ProjectFiles` and `ProjectWriter` (no new port) |
 | Placeholder/plural validation | `catalog/domain/`, using the plugin's `placeholders.scan` |
 | Atomic file writes | a `ProjectWriter` port in `formats/application/`, an adapter beside `node-project-files` |
 | File watching (external changes) | a port in `workspace/application/`, an `fs.watch` adapter |

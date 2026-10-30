@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S3 done, S4 in progress.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S4 done, S5 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -408,6 +408,35 @@ the last step.
         redundant: treating a section recorded with no blocks as new (it diffs as all new anyway).
   - **S4b, source changes in the UI:** the tint, the line marks, and the removal markers in the
     source pane, and a note at a changed section's heading.
+    - *Done-notes:* `ui/editor/source-changes.ts`: each line of a changed or new block gets a
+      tint (a new token, `--pl-color-warn-surface`, both themes) and a mark at its inline start,
+      solid for changed and dashed for new (shape as well as color). Where marked text was removed,
+      a "Text removed here" marker (a dashed rule, in the interface's language and direction)
+      sits before the following block or after the section's last one. Shown in both views.
+      - **At a changed section's heading,** in the section view, the source pane gets the same
+        status bar as the translation (S3d), without a button: "Changed since marked up to date",
+        for outdated sections only.
+      - **A note in the page's status row** says the source's changes are highlighted. It sits in
+        the row above both panes, not above the source pane: a note there would move only the
+        source editor down, and the alignment would answer with a spacer at the translation's very
+        start (where S3d's first-line bar caused trouble).
+      - **The mark's room:** the editor's scroller reaches a little into the space before the
+        text and the content gives it back, so a marked line's text stays in line with the others
+        while its mark isn't clipped.
+      - Offsets from main are mapped like the section starts (BOM, CRLF), and the marks update
+        after marking (the status the mark returns carries the changes).
+      - Tests: the marks in an editor (each line of a block, its kind, a removal before and after,
+        the interface's language and direction, cleared); through the UI (the marks in a BOM and
+        CRLF file, a bar only at an outdated section, the note, the full page without bars,
+        cleared after marking, nothing without changes); and the status E2E in Electron, extended:
+        a changed and a new paragraph are marked, the source section's bar and the note show, and
+        marking the page clears them. Checked by eye in Electron, with a removal too.
+      - Mutation checks, each failing tests: offsets unmapped, changes not watched, not set when
+        the editor starts, source bars on sections never marked, the note shown with no changes, the
+        kind ignored, the removal's side ignored, no `dir` on the marker, and only a block's first
+        line marked. One survived and was removed as unobservable: marking a line once when two
+        blocks share it (blocks never share a line, and CodeMirror merges line marks anyway).
+      - A screen-reader check is in [follow-ups](follow-ups.md).
 - **S5, hints and length:** preservation hints per section (with the plugin's link mapping, if
   chosen) and the length note.
 - **S6, full-page sync:** loose scroll sync and, if needed, the per-document split level.
