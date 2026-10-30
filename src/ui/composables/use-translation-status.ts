@@ -11,6 +11,8 @@ export interface TranslationStatusState {
   readonly error: ShallowRef<ErrorDto | null>;
   /** Marks the whole page up to date with the source it showed. */
   markPage(): Promise<void>;
+  /** Marks one source section (by its index among the source's sections) up to date. */
+  markSection(index: number): Promise<void>;
   /** The page's first save created its translation file: from `missing`, it's a draft now. */
   noteSaved(key: string): void;
   /** These pages were marked up to date elsewhere (marking all existing translations). */
@@ -48,7 +50,7 @@ export function useTranslationStatus(
     return { page: opened.status.page, sections: opened.status.sections };
   });
 
-  async function markPage(): Promise<void> {
+  async function mark(sections: readonly number[] | null): Promise<void> {
     const opened = pair.value;
     const project = projectId.value;
     if (opened === null || project === null || marking.value) return;
@@ -59,7 +61,7 @@ export function useTranslationStatus(
         projectId: project,
         key: opened.key,
         sourceFingerprint: opened.status.sourceFingerprint,
-        sections: null,
+        sections,
       });
       // Another page opened meanwhile: the mark stands, but this view isn't it any more.
       if (pair.value !== opened) return;
@@ -80,7 +82,8 @@ export function useTranslationStatus(
     status,
     marking,
     error,
-    markPage,
+    markPage: () => mark(null),
+    markSection: (index) => mark([index]),
     noteSaved: (key) => {
       const current = status.value;
       if (pair.value?.key !== key || current?.page !== 'missing') return;

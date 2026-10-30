@@ -13,6 +13,7 @@ import { computed, onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } fro
 import type { SaveStatus } from '../composables/use-translation-saving';
 import type { EditorSnapshot } from '../editor/markdown-editor';
 import { alignSections } from '../editor/section-alignment';
+import type { SectionBars } from '../editor/section-status';
 import { errorMessage } from '../i18n/error-message';
 import { isolated, useI18n } from '../i18n/i18n';
 import { autonym } from '../i18n/language-name';
@@ -49,10 +50,12 @@ const emit = defineEmits<{
   save: [];
   discardRestored: [];
   markPage: [];
+  /** Mark one source section up to date, by its index among the source's sections. */
+  markSection: [index: number];
   /** Read the page again (its source changed on disk). */
   reopen: [];
 }>();
-const { t } = useI18n();
+const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 // Only the pair for this page counts: while the next page loads, the previous one isn't shown.
 const current = computed(() => (props.pair?.key === props.document.key ? props.pair : null));
 const waiting = computed(() => props.loading || (current.value === null && props.error === null));
@@ -178,6 +181,44 @@ const shownStatus = computed(() => {
   const status = props.status ?? null;
   return current.value === null || status === null || status.page === 'missing' ? null : status;
 });
+// Each section's status, at its heading in the translation pane, in the section view.
+const onMarkSection = (pairIndex: number) => {
+  const pairing = sections.value;
+  if (pairing?.paired !== true) return;
+  // The status lists the source's sections: pairs before this one with a source side.
+  const index = pairing.pairs.slice(0, pairIndex).filter((pair) => pair.source !== null).length;
+  emit('markSection', index);
+};
+const sectionBars = computed((): SectionBars | null => {
+  const status = shownStatus.value;
+  const pairing = sections.value;
+  if (status === null || pairing?.paired !== true) return null;
+  let index = -1;
+  const count = status.sections.length;
+  return {
+    bars: pairing.pairs.map((pair) => {
+      if (pair.source === null) return null;
+      index++;
+      const section = status.sections[index];
+      if (section === undefined) return null;
+      return {
+        status: section,
+        statusLabel: t(statusNames[section]),
+        mark:
+          section === 'translated'
+            ? null
+            : {
+                label: t('paperl10n-mark-section'),
+                name: t('paperl10n-mark-section-name', String(index + 1), String(count)),
+              },
+        busy: props.marking ?? false,
+      };
+    }),
+    onMark: onMarkSection,
+    lang: uiLocale.value,
+    dir: uiDirection.value,
+  };
+});
 const markErrorText = computed(() =>
   props.markError === undefined || props.markError === null ? '' : errorMessage(props.markError, t),
 );
@@ -285,6 +326,7 @@ defineExpose({
         :saved="targetSaved"
         :section-starts="targetStarts"
         :sections-shown="sectionView"
+        :section-bars="sectionBars"
         startable
         @start="emit('start')"
         @dirty="(dirty) => emit('dirty', dirty)"

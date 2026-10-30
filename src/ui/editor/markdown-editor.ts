@@ -18,6 +18,7 @@ import { livePreview } from './live-preview.ts';
 import { linkLabel } from './markdown-links.ts';
 import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
 import { headingCount, sectionView, setSectionAnchors, showSections } from './section-alignment.ts';
+import { sectionStatus, setSectionBars, type SectionBars } from './section-status.ts';
 
 /** How the editable area is presented: changing it keeps the text and its history. */
 export interface EditorPresentation {
@@ -67,6 +68,8 @@ export interface MarkdownEditor {
   setSectionStarts(starts: readonly (number | null)[] | null): void;
   /** Shows or hides the section view's marks and spacers. */
   showSections(shown: boolean): void;
+  /** Each section's status bar in the section view (`null`: none). */
+  setSectionBars(bars: SectionBars | null): void;
   /** How many top-level headings of `depth` the text has now (`null`: not parsed that far). */
   headingCount(depth: number): number | null;
   destroy(): void;
@@ -90,6 +93,7 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
       markdownDecorations,
       livePreview,
       sectionView,
+      sectionStatus,
       linkEditing((edit) => onEditLink?.(edit)),
       history(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -136,6 +140,9 @@ export function createMarkdownEditor(
     },
     setSectionStarts: (starts) => {
       view.dispatch({ effects: setSectionAnchors.of(starts) });
+    },
+    setSectionBars: (bars) => {
+      view.dispatch({ effects: setSectionBars.of(bars) });
     },
     showSections: (on) => {
       view.dispatch({ effects: showSections.of(on) });

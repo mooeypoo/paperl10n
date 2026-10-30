@@ -149,9 +149,10 @@ test('edits the translation in its own direction, with CodeMirror styled under t
   await page.keyboard.press('End');
   await page.keyboard.type(' נוסף');
   await expect(target.locator('.cm-line').first()).toContainText('נוסף');
-  // The source can't be changed.
-  const before = await source.textContent();
+  // The source can't be changed. (Its text is read with the caret in it: the live preview shows
+  // the marks on the caret's line.)
   await source.click();
+  const before = await source.textContent();
   await page.keyboard.type('x');
   expect(await source.textContent()).toBe(before);
 
@@ -301,8 +302,8 @@ test('saving over a file changed on disk asks; reload shows theirs, overwrite ke
 
   await question.getByRole('button', { name: 'Reload from disk' }).click();
   await expect(question).toBeHidden();
-  // Their heading (its `#` hidden away from the caret).
-  await expect(editor).toHaveText('שלהם');
+  // Their heading (its `#` hidden away from the caret), under its section's status bar.
+  await expect(editor.locator('.cm-line')).toHaveText(['שלהם', '']);
   await expect(page.getByRole('status')).toHaveText('');
 
   // Again, and this time keep mine.
@@ -503,8 +504,21 @@ test('shows paired sections side by side, lined up at their headings', async () 
   await page.getByRole('button', { name: 'Sections' }).click();
   await expect.poll(linedUp).toBe(true);
 
-  // A new heading while typing: the view stays as it opened, and a note says so.
+  // Each section's status sits at its heading in the translation; from the keyboard, Tab leaves
+  // the editor through the sections' buttons, in order.
   const target = page.getByRole('textbox', { name: 'עברית · translation' });
+  await target.click();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  const second = page.getByRole('button', { name: 'Mark section 2 of 4 up to date' });
+  await expect(second).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(second).toHaveCount(0);
+  await expect(page.locator('.document-status')).toContainText('Sections up to date: 1 of 4');
+  expect(readFileSync(join(project, '.paperl10n/status/he.json'), 'utf8')).toContain('"index"');
+  await expect.poll(linedUp).toBe(true);
+
+  // A new heading while typing: the view stays as it opened, and a note says so.
   await target.click();
   await page.keyboard.press('Control+End');
   await page.keyboard.type('\n## חדש\n');

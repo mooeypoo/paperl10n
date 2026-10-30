@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S2 and S3a–S3c done, S3d next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S3 done, S4 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -355,6 +355,29 @@ the last step.
         is marked.
   - **S3d, status by section:** each section's status and "Mark up to date" at its heading in the
     section view.
+    - *Done-notes:* `ui/editor/section-status.ts`: a bar above each section's first line in the
+      translation pane (a block widget at the section's anchor, so it follows edits), with the
+      section's status and, unless it's up to date, "Mark up to date". The alignment spacer goes
+      above the bar (spacers now sit at side −2), so the bar stays with its heading and the headings
+      still line up: the bar counts as the section's own height. The bar takes the section's rule.
+      - **Interface text in the document's pane:** the bar carries the interface's `lang` and
+        `dir`, and isn't editable. Each button's accessible name says which section it marks ("Mark
+        section 2 of 4 up to date").
+      - **Keyboard:** checked in Electron. Tab from the translation editor reaches each section's
+        button in order, then leaves; Enter marks it. The E2E covers it.
+      - **Screen readers:** the bars are inside the editor's text box, so they're read with its
+        content. A check with a real screen reader is in [follow-ups](follow-ups.md).
+      - **The index sent** is the section's among the source's sections, not the pair's (a pair with
+        only a translation side has no status).
+      - Tests: the bars in an editor (shown, the button and its section, waiting while a mark is on
+        its way, only in the section view, following edits, one bar on a line two sections were
+        joined onto, the interface's language and direction); through the UI (each section's status
+        at its heading, marking one with the source's index, the header updating, no bars in the full
+        page or before the translation has a file, buttons waiting while marking); and the E2E
+        above, with the headings still lined up after marking.
+      - Mutation checks, each failing tests: the pair's index sent instead of the source's, the
+        buttons not waiting while marking, bars outside the section view, no `dir`, two bars on
+        one line, bars lost when the editor restarts, and a button on an up-to-date section.
 - **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.
 - **S5, hints and length:** preservation hints per section (with the plugin's link mapping, if
   chosen) and the length note.

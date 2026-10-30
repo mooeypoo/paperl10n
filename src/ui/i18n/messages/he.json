@@ -53,6 +53,8 @@
   "paperl10n-mark-existing-done": "{{PLURAL:$1|עמוד אחד סומן כמעודכן|$1 עמודים סומנו כמעודכנים}}.",
   "paperl10n-sections-progress": "קטעים מעודכנים: $1 מתוך $2",
   "paperl10n-mark-page": "סימון העמוד כמעודכן",
+  "paperl10n-mark-section": "סימון כמעודכן",
+  "paperl10n-mark-section-name": "סימון קטע $1 מתוך $2 כמעודכן",
   "paperl10n-reopen-page": "פתיחת העמוד מחדש",
   "paperl10n-error-workspace-no-target-locale": "קודם צריך לבחור את שפת התרגום.",
   "paperl10n-error-workspace-unknown-language": "Paper Lion לא מכיר את השפה \"$1\". כדי להשתמש בה, הגדירו אותה תחת \"languages\" בקובץ paperl10n.config.json.",

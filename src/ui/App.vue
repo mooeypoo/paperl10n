@@ -299,6 +299,7 @@ async function chooseTarget(tag: string): Promise<void> {
           @save="saveCurrent"
           @discard-restored="saving.discardRestored()"
           @mark-page="translationStatus.markPage()"
+          @mark-section="(index) => translationStatus.markSection(index)"
           @reopen="guard(() => reading.reload())"
         />
         <p v-else class="app-empty">{{ t('paperl10n-no-documents') }}</p>

@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Status through the whole UI (mountApp) with a fake client: the page list's statuses and
 // progress, the one-time offer to mark existing translations, and marking the open page.
-import type { DocumentPairDto, SourceDocumentDto, SourceDocumentListDto } from '#ipc-contract';
+import type {
+  DocumentPairDto,
+  DocumentStatusDto,
+  PaperLionApi,
+  SourceDocumentDto,
+  SourceDocumentListDto,
+} from '#ipc-contract';
+import type { Result } from '#kernel/result';
 import { EditorView } from '@codemirror/view';
 import { flushPromises } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -49,13 +56,15 @@ const indexPair: DocumentPairDto = {
 };
 
 type Answers = Parameters<typeof fakeClient>[0];
-async function opened(answers: Answers = {}) {
-  const { client, calls } = fakeClient({
+async function opened(answers: Answers = {}, overrides: Partial<PaperLionApi> = {}) {
+  const fake = fakeClient({
     open: [{ ok: true, value: summary }],
     list: [list(pages)],
     read: { index: { ok: true, value: indexPair } },
     ...answers,
   });
+  const { calls } = fake;
+  const client = { ...fake.client, ...overrides };
   const element = document.createElement('div');
   document.body.append(element);
   const app = mountApp(element, client, {
@@ -301,5 +310,109 @@ describe('marking the open page up to date', () => {
     await flushPromises();
     expect(document.querySelector<HTMLDialogElement>('dialog.unsaved')?.open).toBe(true);
     expect(calls.filter((call) => call === 'readDocumentPair:p-1:index')).toHaveLength(1);
+  });
+});
+
+describe('marking a section up to date, in the section view', () => {
+  // The translation has an intro the source lacks: that pair has no source section, so the
+  // sections' indices count the source's only.
+  const source = '## A\n\na\n\n## B\n\nb\n';
+  const translation = 'מבוא\n\n## א\n\nא\n\n## ב\n\nב\n';
+  const range = (text: string, from: string, to?: string) => ({
+    start: text.indexOf(from),
+    end: to === undefined ? text.length : text.indexOf(to),
+  });
+  const sectioned: DocumentPairDto = {
+    ...pairFor('index', source, translation),
+    sections: {
+      paired: true,
+      level: 2,
+      pairs: [
+        { kind: 'intro', source: null, target: range(translation, 'מבוא', '## א') },
+        {
+          kind: 'heading',
+          source: range(source, '## A', '## B'),
+          target: range(translation, '## א', '## ב'),
+        },
+        { kind: 'heading', source: range(source, '## B'), target: range(translation, '## ב') },
+      ],
+    },
+    status: { page: 'outdated', sections: ['translated', 'outdated'], sourceFingerprint: 'fp' },
+  };
+  const bars = (element: Element) =>
+    [
+      ...(element
+        .querySelectorAll('section[lang]')[1]
+        ?.querySelector('.markdown-editor')
+        ?.shadowRoot?.querySelectorAll<HTMLElement>('.cm-section-bar') ?? []),
+    ].map((bar) => [
+      bar.textContent.trim(),
+      bar.querySelector('button')?.getAttribute('aria-label') ?? null,
+      bar.nextElementSibling?.textContent,
+    ]);
+
+  it('shows each section’s status at its heading, and marks one', async () => {
+    const { element, calls } = await opened({
+      read: { index: { ok: true, value: sectioned } },
+      mark: { ok: true, value: { page: 'translated', sections: ['translated', 'translated'] } },
+    });
+    await openPage(element, 'index');
+    expect(bars(element)).toEqual([
+      // The heading under each bar (its `##` hidden by the live preview).
+      ['Up to date', null, 'א'],
+      ['Outdated: the source changed sinceMark up to date', 'Mark section 2 of 2 up to date', 'ב'],
+    ]);
+    const content = element
+      .querySelectorAll('section[lang]')[1]
+      ?.querySelector('.markdown-editor')
+      ?.shadowRoot?.querySelector<HTMLButtonElement>('.cm-section-bar button');
+    content?.click();
+    await flushPromises();
+    expect(calls.at(-1)).toBe('markUpToDate:p-1:index:fp:1');
+    expect(bars(element).map(([text]) => text)).toEqual(['Up to date', 'Up to date']);
+    expect(header(element)).toBe('Up to date | Sections up to date: 2 of 2');
+  });
+
+  it('makes every section’s button wait while a mark is on its way', async () => {
+    let finish: (value: Result<DocumentStatusDto, never>) => void = () => undefined;
+    const { element } = await opened(
+      { read: { index: { ok: true, value: sectioned } } },
+      { markUpToDate: () => new Promise((resolve) => (finish = resolve)) },
+    );
+    await openPage(element, 'index');
+    const buttons = () => [
+      ...(element
+        .querySelectorAll('section[lang]')[1]
+        ?.querySelector('.markdown-editor')
+        ?.shadowRoot?.querySelectorAll<HTMLButtonElement>('.cm-section-bar button') ?? []),
+    ];
+    buttons()[0]?.click();
+    await flushPromises();
+    expect(buttons().map((item) => item.disabled)).toEqual([true]);
+    expect(button(element, 'Mark page up to date').disabled).toBe(true);
+    finish({ ok: true, value: { page: 'outdated', sections: ['translated', 'outdated'] } });
+    await flushPromises();
+    expect(buttons().map((item) => item.disabled)).toEqual([false]);
+  });
+
+  it('shows no bars in the full-page view', async () => {
+    const { element } = await opened({ read: { index: { ok: true, value: sectioned } } });
+    await openPage(element, 'index');
+    button(element, 'Full page').click();
+    await flushPromises();
+    expect(bars(element)).toEqual([]);
+  });
+
+  it('shows no bars before the translation has a file', async () => {
+    const { element } = await opened({
+      read: {
+        index: {
+          ok: true,
+          value: { ...sectioned, status: { ...sectioned.status, page: 'missing' } },
+        },
+      },
+    });
+    await openPage(element, 'index');
+    expect(bars(element)).toEqual([]);
   });
 });

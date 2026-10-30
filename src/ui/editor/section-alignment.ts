@@ -32,7 +32,8 @@ export const setSectionAnchors = StateEffect.define<Anchors | null>();
 /** Shows or hides the section view (the anchors keep following edits either way). */
 export const showSections = StateEffect.define<boolean>();
 
-const shown = StateField.define<boolean>({
+/** Whether the section view is shown. */
+export const sectionsShown = StateField.define<boolean>({
   create: () => false,
   update(value, transaction) {
     let next = value;
@@ -41,7 +42,8 @@ const shown = StateField.define<boolean>({
   },
 });
 
-const anchors = StateField.define<Anchors | null>({
+/** Where each section starts now, in pair order (`null`: not paired, or gone). */
+export const sectionAnchors = StateField.define<Anchors | null>({
   create: () => null,
   update(value, transaction) {
     let next = value;
@@ -65,11 +67,11 @@ const anchors = StateField.define<Anchors | null>({
 });
 
 /** Each section's first line, except the document's first: a rule above it marks the boundary. */
-const sectionStarts = EditorView.decorations.compute([anchors, shown], (state) => {
+const sectionStarts = EditorView.decorations.compute([sectionAnchors, sectionsShown], (state) => {
   const marks: Range<Decoration>[] = [];
-  if (!state.field(shown)) return Decoration.none;
+  if (!state.field(sectionsShown)) return Decoration.none;
   const seen = new Set<number>();
-  for (const position of state.field(anchors) ?? []) {
+  for (const position of state.field(sectionAnchors) ?? []) {
     if (position === null) continue;
     const line = state.doc.lineAt(position);
     if (line.number === 1 || seen.has(line.from)) continue;
@@ -117,7 +119,7 @@ const setSpacers = StateEffect.define<readonly Spacer[]>();
 const spacerDecorations = (list: readonly Spacer[]): DecorationSet =>
   Decoration.set(
     list.map(({ position, height }) =>
-      Decoration.widget({ widget: new SpacerWidget(height), block: true, side: -1 }).range(
+      Decoration.widget({ widget: new SpacerWidget(height), block: true, side: -2 }).range(
         position,
       ),
     ),
@@ -153,8 +155,8 @@ const alignments = new WeakMap<EditorView, Alignment>();
 
 /** Every editor has the section view's state; it does nothing until anchors and a partner come. */
 export const sectionView: Extension = [
-  anchors,
-  shown,
+  sectionAnchors,
+  sectionsShown,
   spacers,
   sectionStarts,
   EditorView.updateListener.of((update) => {
@@ -263,10 +265,13 @@ class Alignment {
 
   #measure(): [Spacer[], Spacer[]] {
     const { a, b } = this;
-    const anchorsA = a.state.field(anchors, false) ?? null;
-    const anchorsB = b.state.field(anchors, false) ?? null;
+    const anchorsA = a.state.field(sectionAnchors, false) ?? null;
+    const anchorsB = b.state.field(sectionAnchors, false) ?? null;
     if (anchorsA === null || anchorsB === null) return [[], []];
-    if (a.state.field(shown, false) !== true || b.state.field(shown, false) !== true)
+    if (
+      a.state.field(sectionsShown, false) !== true ||
+      b.state.field(sectionsShown, false) !== true
+    )
       return [[], []];
     // Stacked panes (a narrow window) don't sit side by side: nothing to line up.
     const boxA = a.contentDOM.getBoundingClientRect();

@@ -132,3 +132,64 @@
   padding-block-start: var(--pl-space-3);
   border-block-start: 1px solid var(--pl-color-line);
 }
+
+/* A section's status bar (section-status.ts): it takes the section's rule, so the heading under it
+   sits right below. Interface text, in the interface's font. */
+.cm-editor .cm-section-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-1) var(--pl-space-3);
+  padding-block: var(--pl-space-2) var(--pl-space-1);
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+  color: var(--pl-color-muted);
+}
+
+.cm-editor .cm-section-bar:has(+ .cm-section-start) {
+  border-block-start: 1px solid var(--pl-color-line);
+}
+
+.cm-editor .cm-section-bar + .cm-section-start {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+
+.cm-editor .cm-section-bar-status {
+  padding-inline-start: var(--pl-space-2);
+  border-inline-start: 3px solid var(--pl-color-muted);
+}
+
+.cm-editor .cm-section-bar[data-status='translated'] .cm-section-bar-status {
+  border-inline-start-color: var(--pl-color-ok);
+}
+
+.cm-editor .cm-section-bar[data-status='outdated'] .cm-section-bar-status {
+  border-inline-start-color: var(--pl-color-warn);
+  color: var(--pl-color-ink);
+}
+
+.cm-editor .cm-section-bar-mark {
+  padding-block: 0.1rem;
+  padding-inline: var(--pl-space-2);
+  border: 1px solid var(--pl-color-line);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-color-surface);
+  color: var(--pl-color-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.cm-editor .cm-section-bar-mark:hover {
+  background: var(--pl-color-chip);
+}
+
+.cm-editor .cm-section-bar-mark:focus-visible {
+  outline: 2px solid var(--pl-color-focus);
+  outline-offset: 1px;
+}
+
+.cm-editor .cm-section-bar-mark:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
