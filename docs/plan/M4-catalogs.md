@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C2 and C3a done, C3b next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C3 done, C4 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -342,6 +342,23 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         survived and was simplified: keeping a token's first appearance by hand (a `Map` keeps it).
   - **C3b, message status (`translation`):** status per message from the status file, which grows
     a catalogs section.
+    - *Done-notes:* the rules are in [the translation doc](../domains/translation.md).
+      - `messageStatus(source, translation, recorded)` and `recordMessages(record, messages)`:
+        saving (or keeping) records the source's fingerprint now; removing or emptying a
+        translation drops its record. A message's fingerprint is a block's (`messageFingerprint`).
+      - **The status file's version 2** adds `catalogs` (catalog key → message key →
+        fingerprint, sorted, one message per line). It's written as version 2 only when a catalog
+        records a message, so page-only projects keep version 1 and an older Paper Lion can still
+        read them; version 1 files read as having no catalogs.
+      - `markUpToDate` and `markExistingUpToDate` wrote `{ pages }` back, which would have dropped
+        catalog records: they now write the rest of the file as read (the type change caught it).
+      - Tests: each status, the fingerprint's normalization, recording (saved, re-recorded, others
+        kept, removed and emptied), the catalogs section (written, read back, version 1 kept for
+        page-only files, version 1 read, odd keys, five malformed shapes), and marking pages keeps
+        catalogs (both use cases). The "newer version" tests moved from 2 to 3.
+      - Mutation checks, each failing tests: every status rule, both recording rules, each parse
+        check of the catalogs section, dropping empty catalogs, the version 1 fallback, sorting
+        messages, and either use case writing pages without catalogs.
 - **C4, opening and listing:** projects with either kind (question 1), catalogs in the sidebar with
   progress (question 10).
 - **C5, the message list:** reading a catalog, the rows, search and filters, not-in-source keys.

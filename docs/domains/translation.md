@@ -14,7 +14,9 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
 | Fingerprint | A 64-bit hash of a block's text, ignoring line endings and trailing whitespace: what status keeps of the source. |
 | Marking up to date | The translator saying a section (or a whole page) matches its source as it is now. Explicit, never a side effect of saving. |
 | Page record | Every source section of a page as of its last mark: each one's kind, heading fingerprint, and its blocks' fingerprints when it was marked (or none: never marked). |
-| Status file | One per target language, committed with the translations: the page records, by document key. |
+| Status file | One per target language, committed with the translations: the page records, by document key, and the catalog records, by catalog key. |
+| Catalog record | Each recorded message of a catalog: the fingerprint of its source text when its translation was last saved or kept as up to date, by message key. |
+| Message status | `missing`, `draft`, `translated`, or `outdated`, for one message of a catalog. |
 | Source change | A source block changed or new since its section was marked up to date, or a place where marked text was removed. |
 | Status | `missing`, `draft`, `translated`, or `outdated` (PRD §6), for a page and for each of its source sections. |
 
@@ -72,6 +74,24 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
 5. Places are the blocks' ranges in the source's text; a removal is before the block that
    follows it, or after the section's last block.
 
+## Rules (message status)
+
+Decided in [the M4 plan](../plan/M4-catalogs.md), question 3.
+
+1. **`missing`:** the target doesn't have the message, or has it empty.
+2. **`draft`:** the target has it, and it was never recorded (an existing translation, until it's
+   saved or kept as up to date).
+3. **`translated`:** recorded, and the source text's fingerprint is the recorded one.
+4. **`outdated`:** recorded, and the source text changed since.
+5. **Saving a message's translation records it** against its source as it is now; **keeping an
+   outdated message as up to date** does the same without changing the translation. Unlike a
+   page's sections, a save is enough: a message is short, and saving it usually means it's done.
+6. **Removing or emptying a translation drops its record.** Other messages keep theirs.
+7. **A message's fingerprint is a block's** (`blockFingerprint`): line endings and trailing
+   whitespace don't count; any other change, a typo fix included, does.
+8. Messages the target has and the source doesn't ("not in source", [catalog](catalog.md)) have
+   no status.
+
 ## Rules (preservation hints and length)
 
 1. **Hints are neutral notes, never errors or status** (PRD §6): things a translation usually
@@ -93,9 +113,17 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
 
 ## The status file
 
-`version` (1) and `pages`: each document key's record, a list of sections. A section has `kind`,
-`heading` (heading sections only), and `blocks`, the fingerprints when it was marked (absent:
-never marked; empty: new in the source since, not marked yet). Written with pages sorted by key
-and one section per line, so diffs and merges stay small. A malformed file is an error, never
-guessed at or overwritten; a newer version is refused. Fingerprints and their normalization are
-part of the format: changing either is a new version.
+`version` (1 or 2) and `pages`: each document key's record, a list of sections. A section has
+`kind`, `heading` (heading sections only), and `blocks`, the fingerprints when it was marked
+(absent: never marked; empty: new in the source since, not marked yet).
+
+Version 2 (M4) adds `catalogs`: each catalog key's record, an object of message keys and their
+source fingerprints. A file is written as version 2 only when a catalog records a message, so a
+project with pages only keeps version 1, which an older Paper Lion still reads. Version 1 files
+are read as having no catalogs; `catalogs` in a version 1 file is an error.
+
+Written with pages, catalogs, and messages sorted by key (by code unit), one section or message
+per line, so diffs and merges stay small. A malformed file is an error, never guessed at or
+overwritten; a newer version is refused. Writing one part (marking a page) keeps the others as
+read. Fingerprints and their normalization are part of the format: changing either is a new
+version.
