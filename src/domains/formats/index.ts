@@ -33,8 +33,6 @@ export type {
   CatalogLayout,
   MessageChange,
   ParsedCatalog,
-  PlaceholderKind,
-  PlaceholderToken,
   SourceCatalog,
 } from './application/ports/catalog-format.ts';
 export type { FormatPlugin, PluginHost, PluginModule } from './application/ports/plugin-module.ts';

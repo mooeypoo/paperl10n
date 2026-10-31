@@ -167,8 +167,8 @@ its translation:
 
 Tokens come in order of their start (an enclosing token before those inside it), each with its
 text and UTF-16 range. They may nest (a parameter inside a plural, a plural inside a link) but never
-partly overlap. Validation over these tokens belongs to the `catalog` domain, so it needs no format
-code.
+partly overlap. The token types live in the `catalog` domain, which checks translations against
+them ([the catalog doc](catalog.md)), so the checks need no format code.
 
 ### `ProjectFiles`
 

@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C2 done, C3 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C2 and C3a done, C3b next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -317,7 +317,31 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
       later anyway; now isolated), the indentation taken from the first member (a test where it
       differs), a parameter guard that can't trigger (removed: digits never cross a range's end),
       and folder trimming that `projectPath` already does (removed).
-- **C3, catalogs in the domain:** messages, status (question 3), and validation (question 5).
+- **C3, catalogs in the domain:** messages, status (question 3), and validation (question 5). In
+  two PRs, following where M3 put status:
+  - **C3a, messages and checks (`catalog`):** pairing a catalog's files into messages, and checking
+    a translation's tokens against its source's.
+    - *Done-notes:* the [catalog doc](../domains/catalog.md) has the rules.
+      - **The token types moved into `catalog`** (`domain/placeholder.ts`, with `comparedValue`).
+        `catalog` can't import `formats` (the edge goes the other way), and the checks need them.
+        `#plugin-api` exports them from `#domains/catalog`, as it does `Message`: the same names,
+        so the export list and the API version don't change.
+      - `pairCatalog(source, target, documentation)`: source order, each with its documentation
+        and translation (an empty one reads as none), and the target's keys the source lacks.
+      - `checkMessage(source, translation)`: tokens compared as sets by kind and compared value.
+        **One refinement to question 5:** an added `plural` or `gender` isn't a warning (a
+        language can need one its source doesn't); a missing one is. **Unbalanced brackets**
+        compare `{}` and `[]` counts with the source's rather than with zero, which keeps the check
+        free of any format's syntax (it can't tell `{{` from `{`).
+      - Tests: pairing (order, empty text, not in source, stray documentation, missing files, an
+        empty source), checking (22 cases, the order of warnings, duplicates), and `comparedValue`.
+      - Mutation checks, each failing tests: empty text read as a translation, not-in-source
+        dropped, documentation dropped, plural and gender not allowed to be added (or tags allowed
+        too), the kind or the compared value left out of comparison, the empty-translation rule,
+        brackets balanced against zero, `[]` unchecked, and each kind's compared value. One
+        survived and was simplified: keeping a token's first appearance by hand (a `Map` keeps it).
+  - **C3b, message status (`translation`):** status per message from the status file, which grows
+    a catalogs section.
 - **C4, opening and listing:** projects with either kind (question 1), catalogs in the sidebar with
   progress (question 10).
 - **C5, the message list:** reading a catalog, the rows, search and filters, not-in-source keys.
