@@ -1,7 +1,7 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **open for discussion.** Questions first, each with a recommendation; steps follow once
-they're decided.
+Status: **decided (2026-10-31); C1 next.** See [Decided](#decided). The discussion follows, for
+context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
 lists what the catalog editor does: a list of messages (key · source · target · status, with search
@@ -10,6 +10,22 @@ placeholders, `{{PLURAL:…}}`, `{{GENDER:…}}`, and links, `@metadata`, format
 kept on save, and keys missing from the target or no longer in the source. The UI/UX plan's
 direction C ("Catalog") and its banana-i18n helpers (highlighting, warnings, plural and gender
 previews, placeholder autocomplete) say how it looks.
+
+## Decided
+
+| Topic | Decision |
+|---|---|
+| Message status (question 3) | **Saving a message's translation records it as up to date**; an outdated message also has "Keep as up to date". The record is the source message's fingerprint in the language's status file. |
+| Where the syntax is found (question 6) | **In main, after a 0.2 s pause**: main scans and checks the message and returns token ranges, which the editor marks. No format code in the renderer. |
+| Validation (question 5) | **Warnings only, never blocking a save.** |
+| Real projects to check against | **Paper Lion's own messages** (`src/ui/i18n/messages/`) and **a jQuery.i18n app** (a plain messages folder, no `extension.json`). MediaWiki's `MessagesDirs` is still supported, from fixtures. |
+
+Taken as recommended unless the maintainer says otherwise: at most one document and one catalog
+format per project, at least one of the two (question 1); `MessagesDirs`, else a scan, with a config
+override (question 2); CodeMirror for the expanded row (question 4); plural and gender previews with
+`banana-i18n` in the renderer (question 7); saving as in question 8, `@metadata.authors` untouched;
+`qqq` read-only (question 9); one list with "Pages" and "Messages" groups (question 10); and the
+`workspace → catalog` edge (question 11).
 
 ## Where M3 left us
 
@@ -238,6 +254,5 @@ changes only where it was edited.
 
 ## Open questions for the maintainer
 
-- Which real project should M4 be checked against: a MediaWiki extension of yours, a jQuery.i18n
-  app, or Paper Lion's own messages?
-- Is "saving records it as up to date" (question 3, A) right for how you translate messages?
+- Which jQuery.i18n app to check against, if there's a particular one; otherwise a fixture shaped
+  like one.
