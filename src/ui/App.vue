@@ -13,6 +13,7 @@ import WelcomeState from './components/WelcomeState.vue';
 import { useDocumentPair } from './composables/use-document-pair';
 import { usePages } from './composables/use-pages';
 import { useProject } from './composables/use-project';
+import { useTranslationCheck } from './composables/use-translation-check';
 import { useTranslationSaving } from './composables/use-translation-saving';
 import { useTranslationStatus } from './composables/use-translation-status';
 import { useEnvironment } from './environment';
@@ -46,9 +47,22 @@ const saving = useTranslationSaving(client, projectId, pair, {
   },
 });
 const { started, restored, restoredNotice, dirty, isNew, status: saveStatus } = saving;
+// Hints and the length note follow the translation as it's typed.
+const checking = useTranslationCheck(
+  client,
+  projectId,
+  pair,
+  () => documentView.value?.snapshot()?.text ?? null,
+);
 const saveError = saving.error;
 const draftError = saving.draftError;
 const conflict = saving.conflict;
+
+/** Drops a restored draft: the editor goes back to the file's text, which is checked again. */
+async function discardRestored(): Promise<void> {
+  await saving.discardRestored();
+  checking.refresh();
+}
 
 /** Saves the open page's translation; true when there's nothing left unsaved. */
 async function saveCurrent(): Promise<boolean> {
@@ -293,11 +307,18 @@ async function chooseTarget(tag: string): Promise<void> {
           :status="translationStatus.status.value"
           :marking="translationStatus.marking.value"
           :mark-error="translationStatus.error.value"
-          @start="saving.start()"
+          :check="checking.check.value"
+          @start="
+            saving.start();
+            checking.refresh();
+          "
           @dirty="saving.setDirty"
-          @change="saving.noteEdit()"
+          @change="
+            saving.noteEdit();
+            checking.refresh();
+          "
           @save="saveCurrent"
-          @discard-restored="saving.discardRestored()"
+          @discard-restored="discardRestored"
           @mark-page="translationStatus.markPage()"
           @mark-section="(index) => translationStatus.markSection(index)"
           @reopen="guard(() => reading.reload())"

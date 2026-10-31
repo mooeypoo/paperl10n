@@ -8,6 +8,7 @@ import type {
   PageStatusDto,
   SectionStatusDto,
   SourceDocumentDto,
+  TranslationCheckDto,
 } from '#ipc-contract';
 import type { EditorView } from '@codemirror/view';
 import { computed, onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } from 'vue';
@@ -17,6 +18,7 @@ import { alignSections } from '../editor/section-alignment';
 import type { SectionBar, SectionBars } from '../editor/section-status';
 import type { SourceChangeMarks } from '../editor/source-changes';
 import { errorMessage } from '../i18n/error-message';
+import { hintMessages } from '../i18n/hint-message';
 import { isolated, useI18n } from '../i18n/i18n';
 import { autonym } from '../i18n/language-name';
 import DocumentPane from './DocumentPane.vue';
@@ -44,6 +46,8 @@ const props = defineProps<{
   /** Marking the page up to date is on its way. */
   marking?: boolean;
   markError?: ErrorDto | null;
+  /** The translation as written, checked against its source: hints and lengths. */
+  check?: TranslationCheckDto | null;
 }>();
 const emit = defineEmits<{
   start: [];
@@ -193,7 +197,12 @@ const onMarkSection = (pairIndex: number) => {
 };
 /** Bars by pair index, from each source section's status and its index among them. */
 const barsBySection = (
-  bar: (section: SectionStatusDto, index: number, count: number) => SectionBar | null,
+  bar: (
+    section: SectionStatusDto,
+    index: number,
+    count: number,
+    pairIndex: number,
+  ) => SectionBar | null,
   onMark: (pairIndex: number) => void,
 ): SectionBars | null => {
   const status = shownStatus.value;
@@ -202,20 +211,32 @@ const barsBySection = (
   let index = -1;
   const count = status.sections.length;
   return {
-    bars: pairing.pairs.map((pair) => {
+    bars: pairing.pairs.map((pair, pairIndex) => {
       if (pair.source === null) return null;
       index++;
       const section = status.sections[index];
-      return section === undefined ? null : bar(section, index, count);
+      return section === undefined ? null : bar(section, index, count, pairIndex);
     }),
     onMark,
     lang: uiLocale.value,
     dir: uiDirection.value,
   };
 };
+// Preservation hints: each section's at its bar, while the text still pairs as the page opened;
+// otherwise the page's, above the translation.
+const hintTexts = (hints: TranslationCheckDto['page']) =>
+  hints.flatMap((hint) => hintMessages(hint, t));
+const sectionHints = computed(() => {
+  const found = props.check?.sections ?? null;
+  const pairing = sections.value;
+  if (!sectionView.value || sectionsChanged.value || found === null || pairing?.paired !== true) {
+    return null;
+  }
+  return found.length === pairing.pairs.length ? found.map(hintTexts) : null;
+});
 const sectionBars = computed(() =>
   barsBySection(
-    (section, index, count) => ({
+    (section, index, count, pairIndex) => ({
       status: section,
       statusLabel: t(statusNames[section]),
       mark:
@@ -226,17 +247,37 @@ const sectionBars = computed(() =>
               name: t('paperl10n-mark-section-name', String(index + 1), String(count)),
             },
       busy: props.marking ?? false,
+      hints: sectionHints.value?.[pairIndex] ?? [],
     }),
     onMarkSection,
   ),
 );
+const pageHints = computed(() =>
+  props.check === undefined ||
+  props.check === null ||
+  (sectionHints.value !== null && sectionBars.value !== null)
+    ? []
+    : hintTexts(props.check.page),
+);
+// How long the translation is, against its source, as rendered (to the nearest 5%).
+const lengthNote = computed(() => {
+  const length = props.check?.length;
+  if (length === undefined || length.source === 0) return '';
+  return t('paperl10n-length-note', Math.round((length.translation / length.source) * 20) * 5);
+});
 // In the source pane, at the heading of each section whose source changed since it was marked.
 const noMark = () => undefined;
 const sourceBars = computed(() =>
   barsBySection(
     (section) =>
       section === 'outdated'
-        ? { status: section, statusLabel: t('paperl10n-source-changed'), mark: null, busy: false }
+        ? {
+            status: section,
+            statusLabel: t('paperl10n-source-changed'),
+            mark: null,
+            busy: false,
+            hints: [],
+          }
         : null,
     noMark,
   ),
@@ -379,6 +420,7 @@ defineExpose({
       >
         <template v-if="target !== null && !waiting" #actions>
           <div class="document-save">
+            <span v-if="lengthNote !== ''" class="document-length">{{ lengthNote }}</span>
             <span class="document-save-status" role="status">{{ statusText }}</span>
             <button
               type="button"
@@ -394,7 +436,11 @@ defineExpose({
         </template>
         <template
           v-if="
-            (saveError !== null || draftError !== null || restoredNotice || (started && isNew)) &&
+            (saveError !== null ||
+              draftError !== null ||
+              restoredNotice ||
+              (started && isNew) ||
+              pageHints.length > 0) &&
             !waiting
           "
           #notice
@@ -422,6 +468,12 @@ defineExpose({
           <p v-if="started && isNew" class="document-note">
             {{ t('paperl10n-new-translation', isolated(document.targetPath)) }}
           </p>
+          <div v-if="pageHints.length > 0" class="document-hints">
+            <p class="document-note">{{ t('paperl10n-hints-title') }}</p>
+            <ul>
+              <li v-for="hint in pageHints" :key="hint">{{ hint }}</li>
+            </ul>
+          </div>
         </template>
       </DocumentPane>
     </div>
@@ -503,8 +555,22 @@ defineExpose({
   gap: var(--pl-space-3);
 }
 
-.document-save-status {
+.document-save-status,
+.document-length {
   color: var(--pl-color-muted);
+  font-size: var(--pl-text-sm);
+}
+
+/* Neutral notes, not errors: muted, with a plain rule at the inline start. */
+.document-hints {
+  padding-inline-start: var(--pl-space-3);
+  border-inline-start: 3px solid var(--pl-color-line);
+}
+
+.document-hints ul {
+  margin: var(--pl-space-1) 0 0;
+  padding-inline-start: var(--pl-space-4);
+  color: var(--pl-color-ink);
   font-size: var(--pl-text-sm);
 }
 

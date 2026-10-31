@@ -20,6 +20,8 @@ export interface SectionBar {
   readonly mark: { readonly label: string; readonly name: string } | null;
   /** A mark is on its way: the button waits. */
   readonly busy: boolean;
+  /** Preservation hints for this section, as sentences (neutral notes, not errors). */
+  readonly hints: readonly string[];
 }
 
 export interface SectionBars {
@@ -65,7 +67,9 @@ class SectionBarWidget extends WidgetType {
       a.statusLabel === b.statusLabel &&
       a.busy === b.busy &&
       a.mark?.label === b.mark?.label &&
-      a.mark?.name === b.mark?.name
+      a.mark?.name === b.mark?.name &&
+      a.hints.length === b.hints.length &&
+      a.hints.every((hint, index) => hint === b.hints[index])
     );
   }
   override toDOM(): HTMLElement {
@@ -92,6 +96,16 @@ class SectionBarWidget extends WidgetType {
         bars.onMark(index);
       });
       element.append(button);
+    }
+    if (this.bar.hints.length > 0) {
+      const list = document.createElement('ul');
+      list.className = 'cm-section-bar-hints';
+      for (const hint of this.bar.hints) {
+        const item = document.createElement('li');
+        item.textContent = hint;
+        list.append(item);
+      }
+      element.append(list);
     }
     return element;
   }

@@ -102,4 +102,4 @@ part of the format: changing either is a new version.
 
 ## Later (M3)
 
-The hints and the length note in the UI (S5d).
+The full-page view's scroll sync (S6).

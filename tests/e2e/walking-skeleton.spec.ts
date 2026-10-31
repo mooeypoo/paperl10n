@@ -583,6 +583,34 @@ test('marks translations up to date, and shows a source change as outdated', asy
   expect(problems.console).toEqual([]);
 });
 
+test('shows preservation hints and the length note, following the translation as it changes', async () => {
+  const project = join(profile, 'hints');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  writeFileSync(join(project, 'en/index.md'), '# Welcome\n\nSee [the guide](/guide/).\n');
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+
+  // The translation lacks the source's link: its section's bar says so, and the length shows.
+  const translationPane = page.locator('.pane').nth(1);
+  const hints = translationPane.locator('.cm-section-bar-hints');
+  await expect(hints).toContainText('A link only in the source: ');
+  await expect(hints).toContainText('/guide/');
+  await expect(translationPane.locator('.document-length')).toContainText("of the source's length");
+
+  // Adding the link: once typing pauses, the hint goes.
+  const target = page.getByRole('textbox', { name: 'עברית · translation' });
+  await target.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('[המדריך](/guide/)');
+  await expect(hints).toHaveCount(0);
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
 test('runs in its own profile, not the real one', async () => {
   expect(await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'))).toBe(
     profile,

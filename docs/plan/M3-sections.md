@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S4 done, S5 in progress.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S5 done, S6 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -501,6 +501,31 @@ the last step.
         or link targets counted in the length, a failed mapping blanked, the translation never
         parsed as MDX, and the text unchecked at the IPC boundary.
   - **S5d, hints and length in the UI.**
+    - *Done-notes:* `ui/composables/use-translation-check.ts` asks main to check the translation
+      editor's text when a page opens and 0.4 s after typing pauses (and after starting a new
+      translation or discarding a restored draft), keeping only the newest answer for the open
+      page. A failed check shows nothing: hints are information.
+      - **Where they show:** in the section view, each section's hints are listed in its bar in
+        the translation pane, while the text still pairs as the page opened (the same number of
+        pairs, and the sections-changed note not showing). Otherwise (the full page, a translation
+        without a file yet, so no bars, or sections that changed) the page's hints are listed
+        above the translation, under "Usually kept as they are, and different from the source:".
+        Each hint is a sentence per side ("A link only in the source: /guide/"), with the values
+        isolated (`hint-message.ts`), in en, he, and qqq.
+      - **The length note** sits in the translation pane's header: "About 80% of the source's
+        length", rounded to 5%, not shown for an empty source.
+      - Tests: the wording (both sides, plurals, a code block without a language, Hebrew), the
+        hints in an editor's bar (shown, redrawn when they change), and through the UI with fake
+        timers: the check on opening and after the pause (not before), the newest answer kept,
+        the hints at the bars and not again for the page, the page's hints in the full page, for
+        unpaired text, for pairs that differ from the page's, after a new heading, and for a new
+        translation, a check after discarding a restored draft, and nothing for a failed check or
+        an empty source. An E2E in Electron: a missing link shows at its section with the length
+        note, and adding the link clears it once typing pauses. Checked by eye in both views.
+      - Mutation checks, each failing tests: stale answers kept, no pause, the pair count
+        unchecked, the sections-changed note ignored, no rounding, no check when a new
+        translation starts or after a draft is discarded, bar hints not compared when redrawing,
+        and no wording for a code block without a language.
 - **S6, full-page sync:** loose scroll sync and, if needed, the per-document split level.
 - **S7, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
