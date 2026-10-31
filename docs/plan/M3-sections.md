@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S6 done, S7 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S7 done** (the per-document split level deferred). See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -564,6 +564,11 @@ the last step.
       leader not following the person's input, the alignment measured as scrolled (not at rest),
       and no end spacer.
 - **S7, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
+  - *Done-notes:* PRD §6 (the statuses defined, "Mark up to date", the status file), §7.2 (the
+    split rules, choosing the view on open, explicit status, source changes, hints with the link
+    mapping, the length note, scrolling), §8 (the optional link mapping), §10 (M3 done), and §11
+    (outdated detection, the split level, and sidecar state decided; the per-document level still
+    open).
 
 Round-trip rule throughout: marking, highlighting, and hints never change a document's text;
 only the status file is written by them.
