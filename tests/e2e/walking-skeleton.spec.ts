@@ -259,9 +259,13 @@ test('keeps unsaved edits as a draft, and restores them after a crash', async ()
   await editor.click();
   await page.keyboard.press('Control+End');
   await page.keyboard.type('טיוטה');
-  // The draft lands in the app's data (this test's profile), never in the project.
+  // The draft lands in the app's data (this test's profile), never in the project. It's written
+  // to a temporary file and renamed, so only a finished draft counts: killing the app while the
+  // temporary file is still there would leave no draft to restore.
   const drafts = join(profile, 'drafts');
-  await expect.poll(() => (existsSync(drafts) ? readdirSync(drafts).length : 0)).toBe(1);
+  const finishedDrafts = () =>
+    existsSync(drafts) ? readdirSync(drafts).filter((name) => !name.endsWith('.tmp')).length : 0;
+  await expect.poll(finishedDrafts).toBe(1);
   const translation = readFileSync(join(project, 'he/index.md'), 'utf8');
 
   // A crash: the process dies without unload handlers or a goodbye.
@@ -288,7 +292,7 @@ test('keeps unsaved edits as a draft, and restores them after a crash', async ()
   await page.keyboard.press('Control+S');
   await expect(page.getByRole('status')).toHaveText('Saved');
   expect(readFileSync(join(project, 'he/index.md'), 'utf8')).toContain('טיוטה');
-  await expect.poll(() => readdirSync(drafts).length).toBe(0);
+  await expect.poll(finishedDrafts).toBe(0);
 });
 
 test('saving over a file changed on disk asks; reload shows theirs, overwrite keeps mine', async () => {
