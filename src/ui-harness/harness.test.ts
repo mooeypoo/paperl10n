@@ -80,6 +80,20 @@ describe('the UI harness', () => {
       ['i18n/api', '0 of 2 up to date'],
     ]);
     expect(element.querySelectorAll('section[lang]')).toHaveLength(0);
+    // No pages: it opens on the first catalog, read through the real plugin.
+    expect(element.querySelector('.catalog-title')?.textContent).toBe('i18n');
+    const rows = [...element.querySelectorAll('.catalog-messages tr[data-row]')];
+    expect(rows.map((row) => row.querySelector('bdi')?.textContent)).toEqual([
+      'example-desc',
+      'example-count',
+      'example-link',
+      'example-bold',
+      'example-last',
+    ]);
+    expect(rows[1]?.querySelector('.message-token')?.textContent).toBe(
+      '{{PLURAL:$1|is one example|are $1 examples}}',
+    );
+    expect(element.querySelector('.catalog-orphans li bdi')?.textContent).toBe('example-removed');
   });
 
   it('shows the real error for an unknown fixture', async () => {

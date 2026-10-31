@@ -14,6 +14,8 @@ const props = withDefaults(
     matches: readonly SourceDocumentDto[];
     /** The project's message catalogs; `null` when it has none: the "Messages" group hides. */
     catalogs?: readonly CatalogDto[] | null;
+    /** The catalog shown in the main area, if any (a page is shown otherwise). */
+    selectedCatalog?: string | null;
     selectedKey: string | null;
     /** The page whose translation has unsaved changes, if any. */
     unsavedKey: string | null;
@@ -28,6 +30,7 @@ const props = withDefaults(
   {
     showPages: true,
     catalogs: null,
+    selectedCatalog: null,
     offerExisting: false,
     markingExisting: false,
     markExistingError: null,
@@ -35,7 +38,12 @@ const props = withDefaults(
   },
 );
 const query = defineModel<string>('query', { required: true });
-const emit = defineEmits<{ select: [key: string]; markExisting: []; dismissExisting: [] }>();
+const emit = defineEmits<{
+  select: [key: string];
+  selectCatalog: [key: string];
+  markExisting: [];
+  dismissExisting: [];
+}>();
 const { t } = useI18n();
 const count = (status: PageStatusDto) =>
   props.documents.filter((document) => document.status === status).length;
@@ -152,24 +160,31 @@ const progress = computed(() => {
         <span class="pages-count">{{ t('paperl10n-catalogs-count', catalogs.length) }}</span>
       </div>
       <ul v-if="catalogs.length > 0" class="pages-list">
-        <li v-for="catalog in catalogs" :key="catalog.key" class="catalogs-item">
-          <!-- A key is a folder or a name, not prose in the interface language: isolate it. -->
-          <bdi>{{ catalog.key }}</bdi>
-          <span v-if="catalog.progress !== null" class="catalogs-progress">
-            {{
-              t(
-                'paperl10n-catalog-up-to-date',
-                catalog.progress.byStatus.translated,
-                catalog.progress.total,
-              )
-            }}
-            <template v-if="catalog.progress.byStatus.outdated > 0">
-              · {{ t('paperl10n-catalog-outdated', catalog.progress.byStatus.outdated) }}
-            </template>
-          </span>
-          <span v-if="catalog.problem !== null" class="catalogs-problem">
-            {{ errorMessage(catalog.problem, t) }}
-          </span>
+        <li v-for="catalog in catalogs" :key="catalog.key">
+          <button
+            type="button"
+            class="pages-item catalogs-item"
+            :aria-current="catalog.key === selectedCatalog ? 'page' : undefined"
+            @click="emit('selectCatalog', catalog.key)"
+          >
+            <!-- A key is a folder or a name, not prose in the interface language: isolate it. -->
+            <bdi>{{ catalog.key }}</bdi>
+            <span v-if="catalog.progress !== null" class="catalogs-progress">
+              {{
+                t(
+                  'paperl10n-catalog-up-to-date',
+                  catalog.progress.byStatus.translated,
+                  catalog.progress.total,
+                )
+              }}
+              <template v-if="catalog.progress.byStatus.outdated > 0">
+                · {{ t('paperl10n-catalog-outdated', catalog.progress.byStatus.outdated) }}
+              </template>
+            </span>
+            <span v-if="catalog.problem !== null" class="catalogs-problem">
+              {{ errorMessage(catalog.problem, t) }}
+            </span>
+          </button>
         </li>
       </ul>
       <p v-else class="pages-none">{{ t('paperl10n-no-catalogs') }}</p>
@@ -305,32 +320,6 @@ const progress = computed(() => {
   border-inline-start-color: var(--pl-color-accent);
   background: var(--pl-color-chip);
 }
-.pages-status {
-  flex: none;
-  inline-size: 0.5rem;
-  block-size: 0.5rem;
-  border: 2px solid var(--pl-color-muted);
-  border-radius: 50%;
-}
-
-/* Each status has its own shape or fill, not only its color: missing is hollow, a draft filled
-   grey, up to date filled green, and outdated a diamond. */
-.pages-status[data-status='draft'] {
-  background: var(--pl-color-muted);
-}
-
-.pages-status[data-status='translated'] {
-  border-color: var(--pl-color-ok);
-  background: var(--pl-color-ok);
-}
-
-.pages-status[data-status='outdated'] {
-  border-color: var(--pl-color-warn);
-  border-radius: 1px;
-  background: var(--pl-color-warn);
-  transform: rotate(45deg);
-}
-
 /* Unsaved changes: a small accent dot at the end of the row, beside the status. */
 .pages-unsaved {
   flex: none;
@@ -346,12 +335,9 @@ const progress = computed(() => {
 }
 
 .catalogs-item {
-  display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: var(--pl-space-1);
-  padding-block: var(--pl-space-2);
-  padding-inline: var(--pl-space-3);
-  font-weight: 500;
 }
 
 .catalogs-progress,
