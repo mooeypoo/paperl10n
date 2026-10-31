@@ -140,6 +140,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
         status: {
           page: 'missing',
           sections: ['draft'],
+          changes: { blocks: [], removals: [] },
           sourceFingerprint: expect.stringMatching(/^[0-9a-f]{16}$/) as string,
         },
       },

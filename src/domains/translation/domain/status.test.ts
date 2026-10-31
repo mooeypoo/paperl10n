@@ -131,8 +131,11 @@ describe('matchSections', () => {
   const recorded = (record: PageRecord, current: SectionFingerprints[]) => {
     const { matches, removedFirst } = matchSections(current, record);
     return {
-      matches: matches.map(({ recorded: match, removedAfter }) => [
+      matches: matches.map(({ recorded: match, removedBefore, removedAfter }) => [
         match?.marked?.join(' ') ?? null,
+        ...(removedBefore.length > 0
+          ? [{ before: removedBefore.map((section) => section.marked?.join(' ')) }]
+          : []),
         removedAfter.map((section) => section.marked?.join(' ')),
       ]),
       removedFirst: removedFirst.map((section) => section.marked?.join(' ')),
@@ -198,7 +201,12 @@ describe('matchSections', () => {
       ],
     ],
     ['removed at the end', marked('#A a', '#B b'), page('#A a'), [['#A a', ['#B b']]]],
-    ['removed at the start', marked('#A a', '#B b'), page('#B b'), [['#B b', ['#A a']]]],
+    [
+      'removed at the start: before the first',
+      marked('#A a', '#B b', '#C c'),
+      page('#C c'),
+      [['#C c', { before: ['#A a', '#B b'] }, []]],
+    ],
   ])('%s', (_description, record, current, matches) => {
     expect(recorded(record, current)).toEqual({ matches, removedFirst: [] });
   });
@@ -277,6 +285,13 @@ describe('markSections', () => {
     const record = markSections(page('#A a', '#B b'), null, new Set([0]));
     expect(markSections(page('#A a'), record, new Set<number>())).toEqual([
       { kind: 'heading', heading: '#A', marked: ['#A', 'a'] },
+    ]);
+  });
+
+  it('keeps marked sections removed before the first one ahead of it, in order', () => {
+    expect(markSections(page('#B b'), marked('#A a', '#B b'), new Set<number>())).toEqual([
+      { kind: 'heading', heading: '#A', marked: ['#A', 'a'] },
+      { kind: 'heading', heading: '#B', marked: ['#B', 'b'] },
     ]);
   });
 

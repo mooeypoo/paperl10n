@@ -144,7 +144,12 @@ describe('the app shell', () => {
             },
             draft: null,
             sections: { paired: true, level: null, pairs: [] },
-            status: { page: 'draft', sections: [], sourceFingerprint: 'f' },
+            status: {
+              page: 'draft',
+              sections: [],
+              changes: { blocks: [], removals: [] },
+              sourceFingerprint: 'f',
+            },
           },
         },
       },

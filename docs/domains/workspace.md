@@ -80,8 +80,9 @@ page's draft comes along as `draft` (`{ text, base }`), unless it holds what the
 pair's `sections` pairs the source's sections with those of the text the translation opens with
 (the draft, else the file, else a copy of the source: what starting a translation makes), through
 `#domains/translation`; it's decided when the page opens. Its `status` is the page's and each
-source section's (as if never recorded when the status file can't be read), with the source's
-`sourceFingerprint` for marking it. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+source section's (as if never recorded when the status file can't be read), its source's
+`changes` since it was marked (the changed and new blocks' ranges, and where marked text was
+removed), and the source's `sourceFingerprint` for marking it. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 `workspace.unknown-document` (the key
 isn't listed), `workspace.document-unreadable` (with the file problem, also for a listed source
 file that vanished), or a `FormatError`.
@@ -131,7 +132,7 @@ comes from a newer Paper Lion (`workspace.status-unreadable`, `workspace.status-
 
 `createMarkUpToDate({ sessions, parser, updates })`, `markUpToDate(projectId, { key,
 sourceFingerprint, sections })`: marks a page's source sections (indices in order, or `null` for
-the whole page) up to date and returns the page's status after. It reads the source again and
+the whole page) up to date and returns the page's status after (with its `changes`). It reads the source again and
 refuses with `workspace.source-changed` when its fingerprint isn't the one the page showed (or an
 index is past its sections), so a version the translator hasn't read is never marked. Other
 errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-document`,

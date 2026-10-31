@@ -49,6 +49,8 @@ const keyOf = (section: { readonly kind: SectionKind; readonly heading: string |
 export interface SectionMatch {
   /** Its recorded version; `null`: new since the page was recorded. */
   readonly recorded: RecordedSection | null;
+  /** The first section only: recorded sections removed from the source since, which came first. */
+  readonly removedBefore: readonly RecordedSection[];
   /** Recorded sections removed from the source since, which followed this one. */
   readonly removedAfter: readonly RecordedSection[];
 }
@@ -57,7 +59,8 @@ export interface SectionMatch {
  * Finds each source section in a page's record. Sections match by identity (kind and heading)
  * in order; between those, a changed heading is matched by place (the first unmatched section of
  * the same kind). What's left is new (no record) or removed (kept with the section before it,
- * or the first section when it was first; `removedFirst` when the source has no sections now).
+ * or before the first section when it was first; `removedFirst` when the source has no sections
+ * now).
  */
 export function matchSections(
   current: readonly SectionFingerprints[],
@@ -69,13 +72,15 @@ export function matchSections(
   const currentKeys = current.map((section) => keyOf({ ...section, heading: headingOf(section) }));
   const matched: (RecordedSection | null)[] = current.map(() => null);
   const removedAfter: RecordedSection[][] = current.map(() => []);
+  const removedBefore: RecordedSection[] = [];
   const removedFirst: RecordedSection[] = [];
   /** A removed section stays with the source section before it (or the first, if none). */
   const remove = (recordIndex: number, before: number) => {
     const section = record[recordIndex];
     if (section === undefined) return;
     if (current.length === 0) removedFirst.push(section);
-    else removedAfter[Math.max(before, 0)]?.push(section);
+    else if (before < 0) removedBefore.push(section);
+    else removedAfter[before]?.push(section);
   };
 
   // Between matches: pair added and removed sections of the same kind, in order.
@@ -119,6 +124,7 @@ export function matchSections(
   return {
     matches: current.map((_section, index) => ({
       recorded: matched[index] ?? null,
+      removedBefore: index === 0 ? removedBefore : [],
       removedAfter: removedAfter[index] ?? [],
     })),
     removedFirst,
@@ -138,9 +144,9 @@ export function sectionStatuses(
   if (record === null) return current.map(() => 'draft');
   const { matches } = matchSections(current, record);
   return current.map((section, index): SectionStatus => {
-    const { recorded = null, removedAfter = [] } = matches[index] ?? {};
+    const { recorded = null, removedBefore = [], removedAfter = [] } = matches[index] ?? {};
     if (recorded === null) return 'outdated';
-    const removedMarked = removedAfter.some(wasMarked);
+    const removedMarked = [...removedBefore, ...removedAfter].some(wasMarked);
     if (recorded.marked === null) return removedMarked ? 'outdated' : 'draft';
     return !removedMarked && sameBlocks(recorded.marked, section.blocks)
       ? 'translated'
@@ -193,13 +199,13 @@ export function markSections(
     ...removedFirst.filter(wasMarked),
     ...current.flatMap((section, index): RecordedSection[] => {
       if (which.has(index)) return [markedNow(section)];
-      const { recorded = null, removedAfter = [] } = matches[index] ?? {};
+      const { recorded = null, removedBefore = [], removedAfter = [] } = matches[index] ?? {};
       const kept: RecordedSection = {
         kind: section.kind,
         heading: headingOf(section),
         marked: recorded === null ? (record === null ? null : []) : recorded.marked,
       };
-      return [kept, ...removedAfter.filter(wasMarked)];
+      return [...removedBefore.filter(wasMarked), kept, ...removedAfter.filter(wasMarked)];
     }),
   ];
 }

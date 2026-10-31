@@ -5,6 +5,7 @@ import type { Section, SectionPairing } from '#domains/translation';
 import type {
   ChooseTargetLocale,
   DiscardDraft,
+  DocumentStatus,
   LanguageEntry,
   ListSourceDocuments,
   MarkExistingUpToDate,
@@ -18,6 +19,7 @@ import type {
   SuggestTargetLanguages,
 } from '#domains/workspace';
 import type {
+  DocumentStatusDto,
   DocumentTextDto,
   LanguageDto,
   LocaleDto,
@@ -64,6 +66,20 @@ function toDocumentDto({ path, mdx, document }: ReadDocument): DocumentTextDto {
       start: range.start,
       end: range.end,
     })),
+  };
+}
+
+function toDocumentStatusDto({ page, sections, changes }: DocumentStatus): DocumentStatusDto {
+  return {
+    page,
+    sections: [...sections],
+    changes: {
+      blocks: changes.blocks.map(({ kind, range }) => ({
+        kind,
+        range: { start: range.start, end: range.end },
+      })),
+      removals: changes.removals.map(({ offset, side }) => ({ offset, side })),
+    },
   };
 }
 
@@ -138,8 +154,7 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         draft: pair.draft === null ? null : { text: pair.draft.text, base: pair.draft.base },
         sections: toSectionPairingDto(pair.sections),
         status: {
-          page: pair.status.page,
-          sections: [...pair.status.sections],
+          ...toDocumentStatusDto(pair.status),
           sourceFingerprint: pair.status.sourceFingerprint,
         },
       });
@@ -188,7 +203,7 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
     async markUpToDate({ projectId, key, sourceFingerprint, sections }) {
       const result = await useCases.markUpToDate(projectId, { key, sourceFingerprint, sections });
       if (!result.ok) return err(toErrorDto(result.error));
-      return ok({ page: result.value.page, sections: [...result.value.sections] });
+      return ok(toDocumentStatusDto(result.value));
     },
 
     async markExistingUpToDate({ projectId }) {

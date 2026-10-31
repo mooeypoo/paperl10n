@@ -42,7 +42,12 @@ describe('guardApi', () => {
               target: null,
               draft: null,
               sections: { paired: true, level: null, pairs: [] },
-              status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
+              status: {
+                page: 'missing',
+                sections: [],
+                changes: { blocks: [], removals: [] },
+                sourceFingerprint: 'f',
+              },
             }),
           ),
         suggestTargetLanguages: () =>
@@ -54,7 +59,14 @@ describe('guardApi', () => {
         saveDocument: ({ key }) => Promise.resolve(ok({ path: key, written: false })),
         saveDraft: () => Promise.resolve(ok(null)),
         discardDraft: () => Promise.resolve(ok(null)),
-        markUpToDate: () => Promise.resolve(ok({ page: 'translated', sections: ['translated'] })),
+        markUpToDate: () =>
+          Promise.resolve(
+            ok({
+              page: 'translated',
+              sections: ['translated'],
+              changes: { blocks: [], removals: [] },
+            }),
+          ),
         markExistingUpToDate: () => Promise.resolve(ok({ marked: ['k'] })),
       },
       onUnexpected,
@@ -84,7 +96,12 @@ describe('guardApi', () => {
         target: null,
         draft: null,
         sections: { paired: true, level: null, pairs: [] },
-        status: { page: 'missing', sections: [], sourceFingerprint: 'f' },
+        status: {
+          page: 'missing',
+          sections: [],
+          changes: { blocks: [], removals: [] },
+          sourceFingerprint: 'f',
+        },
       },
     });
     expect(
@@ -112,7 +129,9 @@ describe('guardApi', () => {
     expect(await api.discardDraft({ projectId: 'p', key: 'k' })).toEqual(ok(null));
     expect(
       await api.markUpToDate({ projectId: 'p', key: 'k', sourceFingerprint: 'f', sections: null }),
-    ).toEqual(ok({ page: 'translated', sections: ['translated'] }));
+    ).toEqual(
+      ok({ page: 'translated', sections: ['translated'], changes: { blocks: [], removals: [] } }),
+    );
     expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(ok({ marked: ['k'] }));
     expect(calls).toEqual([]);
   });

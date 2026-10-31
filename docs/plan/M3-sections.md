@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S3 done, S4 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S3 done, S4 in progress.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -383,7 +383,31 @@ the last step.
       - Mutation checks, each failing tests: the pair's index sent instead of the source's, the
         buttons not waiting while marking, bars outside the section view, no `dir`, two bars on
         one line, bars lost when the editor restarts, and a button on an up-to-date section.
-- **S4, source changes:** highlighting changed, new, and removed blocks in the source pane.
+- **S4, source changes:** highlighting changed, new, and removed blocks in the source pane. In two
+  PRs:
+  - **S4a, source changes in main:** which blocks changed, are new, or were removed since each
+    section was marked, by place in the source, with the page's status.
+    - *Done-notes:* `translation/domain/changes.ts` (`sourceChanges`, by block index) and
+      `documentChanges` in `translation/application` (by range in the source's text). The rules are
+      in [the domain doc](../domains/translation.md#rules-source-changes). The page's status (in
+      the pair, and returned by marking) carries `changes`: the changed and new blocks' ranges, and
+      the removals, each before the block that follows it or after its section's last block. The
+      page list doesn't compute them.
+      - **One refinement to S3a's matching:** sections removed before the first one are kept
+        *before* it (`removedBefore`), not after it, so the removal shows where the text was.
+        Status reads them as before (the first section is outdated), and a mark keeps them in
+        that order.
+      - Tests: the rules (table), the ranges with a parsed document, the use cases (changes after
+        the source changes on disk, none after marking), and the IPC end to end with the real
+        parser.
+      - Mutation checks, each failing tests: no `changed` blocks (all `added`), no removal for
+        removed blocks, a removal before the first section placed at its end, removed sections
+        never marked shown, the document-start removal dropped (in the domain and in the ranges),
+        status ignoring sections removed before the first, a mark dropping them, a removal's side
+        swapped, `added` blocks dropped, and the record ignored. One survived and was removed as
+        redundant: treating a section recorded with no blocks as new (it diffs as all new anyway).
+  - **S4b, source changes in the UI:** the tint, the line marks, and the removal markers in the
+    source pane, and a note at a changed section's heading.
 - **S5, hints and length:** preservation hints per section (with the plugin's link mapping, if
   chosen) and the length note.
 - **S6, full-page sync:** loose scroll sync and, if needed, the per-document split level.

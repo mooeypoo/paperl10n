@@ -31,4 +31,10 @@ export {
   type StatusFileError,
 } from './domain/status-file.ts';
 export { outlineOf, pairDocumentSections } from './application/document-sections.ts';
-export { sectionFingerprints } from './application/document-status.ts';
+export {
+  documentChanges,
+  sectionFingerprints,
+  type ChangedBlock,
+  type DocumentChanges,
+  type Removal,
+} from './application/document-status.ts';

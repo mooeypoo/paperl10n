@@ -47,7 +47,8 @@ export function useTranslationStatus(
     const opened = pair.value;
     if (opened === null) return null;
     if (changed.value?.key === opened.key) return changed.value.status;
-    return { page: opened.status.page, sections: opened.status.sections };
+    const { page, sections, changes } = opened.status;
+    return { page, sections, changes };
   });
 
   async function mark(sections: readonly number[] | null): Promise<void> {
@@ -95,7 +96,12 @@ export function useTranslationStatus(
       if (current === null || key === undefined || !keys.includes(key)) return;
       changed.value = {
         key,
-        status: { page: 'translated', sections: current.sections.map(() => 'translated') },
+        // The page had no record, so nothing in its source had changed: nor does it now.
+        status: {
+          page: 'translated',
+          sections: current.sections.map(() => 'translated'),
+          changes: { blocks: [], removals: [] },
+        },
       };
     },
   };

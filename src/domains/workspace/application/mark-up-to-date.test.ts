@@ -69,6 +69,8 @@ async function openWith(tree: FileTree, settings: object = { targetLocale: 'he' 
   };
 }
 
+const noChanges = { blocks: [], removals: [] };
+
 const translated = { 'en/index.md': source, 'he/index.md': 'מבוא\n## א\nא\n## ב\nב\n' };
 
 describe('markUpToDate', () => {
@@ -80,7 +82,11 @@ describe('markUpToDate', () => {
       await app.mark(app.projectId, { key: 'index', sourceFingerprint, sections: null }),
     ).toEqual({
       ok: true,
-      value: { page: 'translated', sections: ['translated', 'translated', 'translated'] },
+      value: {
+        page: 'translated',
+        sections: ['translated', 'translated', 'translated'],
+        changes: noChanges,
+      },
     });
     expect(await app.statusFile()).toMatch(
       /^\{\n {2}"version": 1,\n {2}"pages": \{\n {4}"index": \[/,
@@ -96,13 +102,17 @@ describe('markUpToDate', () => {
       await app.mark(app.projectId, { key: 'index', sourceFingerprint, sections: [0, 2] }),
     ).toEqual({
       ok: true,
-      value: { page: 'draft', sections: ['translated', 'draft', 'translated'] },
+      value: { page: 'draft', sections: ['translated', 'draft', 'translated'], changes: noChanges },
     });
     expect(
       await app.mark(app.projectId, { key: 'index', sourceFingerprint, sections: [1] }),
     ).toEqual({
       ok: true,
-      value: { page: 'translated', sections: ['translated', 'translated', 'translated'] },
+      value: {
+        page: 'translated',
+        sections: ['translated', 'translated', 'translated'],
+        changes: noChanges,
+      },
     });
   });
 
@@ -120,6 +130,11 @@ describe('markUpToDate', () => {
       'outdated',
       ['translated', 'outdated', 'translated'],
     ]);
+    // And which block changed, where it is in the source now.
+    expect(changed.changes).toEqual({
+      blocks: [{ kind: 'changed', range: { start: 11, end: 21 } }],
+      removals: [],
+    });
     expect(await app.statuses()).toEqual({ index: 'outdated' });
     expect(
       await app.mark(app.projectId, {
@@ -127,7 +142,7 @@ describe('markUpToDate', () => {
         sourceFingerprint: changed.sourceFingerprint,
         sections: [1],
       }),
-    ).toMatchObject({ ok: true, value: { page: 'translated' } });
+    ).toMatchObject({ ok: true, value: { page: 'translated', changes: noChanges } });
   });
 
   it('refuses to mark a source that changed on disk since the page showed it', async () => {

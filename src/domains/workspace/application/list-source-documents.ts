@@ -6,7 +6,7 @@ import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
-import { documentStatus, readStatusFile, type StatusReadError } from './translation-status.ts';
+import { documentPageStatus, readStatusFile, type StatusReadError } from './translation-status.ts';
 
 export interface SourceDocumentEntry {
   readonly key: DocumentKey;
@@ -75,7 +75,7 @@ export function createListSourceDocuments(deps: {
         // An unreadable source claims nothing; opening the page shows why.
         if (text.ok) {
           const source = deps.parser.parse(text.value, { mdx: document.path.endsWith('.mdx') });
-          status = documentStatus(source, file, document.key, true).page;
+          status = documentPageStatus(source, file, document.key, true);
         }
       }
       entries.push({
