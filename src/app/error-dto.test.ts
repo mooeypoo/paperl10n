@@ -86,6 +86,10 @@ const cases: [AppError, ErrorDto][] = [
     },
   ],
   [
+    { code: 'formats.invalid-catalog', formatId, reason: 'not JSON' },
+    { code: 'formats.invalid-catalog', params: { formatId, reason: 'not JSON' }, details: [] },
+  ],
+  [
     { code: 'formats.plugin-failed', formatId, reason: 'boom' },
     { code: 'formats.plugin-failed', params: { formatId, reason: 'boom' }, details: [] },
   ],

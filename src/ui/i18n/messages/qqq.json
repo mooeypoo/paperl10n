@@ -22,6 +22,7 @@
   "paperl10n-error-workspace-unknown-project": "Error when the app no longer knows the project the UI refers to.",
   "paperl10n-error-formats-invalid-options": "Error. $1: the plugin id; $2: the plugin's explanation (in English).",
   "paperl10n-error-formats-unsupported-project": "Error. $1: the plugin id; $2: the plugin's explanation (in English).",
+  "paperl10n-error-formats-invalid-catalog": "Error when a catalog file (interface messages) isn't valid for its format. $1: the plugin id; $2: the plugin's explanation (in English).",
   "paperl10n-error-formats-file-access": "Error. $1: the plugin id; $2: the file's path; $3: the problem code.",
   "paperl10n-error-formats-plugin-failed": "Error when a plugin crashed (a bug in the plugin). $1: the plugin id; $2: technical details.",
   "paperl10n-error-internal-unexpected": "Error for a bug in the app itself.",

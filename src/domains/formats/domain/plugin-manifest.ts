@@ -5,11 +5,11 @@ import { formatId, kindOfFormatId, type FormatId, type FormatKind } from './form
 /** Manifest format versions this app understands. */
 export const SUPPORTED_MANIFEST_VERSIONS: readonly number[] = [1];
 /** Plugin API versions this app implements. */
-export const SUPPORTED_API_VERSIONS: readonly number[] = [2];
+export const SUPPORTED_API_VERSIONS: readonly number[] = [3];
 
 /**
- * Optional features a plugin can declare, per kind. Plugin API v1 defines none yet. A capability
- * is added here together with its interface method (e.g. `frontmatter-rules` in M1/M2).
+ * Optional features a plugin can declare, per kind. The plugin API defines none yet. A capability
+ * is added here together with its interface method (e.g. `frontmatter-rules`).
  */
 export const KNOWN_CAPABILITIES: Readonly<Record<FormatKind, readonly string[]>> = {
   document: [],
@@ -194,7 +194,7 @@ export function parsePluginManifest(input: unknown): Result<PluginManifest, Inva
     if (!known.includes(capability)) {
       problems.push({
         field: 'capabilities',
-        problem: `"${capability}" isn't a capability of plugin API v1`,
+        problem: `"${capability}" isn't a capability of the plugin API`,
       });
     }
   }

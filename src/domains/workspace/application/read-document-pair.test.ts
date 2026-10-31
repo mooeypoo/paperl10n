@@ -27,7 +27,7 @@ async function openWith(
   drafts: DraftStore = new InMemoryDraftStore(),
   parser = new FakeMarkdownParser(),
 ) {
-  const registry = createFormatRegistry([plugin], { apiVersion: 2 });
+  const registry = createFormatRegistry([plugin], { apiVersion: 3 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opened = await createOpenProject({
@@ -203,7 +203,7 @@ describe('readDocumentPair', () => {
       error: { code: 'formats.unsupported-project', reason: 'no docs', formatId: 'format-fake' },
     });
 
-    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 2 });
+    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 3 });
     if (base.kind !== 'document') throw new Error('test setup');
     const noTarget = fakeDocumentPlugin('format-fake', {
       ...detects('likely'),

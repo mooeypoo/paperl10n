@@ -12,7 +12,7 @@ export { localeId, type LocaleId } from '#kernel/locale-id';
 
 // Documents and messages
 export { documentKey, type DocumentKey, type SourceDocument } from '#domains/document';
-export type { Message, MessageKey } from '#domains/catalog';
+export { messageKey, type Message, type MessageKey } from '#domains/catalog';
 
 // The contracts plugins implement, and what they receive
 export type { Detection, DetectionConfidence } from './domain/detection.ts';
@@ -25,11 +25,13 @@ export type {
   ProjectLocale,
 } from './application/ports/document-format.ts';
 export type {
+  CatalogEdit,
   CatalogFormat,
   CatalogLayout,
-  CatalogLocation,
   MessageChange,
   ParsedCatalog,
+  PlaceholderKind,
   PlaceholderToken,
+  SourceCatalog,
 } from './application/ports/catalog-format.ts';
 export type { FormatPlugin, PluginHost, PluginModule } from './application/ports/plugin-module.ts';

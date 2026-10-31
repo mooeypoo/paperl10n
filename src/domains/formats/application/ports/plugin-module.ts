@@ -4,10 +4,10 @@ import type { DocumentFormat } from './document-format.ts';
 
 export type FormatPlugin = DocumentFormat | CatalogFormat;
 
-/** Services the app gives plugins. Only a version in v1; a logger or clock can be added later
+/** Services the app gives plugins. Only a version so far; a logger or clock can be added later
  * without breaking plugins, because plugins receive it through `create`. */
 export interface PluginHost {
-  readonly apiVersion: 2;
+  readonly apiVersion: 3;
 }
 
 /** What a plugin's `index.ts` exports as `plugin`: a manifest (data) and a factory (code). */

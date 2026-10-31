@@ -242,6 +242,7 @@ export const errorCodes = [
   'workspace.status-unwritable',
   'formats.invalid-options',
   'formats.unsupported-project',
+  'formats.invalid-catalog',
   'formats.file-access',
   'formats.plugin-failed',
   /** A bug: something threw instead of returning a result. Logged in main. */

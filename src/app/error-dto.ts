@@ -71,6 +71,7 @@ export function toErrorDto(error: AppError): ErrorDto {
       );
     case 'formats.invalid-options':
     case 'formats.unsupported-project':
+    case 'formats.invalid-catalog':
     case 'formats.plugin-failed':
       return dto({ formatId: error.formatId, reason: error.reason });
     case 'formats.file-access':

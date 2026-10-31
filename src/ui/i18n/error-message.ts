@@ -31,6 +31,7 @@ export const errorMessageParams: Readonly<Record<ErrorCode, readonly string[]>> 
   'workspace.status-unwritable': ['file', 'problem'],
   'formats.invalid-options': ['formatId', 'reason'],
   'formats.unsupported-project': ['formatId', 'reason'],
+  'formats.invalid-catalog': ['formatId', 'reason'],
   'formats.file-access': ['formatId', 'file', 'problem'],
   'formats.plugin-failed': ['formatId', 'reason'],
   'internal.unexpected': [],

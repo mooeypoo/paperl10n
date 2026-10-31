@@ -19,7 +19,7 @@ async function opened(
   drafts: DraftStore = new InMemoryDraftStore(),
 ) {
   const registry = createFormatRegistry([fakeDocumentPlugin('format-fake', detects('likely'))], {
-    apiVersion: 2,
+    apiVersion: 3,
   });
   if (!registry.ok) throw new Error('test setup: registry');
   const sessions = new InMemoryProjectSessions(randomUUID);

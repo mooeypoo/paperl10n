@@ -6,6 +6,8 @@ import type { FormatId } from '../../domain/format-id.ts';
 export type PluginError =
   | { readonly code: 'formats.invalid-options'; readonly reason: string }
   | { readonly code: 'formats.unsupported-project'; readonly reason: string }
+  /** A catalog file the plugin can't read as its format (`CatalogFormat.parse`). */
+  | { readonly code: 'formats.invalid-catalog'; readonly reason: string }
   | { readonly code: 'formats.file-access'; readonly cause: FileAccessError };
 
 /** A plugin failure as the rest of the app sees it: which plugin, and what went wrong. */
