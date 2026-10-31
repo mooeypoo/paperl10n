@@ -7,7 +7,9 @@ import type {
   ChooseTargetLocale,
   DiscardDraft,
   DocumentStatus,
+  FormatName,
   LanguageEntry,
+  ListCatalogs,
   ListSourceDocuments,
   MarkExistingUpToDate,
   MarkUpToDate,
@@ -22,6 +24,7 @@ import type {
 import type {
   DocumentStatusDto,
   DocumentTextDto,
+  FormatDto,
   LanguageDto,
   LocaleDto,
   PaperLionApi,
@@ -33,6 +36,7 @@ import { toErrorDto } from './error-dto.ts';
 export interface UseCases {
   readonly openProject: OpenProject;
   readonly listSourceDocuments: ListSourceDocuments;
+  readonly listCatalogs: ListCatalogs;
   readonly readDocumentPair: ReadDocumentPair;
   readonly suggestTargetLanguages: SuggestTargetLanguages;
   readonly searchTargetLanguages: SearchTargetLanguages;
@@ -43,6 +47,10 @@ export interface UseCases {
   readonly markUpToDate: MarkUpToDate;
   readonly markExistingUpToDate: MarkExistingUpToDate;
   readonly checkTranslation: CheckTranslation;
+}
+
+function toFormatDto(format: FormatName | null): FormatDto | null {
+  return format === null ? null : { id: format.id, displayName: format.displayName };
 }
 
 function toLocaleDto(locale: Locale): LocaleDto {
@@ -117,10 +125,8 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         name: summary.name,
         sourceLocale: toLocaleDto(summary.sourceLocale),
         targetLocale: summary.targetLocale === null ? null : toLocaleDto(summary.targetLocale),
-        documentFormat: {
-          id: summary.documentFormat.id,
-          displayName: summary.documentFormat.displayName,
-        },
+        documentFormat: toFormatDto(summary.documentFormat),
+        catalogFormat: toFormatDto(summary.catalogFormat),
         warnings: [...summary.warnings],
       });
     },
@@ -137,6 +143,33 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
           targetExists: entry.targetExists,
           hasDraft: entry.hasDraft,
           status: entry.status,
+        })),
+        statusFile: {
+          exists: statusFile.exists,
+          problem: statusFile.problem === null ? null : toErrorDto(statusFile.problem),
+        },
+      });
+    },
+
+    async listCatalogs({ projectId }) {
+      const result = await useCases.listCatalogs(projectId);
+      if (!result.ok) return err(toErrorDto(result.error));
+      const { catalogs, statusFile } = result.value;
+      return ok({
+        catalogs: catalogs.map((entry) => ({
+          key: entry.key,
+          sourcePath: entry.sourcePath,
+          targetPath: entry.targetPath,
+          targetExists: entry.targetExists,
+          progress:
+            entry.progress === null
+              ? null
+              : {
+                  total: entry.progress.total,
+                  byStatus: { ...entry.progress.byStatus },
+                  notInSource: entry.progress.notInSource,
+                },
+          problem: entry.problem === null ? null : toErrorDto(entry.problem),
         })),
         statusFile: {
           exists: statusFile.exists,

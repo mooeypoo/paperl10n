@@ -13,6 +13,7 @@ import { draftKey } from './drafts.ts';
 import type { Draft, DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import { documentStatus, readStatusFile, type DocumentStatus } from './translation-status.ts';
+import { findDocument } from './find-document.ts';
 
 export interface ReadDocument {
   readonly path: ProjectPath;
@@ -89,12 +90,11 @@ export function createReadDocumentPair(deps: {
     const targetLocale = project.targetLocale;
     if (targetLocale === null) return err({ code: 'workspace.no-target-locale' });
 
-    const documents = await project.layout.listSourceDocuments();
-    if (!documents.ok) return documents;
-    const document = documents.value.find((candidate) => candidate.key === key);
-    if (document === undefined) return err({ code: 'workspace.unknown-document', key });
+    const found = await findDocument(project, key);
+    if (!found.ok) return found;
+    const { document, layout } = found.value;
 
-    const targetPath = project.layout.targetPathFor(document, targetLocale.id);
+    const targetPath = layout.targetPathFor(document, targetLocale.id);
     if (!targetPath.ok) return targetPath;
 
     const source = await read(project.files, document.path, deps.parser);

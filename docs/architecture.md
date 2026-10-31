@@ -45,6 +45,7 @@ graph TD
   workspace --> locale
   workspace --> document
   workspace --> translation
+  workspace --> catalog
   formats --> document
   formats --> catalog
   translation --> document
@@ -154,9 +155,11 @@ The walking skeleton is one slice through every layer. Clicking **Open folder…
    2. `ProjectFilesOpener.open(folder)`: the disk adapter (`node-project-files`), rooted at the
       folder.
    3. Reads and validates `paperl10n.config.json` (`workspace/domain/project-config.ts`).
-   4. Chooses the document format: the one pinned in the config, otherwise the best detection
-      from the registry.
-   5. `format.open(…)` → a layout bound to this project; the project is stored in
+   4. Chooses the formats, each kind on its own: the document format (pages) and the catalog
+      format (message catalogs), each the one pinned in the config (`documentFormat`,
+      `catalogFormat`), otherwise the best detection of that kind from the registry. A project
+      has pages, catalogs, or both; with neither, opening fails (`workspace.no-format`).
+   5. Each chosen format's `open(…)` → a layout bound to this project; the project is stored in
       `ProjectSessions` under a random, opaque id.
 6. The result (a `ProjectSummary`, or a domain error) is mapped to DTOs (`app/error-dto.ts`:
    an exhaustive `switch`, so every error has a code, and every code has a UI message).

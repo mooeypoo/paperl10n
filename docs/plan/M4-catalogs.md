@@ -360,7 +360,43 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         check of the catalogs section, dropping empty catalogs, the version 1 fallback, sorting
         messages, and either use case writing pages without catalogs.
 - **C4, opening and listing:** projects with either kind (question 1), catalogs in the sidebar with
-  progress (question 10).
+  progress (question 10). In two PRs:
+  - **C4a, opening and listing (main):** a project with pages, catalogs, or both; the catalogs
+    with their progress over IPC; `catalog-banana` registered.
+    - *Done-notes:* the use cases are in [the workspace doc](../domains/workspace.md).
+      - **The opened project** has `documents` and `catalogs`, each a format with its layout, or
+        `null`, instead of one document format and layout. The page use cases find a page
+        through one helper (`findDocument`), so a project without pages answers any page with
+        `workspace.unknown-document`, lists none, and marks none.
+      - **Choosing formats:** `catalogFormat` in the config, next to `documentFormat`. Each kind
+        is pinned or detected on its own; detection runs once. `workspace.no-document-format` is
+        now `workspace.no-format` (neither kind), and `workspace.unknown-catalog-format` is new.
+        The project's languages come from both layouts (`projectLocales`).
+      - **`listCatalogs`** (use case and IPC method): each catalog's paths, whether the target
+        exists, and its progress (counts by message status, and not-in-source keys). A catalog
+        whose file can't be read still lists, with the problem (`workspace.catalog-unreadable`,
+        new, or the plugin's `formats.invalid-catalog`).
+      - **The project summary** carries `documentFormat` and `catalogFormat`, each nullable. The
+        header shows each format the project has; the sidebar is C4b.
+      - The `workspace → catalog` edge (`scripts/domain-graph.ts`, `docs/architecture.md`).
+      - `catalog-banana` is in `app/plugins.ts`. Opening Paper Lion's own folder now also finds
+        the plugin's fixtures as catalogs (C2's known limit): `dirs` leaves them out.
+      - Tests: opening (catalogs only, both kinds, a pinned catalog format, the best detection
+        of each kind, catalog options, both new errors); every page use case on a project with
+        catalogs only; `listCatalogs` (statuses from the status file, no catalogs, with pages
+        too, an unreadable status file, an unreadable source, a translation the format can't
+        read, the layout's errors, an unknown project, no target); `catalogProgress`;
+        `projectLocales`; the config's `catalogFormat`; and `listCatalogs` end to end over IPC
+        on a copy of `catalog-banana`'s MediaWiki fixture.
+      - Mutation checks, each failing tests: a pinned catalog format of the wrong kind, the best
+        match of each kind, failing only without both kinds, a catalog layout's error, the
+        summary's catalog format, the catalogs' locales and their de-duplication, the status
+        record, not-in-source counts, a translation's problem, listing catalogs at all, page
+        requests without pages, marking existing without pages, and the config's
+        `catalogFormat`. Two conditions turned out redundant (a pinned format can't be replaced
+        by detection anyway) and were removed.
+  - **C4b, the sidebar (UI):** "Pages" and "Messages" groups, each catalog with its progress,
+    and the project's progress line counting both.
 - **C5, the message list:** reading a catalog, the rows, search and filters, not-in-source keys.
 - **C6, the message editor:** the expanded row with CodeMirror, `qqq`, checks from main (question 6),
   and keyboard navigation.

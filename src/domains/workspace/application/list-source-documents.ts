@@ -57,35 +57,38 @@ export function createListSourceDocuments(deps: {
     const target = project.targetLocale;
     if (target === null) return err({ code: 'workspace.no-target-locale' });
 
-    const documents = await project.layout.listSourceDocuments();
-    if (!documents.ok) return documents;
-
     const drafted = await deps.drafts.documents(project.location, target.id);
     const withDrafts = new Set<string>(drafted.ok ? drafted.value : []);
     const read = await readStatusFile(project, target.id);
     const file = read.ok ? read.value.file : emptyStatusFile;
     const entries: SourceDocumentEntry[] = [];
-    for (const document of documents.value) {
-      const targetPath = project.layout.targetPathFor(document, target.id);
-      if (!targetPath.ok) return targetPath;
-      const targetExists = await project.files.exists(targetPath.value);
-      let status: PageStatus = targetExists ? 'draft' : 'missing';
-      if (targetExists && file.pages.has(document.key)) {
-        const text = await project.files.readText(document.path);
-        // An unreadable source claims nothing; opening the page shows why.
-        if (text.ok) {
-          const source = deps.parser.parse(text.value, { mdx: document.path.endsWith('.mdx') });
-          status = documentPageStatus(source, file, document.key, true);
+    // A project without pages lists none (its catalogs list on their own).
+    if (project.documents !== null) {
+      const { layout } = project.documents;
+      const documents = await layout.listSourceDocuments();
+      if (!documents.ok) return documents;
+      for (const document of documents.value) {
+        const targetPath = layout.targetPathFor(document, target.id);
+        if (!targetPath.ok) return targetPath;
+        const targetExists = await project.files.exists(targetPath.value);
+        let status: PageStatus = targetExists ? 'draft' : 'missing';
+        if (targetExists && file.pages.has(document.key)) {
+          const text = await project.files.readText(document.path);
+          // An unreadable source claims nothing; opening the page shows why.
+          if (text.ok) {
+            const source = deps.parser.parse(text.value, { mdx: document.path.endsWith('.mdx') });
+            status = documentPageStatus(source, file, document.key, true);
+          }
         }
+        entries.push({
+          key: document.key,
+          sourcePath: document.path,
+          targetPath: targetPath.value,
+          targetExists,
+          hasDraft: withDrafts.has(document.key),
+          status,
+        });
       }
-      entries.push({
-        key: document.key,
-        sourcePath: document.path,
-        targetPath: targetPath.value,
-        targetExists,
-        hasDraft: withDrafts.has(document.key),
-        status,
-      });
     }
     return ok({
       documents: entries,

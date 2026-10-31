@@ -44,14 +44,29 @@ const cases: [AppError, ErrorDto][] = [
     { code: 'workspace.unknown-document-format', params: { formatId: 'format-nope' }, details: [] },
   ],
   [
+    { code: 'workspace.unknown-catalog-format', formatId: 'catalog-nope' },
+    { code: 'workspace.unknown-catalog-format', params: { formatId: 'catalog-nope' }, details: [] },
+  ],
+  [
     {
-      code: 'workspace.no-document-format',
+      code: 'workspace.no-format',
       failures: [{ code: 'formats.plugin-failed', formatId, reason: 'boom' }],
     },
     {
-      code: 'workspace.no-document-format',
+      code: 'workspace.no-format',
       params: {},
       details: ['format-fake: formats.plugin-failed'],
+    },
+  ],
+  [
+    {
+      code: 'workspace.catalog-unreadable',
+      cause: { code: 'files.not-utf8', path: 'i18n/he.json' as ProjectPath },
+    },
+    {
+      code: 'workspace.catalog-unreadable',
+      params: { file: 'i18n/he.json', problem: 'files.not-utf8' },
+      details: [],
     },
   ],
   [

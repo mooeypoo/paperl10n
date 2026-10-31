@@ -9,6 +9,12 @@ export interface LocaleDto {
   readonly direction: 'ltr' | 'rtl';
 }
 
+/** A format plugin, as the UI names it. */
+export interface FormatDto {
+  readonly id: string;
+  readonly displayName: string;
+}
+
 export interface ProjectSummaryDto {
   /** An opaque handle. The renderer never sees the project's path on disk. */
   readonly projectId: string;
@@ -16,7 +22,11 @@ export interface ProjectSummaryDto {
   readonly sourceLocale: LocaleDto;
   /** `null` when the project has no target language yet: the UI asks for one. */
   readonly targetLocale: LocaleDto | null;
-  readonly documentFormat: { readonly id: string; readonly displayName: string };
+  /** The format of the project's pages; `null` when it has none. */
+  readonly documentFormat: FormatDto | null;
+  /** The format of the project's message catalogs; `null` when it has none. A project has pages,
+   * catalogs, or both. */
+  readonly catalogFormat: FormatDto | null;
   /** Non-fatal problems, e.g. unknown keys in the config file. */
   readonly warnings: readonly string[];
 }
@@ -67,6 +77,43 @@ export interface SourceDocumentListDto {
     /** `false`: nothing was ever marked up to date in this language. */
     readonly exists: boolean;
     /** Why it can't be read: pages then list as never marked, and marking is refused. */
+    readonly problem: ErrorDto | null;
+  };
+}
+
+/**
+ * A message's status: `missing` (no translation, or an empty one), `draft` (never recorded),
+ * `translated` (recorded, the source unchanged since), or `outdated` (the source changed since).
+ */
+export type MessageStatusDto = 'missing' | 'draft' | 'translated' | 'outdated';
+
+/** How many of a catalog's source messages have each status. */
+export interface CatalogProgressDto {
+  /** The source's messages. */
+  readonly total: number;
+  readonly byStatus: Readonly<Record<MessageStatusDto, number>>;
+  /** The translation's messages the source no longer has. */
+  readonly notInSource: number;
+}
+
+export interface CatalogDto {
+  /** The catalog's identity, chosen by its format (banana-i18n: its messages folder). */
+  readonly key: string;
+  /** Project-relative. */
+  readonly sourcePath: string;
+  /** Project-relative; the file may not exist yet. */
+  readonly targetPath: string;
+  readonly targetExists: boolean;
+  /** `null` when its files can't be read; `problem` says why. */
+  readonly progress: CatalogProgressDto | null;
+  readonly problem: ErrorDto | null;
+}
+
+export interface CatalogListDto {
+  readonly catalogs: readonly CatalogDto[];
+  /** The target language's status file, as for pages. */
+  readonly statusFile: {
+    readonly exists: boolean;
     readonly problem: ErrorDto | null;
   };
 }
@@ -225,7 +272,8 @@ export const errorCodes = [
   'workspace.config-unwritable',
   'workspace.config-invalid',
   'workspace.unknown-document-format',
-  'workspace.no-document-format',
+  'workspace.unknown-catalog-format',
+  'workspace.no-format',
   'workspace.unknown-project',
   'workspace.no-target-locale',
   'workspace.unknown-language',
@@ -240,6 +288,7 @@ export const errorCodes = [
   'workspace.status-invalid',
   'workspace.status-unsupported',
   'workspace.status-unwritable',
+  'workspace.catalog-unreadable',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.invalid-catalog',
@@ -269,6 +318,9 @@ export interface PaperLionApi {
   listSourceDocuments(request: {
     readonly projectId: string;
   }): Promise<Result<SourceDocumentListDto, ErrorDto>>;
+  /** The project's message catalogs, each with its progress in the target language. A project
+   * without catalogs lists none. */
+  listCatalogs(request: { readonly projectId: string }): Promise<Result<CatalogListDto, ErrorDto>>;
   /** A page's source and its translation, read and parsed. */
   readDocumentPair(request: {
     readonly projectId: string;
@@ -355,6 +407,7 @@ export type ApiMethod = keyof PaperLionApi;
 export const apiMethods = [
   'openProject',
   'listSourceDocuments',
+  'listCatalogs',
   'readDocumentPair',
   'suggestTargetLanguages',
   'searchTargetLanguages',

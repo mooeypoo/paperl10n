@@ -75,7 +75,9 @@ export function fakeDocumentPlugin(
   return { manifest: fakeManifest(id), create: () => format };
 }
 
-/** Detection overrides for `fakeDocumentPlugin`. */
-export function detects(confidence: 'certain' | 'likely' | 'fallback'): Partial<DocumentFormat> {
+/** Detection overrides for `fakeDocumentPlugin` and `fakeCatalogPlugin`. */
+export function detects(
+  confidence: 'certain' | 'likely' | 'fallback',
+): Pick<DocumentFormat, 'detect'> {
   return { detect: () => Promise.resolve<Detection>({ matches: true, confidence, evidence: [] }) };
 }
