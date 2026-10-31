@@ -4,7 +4,10 @@
    Design tokens (custom properties) and fonts inherit into it from the page. Rules start with
    .cm-editor so they outrank CodeMirror's base theme (two classes, like `.ͼ2 .cm-scroller`). */
 
+/* Fills its host when the host has a height (a wide window), and scrolls inside it. */
 .cm-editor {
+  flex: 1 1 auto;
+  min-block-size: 0;
   border-radius: var(--pl-radius-md);
   font-family: var(--pl-font-text);
   font-size: 1.0625rem;

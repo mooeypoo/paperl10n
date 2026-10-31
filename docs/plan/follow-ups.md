@@ -64,3 +64,9 @@ it came from. When one is picked up, it moves into that milestone's plan and is 
   and a line mark only; the page's note, the section bars, and the "Text removed here" markers are
   text. Check what a screen reader gets in the source pane, and whether the marked lines need a
   description too.
+- **Changing the split level per document** (PRD §7.2, question 3 of the plan). Not built in S6:
+  the default rules held on the plugin fixtures and READMEs. Build it if a page on the
+  maintainer's site splits at the wrong level: the level stored in the status file next to the
+  page's fingerprints, so it's shared.
+- **Keep "Scroll together" across launches.** The full page's toggle (S6) is kept while the app
+  runs; a preference (like the theme) would keep it, if turning it off turns out to be common.

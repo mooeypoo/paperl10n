@@ -535,6 +535,114 @@ test('shows paired sections side by side, lined up at their headings', async () 
   expect(problems.console).toEqual([]);
 });
 
+test('scrolls the panes together: locked in the section view, at paired headings in the full page', async () => {
+  const project = join(profile, 'basic');
+  cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });
+  const long = 'A paragraph long enough to wrap onto several lines in its pane. '.repeat(6);
+  const longHe = 'מילים רבות '.repeat(60);
+  writeFileSync(
+    join(project, 'en/index.md'),
+    `# Welcome\n\nIntro.\n\n## Install\n\n${`${long}\n\n`.repeat(8)}## Use\n\nShort.\n\n## Configure\n\n${`${long}\n\n`.repeat(8)}`,
+  );
+  writeFileSync(
+    join(project, 'he/index.md'),
+    `# ברוכים הבאים\n\nמבוא.\n\n## התקנה\n\nקצר.\n\n## שימוש\n\n${`${longHe}\n\n`.repeat(6)}## הגדרות\n\n${`${longHe}\n\n`.repeat(6)}`,
+  );
+  await page.setViewportSize({ width: 1500, height: 900 });
+  // Each pane scrolls on its own only in a wide window (the screen must allow one).
+  expect(await page.evaluate(() => innerWidth)).toBe(1500);
+  await stubFolderDialog(project);
+  await page.getByRole('button', { name: 'Open folder…' }).click();
+  await page.locator('nav').getByText('index', { exact: true }).click();
+  const target = page.getByRole('textbox', { name: 'עברית · translation' });
+  await expect(target).toBeVisible();
+
+  /** Each pane's scroll position, and where a line reading `text` sits on screen in each (the
+   * live preview hides a heading's `##` away from the cursor). */
+  const panes = (sourceLine: string, targetLine: string) =>
+    page.evaluate(
+      ([sourceText, targetText]) =>
+        [...document.querySelectorAll('.markdown-editor')].map((host, index) => {
+          const scroller = host.shadowRoot?.querySelector('.cm-scroller');
+          const wanted = index === 0 ? sourceText : targetText;
+          const line = [...(host.shadowRoot?.querySelectorAll('.cm-line') ?? [])].find(
+            (candidate) => candidate.textContent === wanted,
+          );
+          return {
+            scrollTop: Math.round(scroller?.scrollTop ?? -1),
+            line: line === undefined ? null : Math.round(line.getBoundingClientRect().top),
+          };
+        }),
+      [sourceLine, targetLine],
+    );
+  /** Turns the mouse wheel over a pane's editor (0: the source), as a person scrolls it. */
+  const wheelOver = async (index: number, delta: number) => {
+    const box = await page.locator('.markdown-editor').nth(index).boundingBox();
+    if (box === null) throw new Error('no editor');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, delta);
+  };
+
+  // The section view: scrolling the source scrolls the translation as far, so pairs stay level.
+  // (Far enough to bring the third pair into view: lines far from view aren't drawn.)
+  await wheelOver(0, 1500);
+  await expect
+    .poll(async () => {
+      const [a, b] = await panes('Use', 'שימוש');
+      return (
+        a !== undefined &&
+        b !== undefined &&
+        a.scrollTop > 0 &&
+        a.line !== null &&
+        b.line !== null &&
+        Math.abs(a.line - b.line) <= 2
+      );
+    })
+    .toBe(true);
+
+  // The full page: scrolling the translation brings the source's paired heading level with its own.
+  await page.getByRole('button', { name: 'Full page' }).click();
+  await expect(page.getByRole('button', { name: 'Scroll together' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  // Scrolled by a person (so it leads) back to the top, where its heading is drawn (lines far
+  // from view aren't), then to the heading.
+  await wheelOver(1, -10000);
+  await expect
+    .poll(() =>
+      target.evaluate((content) => {
+        const line = [...content.querySelectorAll('.cm-line')].find(
+          (candidate) => candidate.textContent === 'שימוש',
+        );
+        line?.scrollIntoView({ block: 'start' });
+        return line !== undefined;
+      }),
+    )
+    .toBe(true);
+  await expect
+    .poll(async () => {
+      const [a, b] = await panes('Use', 'שימוש');
+      return a?.line !== null && b?.line !== null && Math.abs((a?.line ?? 0) - (b?.line ?? 0)) <= 2;
+    })
+    .toBe(true);
+
+  // Turned off, each pane scrolls on its own.
+  await page.getByRole('button', { name: 'Scroll together' }).click();
+  const before = await panes('', '');
+  await target.evaluate(async (content) => {
+    content.closest('.cm-scroller')?.scrollBy({ top: 400 });
+    // The scroll event (which the other pane would follow) comes with the next frame.
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const after = await panes('', '');
+  expect(after[1]?.scrollTop).toBeGreaterThan(before[1]?.scrollTop ?? 0);
+  expect(after[0]?.scrollTop).toBe(before[0]?.scrollTop);
+
+  expect(await problems.violations()).toEqual([]);
+  expect(problems.console).toEqual([]);
+});
+
 test('marks translations up to date, and shows a source change as outdated', async () => {
   const project = join(profile, 'basic');
   cpSync(basicFixture, project, { recursive: true, verbatimSymlinks: true });

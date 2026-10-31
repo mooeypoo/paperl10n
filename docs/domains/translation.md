@@ -99,7 +99,3 @@ never marked; empty: new in the source since, not marked yet). Written with page
 and one section per line, so diffs and merges stay small. A malformed file is an error, never
 guessed at or overwritten; a newer version is refused. Fingerprints and their normalization are
 part of the format: changing either is a new version.
-
-## Later (M3)
-
-The full-page view's scroll sync (S6).

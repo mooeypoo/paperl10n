@@ -52,6 +52,33 @@ describe('spacersFor', () => {
   ])('%s', (_description, tops, positions, expected) => {
     expect(spacersFor(tops, positions)).toEqual(expected);
   });
+
+  // Both documents end level too, so the panes can scroll as far as each other.
+  const level = { tops: [at(0, 0)], positions: [at(0, 0)] };
+  it.each([
+    [
+      'the source ends higher: a spacer after its last line',
+      level,
+      [500, 560],
+      [[{ position: 90, height: 60, end: true }], []],
+    ],
+    [
+      'the translation ends higher',
+      level,
+      [500, 470],
+      [[], [{ position: 80, height: 30, end: true }]],
+    ],
+    ['ending level, none', level, [500, 500], [[], []]],
+    [
+      // The source's second section waits 40, so its end is 40 lower already.
+      'counting the spacers above',
+      { tops: [at(0, 0), at(100, 140)], positions: [at(0, 0), at(10, 20)] },
+      [500, 520],
+      [[{ position: 10, height: 40 }], [{ position: 80, height: 20, end: true }]],
+    ],
+  ] as const)('%s', (_description, { tops, positions }, bottoms, expected) => {
+    expect(spacersFor(tops, positions, { bottoms, lengths: [90, 80] })).toEqual(expected);
+  });
 });
 
 describe('the section view in an editor', () => {

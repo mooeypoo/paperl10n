@@ -161,6 +161,27 @@ describe('the section view', () => {
     expect(editorIn(element, 1).state.doc.toString()).toBe(`עוד ${translation}`);
   });
 
+  it('offers to stop scrolling the panes together in the full page only (the section view always does)', async () => {
+    const element = await opened({
+      ...pairFor('index', source, translation),
+      sections: paired(translation),
+    });
+    expect(findButton(element, 'Scroll together')).toBeUndefined();
+    button(element, 'Full page').click();
+    await flushPromises();
+    expect(button(element, 'Scroll together').getAttribute('aria-pressed')).toBe('true');
+    button(element, 'Scroll together').click();
+    await flushPromises();
+    expect(button(element, 'Scroll together').getAttribute('aria-pressed')).toBe('false');
+    // Kept while the page is shown, across views.
+    button(element, 'Sections').click();
+    await flushPromises();
+    expect(findButton(element, 'Scroll together')).toBeUndefined();
+    button(element, 'Full page').click();
+    await flushPromises();
+    expect(button(element, 'Scroll together').getAttribute('aria-pressed')).toBe('false');
+  });
+
   it.each([
     [
       'a different number of sections',

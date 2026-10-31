@@ -367,6 +367,25 @@ async function chooseTarget(tag: string): Promise<void> {
   padding: var(--pl-space-5);
 }
 
+/* Wide enough for the panes to sit side by side: the app takes the window's height, and the
+   sidebar and the page each scroll on their own, so each pane's editor can scroll inside it (and
+   the panes scroll together, docs/plan/M3-sections.md). Narrower, the whole window scrolls.
+   (The same width as DocumentView's.) */
+@media (min-width: 64rem) {
+  .app {
+    block-size: 100vh;
+  }
+
+  .app-body {
+    flex-wrap: nowrap;
+  }
+
+  .app-sidebar,
+  .app-main {
+    overflow-y: auto;
+  }
+}
+
 .app-error,
 .app-warnings {
   padding: var(--pl-space-3) var(--pl-space-4);

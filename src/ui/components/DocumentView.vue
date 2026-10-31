@@ -14,6 +14,7 @@ import type { EditorView } from '@codemirror/view';
 import { computed, onBeforeUnmount, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import type { SaveStatus } from '../composables/use-translation-saving';
 import type { EditorSnapshot } from '../editor/markdown-editor';
+import { scrollSync } from '../editor/scroll-sync';
 import { alignSections } from '../editor/section-alignment';
 import type { SectionBar, SectionBars } from '../editor/section-status';
 import type { SourceChangeMarks } from '../editor/source-changes';
@@ -135,6 +136,18 @@ watch(
   ([source, translation, on], _previous, onCleanup) => {
     if (source !== null && translation !== null && on)
       onCleanup(alignSections(source, translation));
+  },
+  { flush: 'post' },
+);
+// Each pane scrolls on its own (in a window wide enough for both side by side), and they scroll
+// together: locked in the section view, loosely in the full page unless that's turned off. The
+// translation keeps its place when they start.
+const scrollTogether = ref(true);
+watch(
+  [sourceView, targetView, sectionView, scrollTogether],
+  ([source, translation, sectionsOn, together], _previous, onCleanup) => {
+    if (source !== null && translation !== null && (sectionsOn || together))
+      onCleanup(scrollSync(translation, source));
   },
   { flush: 'post' },
 );
@@ -317,28 +330,36 @@ defineExpose({
         <h2 class="document-title">
           <bdi>{{ document.key }}</bdi>
         </h2>
-        <div
-          v-if="current !== null && target !== null && error === null"
-          class="document-views"
-          role="group"
-          :aria-label="t('paperl10n-view-label')"
-        >
+        <div v-if="current !== null && target !== null && error === null" class="document-controls">
+          <div class="document-views" role="group" :aria-label="t('paperl10n-view-label')">
+            <button
+              type="button"
+              class="pl-button"
+              :aria-pressed="sectionView"
+              :disabled="!pairable"
+              @click="mode = 'sections'"
+            >
+              {{ t('paperl10n-view-sections') }}
+            </button>
+            <button
+              type="button"
+              class="pl-button"
+              :aria-pressed="!sectionView"
+              @click="mode = 'full'"
+            >
+              {{ t('paperl10n-view-full') }}
+            </button>
+          </div>
+          <!-- Only where the panes scroll on their own (a wide window), and only in the full page:
+               the section view always scrolls them together. -->
           <button
+            v-if="!sectionView"
             type="button"
-            class="pl-button"
-            :aria-pressed="sectionView"
-            :disabled="!pairable"
-            @click="mode = 'sections'"
+            class="pl-button document-scroll-together"
+            :aria-pressed="scrollTogether"
+            @click="scrollTogether = !scrollTogether"
           >
-            {{ t('paperl10n-view-sections') }}
-          </button>
-          <button
-            type="button"
-            class="pl-button"
-            :aria-pressed="!sectionView"
-            @click="mode = 'full'"
-          >
-            {{ t('paperl10n-view-full') }}
+            {{ t('paperl10n-scroll-together') }}
           </button>
         </div>
       </header>
@@ -506,9 +527,20 @@ defineExpose({
   gap: var(--pl-space-2) var(--pl-space-4);
 }
 
+.document-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2) var(--pl-space-4);
+}
+
 .document-views {
   display: flex;
   gap: var(--pl-space-1);
+}
+
+.document-scroll-together {
+  display: none;
 }
 
 .document-status {
@@ -547,6 +579,26 @@ defineExpose({
   grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
   gap: var(--pl-space-5);
   align-items: start;
+}
+
+/* Wide enough for the panes side by side (the same width as App's): the page fills the main
+   area, and each pane fills the height left below the page's notes, its editor scrolling inside
+   it. Many notes leave the panes a minimum, and the main area scrolls instead. */
+@media (min-width: 64rem) {
+  .document {
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
+
+  .document-panes {
+    flex: 1 1 0;
+    min-block-size: 24rem;
+    align-items: stretch;
+  }
+
+  .document-scroll-together {
+    display: inline-block;
+  }
 }
 
 .document-save {

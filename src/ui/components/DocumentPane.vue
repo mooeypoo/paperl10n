@@ -133,7 +133,12 @@ defineExpose({
 
 <style scoped>
 .pane {
+  /* A column, so that when the pane has a set height (a wide window, see DocumentView) the
+     editor takes what the header and notes leave, and scrolls inside it. */
+  display: flex;
+  flex-direction: column;
   min-inline-size: 0;
+  min-block-size: 0;
   border: 1px solid var(--pl-color-line);
   border-radius: var(--pl-radius-lg);
   background: var(--pl-color-surface);
@@ -163,7 +168,11 @@ defineExpose({
 
 .pane-notices {
   display: flex;
+  flex: 0 1 auto;
   flex-direction: column;
+  /* Many notes scroll, leaving the editor most of the pane. */
+  max-block-size: 40%;
+  overflow-y: auto;
   gap: var(--pl-space-2);
   margin-block-end: var(--pl-space-3);
 }
@@ -190,6 +199,10 @@ defineExpose({
 }
 
 .pane-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
   padding-block: var(--pl-space-4) var(--pl-space-5);
   padding-inline: var(--pl-space-5);
 }
