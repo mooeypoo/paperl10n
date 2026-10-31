@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Moriel"
+		]
+	},
+	"apihelp-example-summary": "Lists examples.",
+	"apihelp-example-param-limit": "How many examples to return."
+}
