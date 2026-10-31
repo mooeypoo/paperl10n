@@ -310,6 +310,7 @@ describe('guarded document formats', () => {
               locales: [],
               listSourceDocuments: () => Promise.reject(new Error('boom')),
               targetPathFor: boom,
+              sourceLinkTarget: boom,
             }),
           ),
       }),
@@ -320,6 +321,26 @@ describe('guarded document formats', () => {
     };
     expect(await layout.listSourceDocuments()).toEqual(failed);
     expect(layout.targetPathFor(intro, locale('he'))).toEqual(failed);
+    expect(layout.sourceLinkTarget('/he/x/', locale('he'))).toEqual(failed);
+  });
+
+  it('maps link targets with the plugin’s method, or leaves them as written without one', async () => {
+    const plain = unwrap(await openLayout({}));
+    expect(plain.sourceLinkTarget('/he/x/', locale('he'))).toEqual({ ok: true, value: '/he/x/' });
+    const mapping = unwrap(
+      await openLayout({
+        open: () =>
+          Promise.resolve(
+            ok<DocumentLayout>({
+              locales: [],
+              listSourceDocuments: () => Promise.resolve(ok([])),
+              targetPathFor: () => ok(path('he/x.md')),
+              sourceLinkTarget: (target, to) => (to === 'he' ? target.slice(3) : target),
+            }),
+          ),
+      }),
+    );
+    expect(mapping.sourceLinkTarget('/he/x/', locale('he'))).toEqual({ ok: true, value: '/x/' });
   });
 
   it('adds the plugin id to errors from layout methods', async () => {

@@ -27,6 +27,8 @@ export interface GuardedDocumentLayout {
   readonly locales: readonly ProjectLocale[];
   listSourceDocuments(): Promise<Result<readonly SourceDocument[], FormatError>>;
   targetPathFor(document: SourceDocument, target: LocaleId): Result<ProjectPath, FormatError>;
+  /** The plugin's `sourceLinkTarget`, or the target as written when it has none. */
+  sourceLinkTarget(target: string, locale: LocaleId): Result<string, FormatError>;
 }
 
 export interface RegisteredDocumentFormat {
@@ -133,6 +135,8 @@ function guardDocumentFormat(
         locales: inner.locales,
         listSourceDocuments: () => guardAsync(id, () => inner.listSourceDocuments()),
         targetPathFor: (document, target) => guard(id, () => inner.targetPathFor(document, target)),
+        sourceLinkTarget: (target, locale) =>
+          guard(id, () => ok(inner.sourceLinkTarget?.(target, locale) ?? target)),
       });
     },
   };

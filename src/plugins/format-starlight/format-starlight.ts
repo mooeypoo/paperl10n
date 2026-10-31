@@ -269,6 +269,20 @@ function createLayout(parts: LayoutParts): DocumentLayout {
       return ok(documents);
     },
 
+    // Starlight serves a locale's pages under its folder's name (`/he/guide/`), and the root
+    // locale's at the root. A link's first path segment naming the translation's folder becomes
+    // the source's. Relative links and other sites' URLs are left as written, and so is a site
+    // `base` (in the Astro config, which a plugin can't run).
+    sourceLinkTarget(target, locale) {
+      const folder = parts.folderFor(locale);
+      if (folder === '' || folder === sourceFolderName) return target;
+      const first = /^\/([^/?#]+)/.exec(target);
+      if (first?.[1]?.toLowerCase() !== folder.toLowerCase()) return target;
+      const rest = target.slice(first[0].length);
+      const path = rest.startsWith('/') ? rest : `/${rest}`;
+      return sourceFolderName === '' ? path : `/${sourceFolderName}${path}`;
+    },
+
     targetPathFor(document, target) {
       const folder = parts.folderFor(target);
       if (target !== sourceLocale && folder === sourceFolderName) {

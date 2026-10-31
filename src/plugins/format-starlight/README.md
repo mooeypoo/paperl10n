@@ -62,6 +62,16 @@ ones, or the existing locale-like folders.
 Any other option is rejected with `formats.invalid-options`. A target locale that would share the
 source locale's folder is refused with `formats.unsupported-project`.
 
+## Links in a translation (`sourceLinkTarget`)
+
+Starlight serves a locale's pages under its folder's name (`/he/guide/`), and the root locale's
+at the root. For the preservation hints, a translation's link whose first path segment is its
+locale's folder (ignoring case) is read in the source's form: that segment is dropped when the
+source is at the root (`/he/guide/` → `/guide/`), or swapped for the source's folder
+(`/he/guide/` → `/en/guide/`). Relative links, other sites, and later segments are left as
+written. A site `base` (set in the Astro config) isn't known, so links under one compare as
+written.
+
 ## Detection
 
 `certain` when an Astro config (`astro.config.mjs`, `.ts`, `.mts`, `.js`, `.cjs`) mentions
@@ -82,5 +92,6 @@ but no Starlight import. A custom `contentDir` isn't detected; pin the format in
 
 ## Not yet
 
+- A site `base` in link targets (see above).
 - Locales built in code (imported from another module, computed): set `localeFolders`.
 - A translation with a different extension than its source (`index.md` for `index.mdx`).

@@ -64,6 +64,7 @@ interface DocumentLayout {
   readonly locales: readonly ProjectLocale[];                           // the project's locales, source included
   listSourceDocuments(): Promise<Result<readonly SourceDocument[], PluginError>>;
   targetPathFor(document: SourceDocument, target: LocaleId): Result<ProjectPath, PluginError>;
+  sourceLinkTarget?(target: string, locale: LocaleId): string;            // optional (M3)
 }
 
 interface ProjectLocale {
@@ -80,6 +81,12 @@ interface FormatContext {
 
 `open` is the second phase: the plugin reads the system's own config once (VitePress's `locales`,
 for example) and returns a layout bound to this project.
+
+`sourceLinkTarget` (optional, M3) reads a link target as written in a locale's pages in the form
+the source's pages would write it (`/he/guide/` → `/guide/` on a site that serves Hebrew under
+`/he/`), so the preservation hints don't flag every localized link. Pure; anything it doesn't
+recognize comes back unchanged, and the source locale's links always do. The registry's guarded
+layout always has it: without the plugin's, a link compares as written.
 
 ### `CatalogFormat` (sketch)
 
@@ -167,7 +174,7 @@ reads what it can statically and never runs it.
   `declaredLocales` with `locales: ProjectLocale[]`; no plugins outside this repository existed
   yet.
 - Adding an optional capability, or a field to `PluginHost`, is not breaking: v1 plugins keep
-  working. Removing or changing anything a plugin can see is breaking, needs a new `apiVersion`,
+  working. (M3 added `DocumentLayout.sourceLinkTarget` this way, within version 2.) Removing or changing anything a plugin can see is breaking, needs a new `apiVersion`,
   and shows up as a diff in the frozen export list (`plugin-api.test.ts`).
 - `manifestVersion` versions the manifest's own shape, separately from the API.
 - `version` is the plugin's own semantic version.
@@ -217,7 +224,8 @@ It checks, through the registry's guarded views (so a crash reads as `formats.pl
 - options it doesn't understand produce `formats.invalid-options`;
 - per fixture: detection matches the expectation, the same way every time; source documents come
   in a stable order, with unique keys, in the source locale, and exist; each maps to itself for the
-  source locale; target paths are distinct and never a source path.
+  source locale; target paths are distinct and never a source path; link targets map without
+  failing, and the source locale's come back as written.
 
 The kit itself is tested against deliberately broken plugins (`testing/plugin-contract.test.ts`).
 Adding a check means adding a broken-plugin case for it. Round-trip checks arrive with writing
