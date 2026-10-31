@@ -329,10 +329,6 @@ const MALFORMED_SAMPLES: readonly string[] = [
   '=',
 ];
 
-function inFolder(folder: string, path: string): boolean {
-  return folder === '' || path.startsWith(`${folder}/`);
-}
-
 function keyOf(raw: string): MessageKey {
   const key = messageKey(raw);
   if (!key.ok) throw new Error(`kit: invalid message key ${raw}`);
@@ -443,7 +439,7 @@ function firstAndLast<T>(items: readonly T[]): T[] {
 
 /** Checks run against each fixture of a catalog plugin. */
 export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
-  'lists catalogs in a stable order, each folder once, with its files there': async (
+  'lists catalogs in a stable order, each key once, in the source locale, with their files': async (
     plugin,
     subject,
   ) => {
@@ -454,12 +450,11 @@ export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
     });
     const catalogs = expectOk(await layout.listCatalogs(), 'listCatalogs');
     expect(expectOk(await layout.listCatalogs(), 'listCatalogs')).toEqual(catalogs);
-    expect(new Set(catalogs.map((c) => c.folder)).size).toBe(catalogs.length);
+    expect(new Set(catalogs.map((c) => c.key)).size).toBe(catalogs.length);
     const sourceLocale = parseLocale(subject.fixture.sourceLocale);
     for (const catalog of catalogs) {
       expect(catalog.locale).toBe(sourceLocale);
       for (const path of [catalog.path, catalog.documentation ?? catalog.path]) {
-        expect(inFolder(catalog.folder, path), `${path} in ${catalog.folder}`).toBe(true);
         expect(await files.exists(path), path).toBe(true);
       }
       expect(catalog.documentation, 'documentation is its own file').not.toBe(catalog.path);
@@ -473,7 +468,7 @@ export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
     expect(new Set(locales).size).toBe(locales.length);
     expect(locales).toContain(parseLocale(subject.fixture.sourceLocale));
   },
-  'maps each catalog to its own file for the source locale, and to distinct files in its folder for the others':
+  'maps each catalog to its own file for the source locale, and to distinct new files for the others':
     async (plugin, subject) => {
       const layout = await openCatalogLayout(plugin, subject);
       const catalogs = expectOk(await layout.listCatalogs(), 'listCatalogs');
@@ -496,7 +491,6 @@ export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
         );
         for (const locale of targets) {
           const path = expectOk(layout.targetPathFor(catalog, locale), 'targetPathFor');
-          expect(inFolder(catalog.folder, path), `${locale}: ${path}`).toBe(true);
           expect(sourceFiles.has(path), `${locale}: ${path} is a source file`).toBe(false);
           expect(seen.has(path), `${locale}: ${path} is mapped twice`).toBe(false);
           seen.add(path);
@@ -578,7 +572,7 @@ export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
   'writes a new file with its messages in source order': async (plugin, subject) => {
     const { format, catalogs } = await readCatalogs(plugin, subject);
     for (const { catalog, source } of catalogs) {
-      const at = `a new file for ${catalog.folder || '(root)'}`;
+      const at = `a new file for ${catalog.key}`;
       const create = (changes: readonly MessageChange[]) =>
         expectOk(
           format.parse(expectOk(format.serialize({ source, target: null, changes }), at)),

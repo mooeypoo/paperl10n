@@ -5,6 +5,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import * as pluginApi from '#plugin-api';
 import * as pluginApiTesting from '#plugin-api/testing';
 import {
+  catalogKey,
   documentKey,
   err,
   localeId,
@@ -25,6 +26,7 @@ describe('#plugin-api', () => {
   it('exports exactly these runtime values (types are checked by the compile below)', () => {
     expect(Object.keys(pluginApi).sort()).toEqual([
       'PROJECT_ROOT',
+      'catalogKey',
       'documentKey',
       'err',
       'localeId',
@@ -72,10 +74,10 @@ describe('#plugin-api', () => {
 
   it('is enough to write a complete catalog plugin, with no other imports', () => {
     const sourceLocale = localeId('en');
-    const folder = projectPath('i18n');
+    const key = catalogKey('i18n');
     const path = projectPath('i18n/en.json');
-    if (!sourceLocale.ok || !folder.ok || !path.ok) throw new Error('test setup');
-    const catalog = { folder: folder.value, path: path.value, locale: sourceLocale.value };
+    if (!sourceLocale.ok || !key.ok || !path.ok) throw new Error('test setup');
+    const catalog = { key: key.value, path: path.value, locale: sourceLocale.value };
 
     const parse = (text: string) => {
       const key = messageKey(text);

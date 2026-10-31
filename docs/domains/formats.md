@@ -19,7 +19,8 @@ system is a new plugin plus fixtures, with zero changes to domain code.
 | Layout | Where a system keeps documents (or catalogs) for each locale. A plugin's `open()` returns one, bound to the project. |
 | Document key | The locale-independent identity of a document (`guide/getting-started`), shared by a source and its translations. Lives in `document`. |
 | Project files | The read-only view of the project a plugin gets (`ProjectFiles`). The only way a plugin sees the disk. |
-| Catalog | A messages folder with one file per locale (banana-i18n's `i18n/en.json`, `i18n/he.json`), and maybe a documentation file (`i18n/qqq.json`). Its folder is its identity, as a key is a page's. A plugin lists them as `SourceCatalog`s. |
+| Catalog | A set of messages with one file per locale, laid out the system's way, and maybe a documentation file (banana-i18n's `qqq.json`). A plugin lists them as `SourceCatalog`s. |
+| Catalog key | A catalog's locale-independent identity, as a document key is a page's, chosen by the plugin: banana-i18n's messages folder (`i18n/api`), gettext's domain (`myapp`). Lives in `catalog`. |
 | Message key | A message's identity in a catalog (`paperl10n-open-folder`): any non-empty text, as written. Lives in `catalog`. |
 | Placeholder token | A piece of a message that must survive translation unchanged: `$1`, `{{PLURAL:…}}`, `%s`, `{name}`, with its kind and what a check compares. A catalog plugin's `placeholders.scan` finds them. |
 | Plugin error | An expected failure a plugin returns (`formats.invalid-options`, `formats.unsupported-project`, `formats.invalid-catalog`, `formats.file-access`). |
@@ -110,8 +111,8 @@ interface CatalogLayout {
 }
 
 interface SourceCatalog {
-  readonly folder: ProjectPath;                                         // its identity: `i18n`, `i18n/api`
-  readonly path: ProjectPath;                                           // the source locale's file, in the folder
+  readonly key: CatalogKey;                                             // its identity: `i18n/api`, `myapp`
+  readonly path: ProjectPath;                                           // the source locale's file (or template)
   readonly locale: LocaleId;
   readonly documentation?: ProjectPath;                                 // `qqq.json`, when there is one
 }
@@ -128,10 +129,22 @@ interface CatalogEdit {
 }
 ```
 
-**A catalog is a messages folder** with one file per locale. The folder identifies it, as a key
-identifies a page; `targetPathFor` puts each locale's file in it, naming the file the system's way
-(`pt-br.json` for `pt-BR`). `locales` lists the locales the catalogs have files for (documentation
-isn't a locale). Single-file layouts (every locale in one file) aren't supported yet.
+**A catalog is a set of messages with one file per locale, identified by its key.** Where those
+files live is the system's, and only the plugin knows it:
+
+| System | Layout | Key |
+|---|---|---|
+| banana-i18n | a messages folder: `i18n/en.json`, `i18n/he.json`, `i18n/qqq.json` | the folder (`i18n/api`) |
+| gettext, side by side | `po/myapp.pot` (the template), `po/he.po` | the domain (`myapp`) |
+| gettext, a folder per locale | `locale/he/LC_MESSAGES/myapp.po`, next to other domains' files | the domain |
+
+The plugin finds which layout a project uses from its files, and `targetPathFor` always answers in
+it, naming files the system's way (`pt-br.json` for `pt-BR`), including for a locale that has no
+file yet. Where a project's files can't tell (a gettext template with no translations yet), the
+plugin takes an option (`formatOptions`); core config needs nothing. Each plugin's fixture tests
+check its paths against real project shapes; the kit checks only what holds for every layout.
+`locales` lists the locales the catalogs have files for (documentation isn't a locale). Single-file
+layouts (every locale in one file) aren't supported yet.
 
 **Writing a catalog** patches the file as read. No changes give back the text as read; setting a
 message to its current text, or removing one the file lacks, changes nothing; a changed message
@@ -234,8 +247,8 @@ reads what it can statically and never runs it.
   manifest validator accepts only versions this app supports (`SUPPORTED_API_VERSIONS`, now
   `[3]`), and the registry passes the host's version to `create(host)`. Version 2 (M1) replaced
   `declaredLocales` with `locales: ProjectLocale[]`. Version 3 (M4) reshaped `CatalogFormat` from
-  its sketch: catalogs identified by their folder, the layout's `locales`, `serialize` taking a
-  `CatalogEdit`, typed placeholder tokens, `messageKey`, and the `formats.invalid-catalog` error.
+  its sketch: catalogs identified by a key, the layout's `locales`, `serialize` taking a
+  `CatalogEdit`, typed placeholder tokens, `catalogKey` and `messageKey`, and the `formats.invalid-catalog` error.
   No plugins outside this repository existed yet, so neither kept the older version.
 - Adding an optional capability, or a field to `PluginHost`, is not breaking: plugins keep
   working. (M3 added `DocumentLayout.sourceLinkTarget` this way, within version 2.) Removing or changing anything a plugin can see is breaking, needs a new `apiVersion`,
@@ -295,11 +308,10 @@ back as written.
 
 For a **catalog plugin**, per fixture:
 
-- catalogs come in a stable order, each folder once, in the source locale, with the source and
-  documentation files existing in the folder; the locales are listed once each, the source's
-  included;
-- each catalog maps to its own file for the source locale, and to distinct files in its folder,
-  never a source or documentation file, for the others (the listed locales and `targetLocales`);
+- catalogs come in a stable order, each key once, in the source locale, with their source and
+  documentation files existing; the locales are listed once each, the source's included;
+- each catalog maps to its own file for the source locale, and to distinct files, never a source
+  or documentation file, for the others (the listed locales and `targetLocales`);
 - **round trip:** every existing file (source, each listed locale's, documentation) parses with
   unique keys, and writing it with no changes gives back its text byte for byte;
 - **writing only what changed**, on each locale's file, for its first and last message: setting it

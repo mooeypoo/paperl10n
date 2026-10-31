@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { messageKey, type Message, type MessageKey } from '#domains/catalog';
+import { catalogKey, messageKey, type Message, type MessageKey } from '#domains/catalog';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
@@ -23,6 +23,7 @@ import { fakeManifest } from './fake-plugins.ts';
 
 const EXTENSION = '.cat';
 const DOCUMENTATION = 'qqq';
+const ROOT_KEY = '.';
 
 interface Line {
   /** The line as written, without its line break. */
@@ -196,8 +197,8 @@ function nameOf(path: ProjectPath): string {
 
 /**
  * A catalog plugin for tests. By default it never detects. Its catalogs are the folders holding a
- * `<sourceLocale>.cat`, and its locales the names of every other `.cat` file (but `qqq`). Override
- * any method.
+ * `<sourceLocale>.cat`, keyed by the folder (`.` for the root), and its locales the names of every
+ * other `.cat` file (but `qqq`). Override any method.
  */
 export function fakeCatalogPlugin(
   id: string,
@@ -213,20 +214,21 @@ export function fakeCatalogPlugin(
       const listed = await context.files.list(PROJECT_ROOT, { extensions: [EXTENSION] });
       if (!listed.ok) return err({ code: 'formats.file-access', cause: listed.error });
       const all = listed.value;
-      const catalogs: SourceCatalog[] = all
-        .filter((path) => nameOf(path) === context.sourceLocale)
-        .map((path) => {
-          const folder = folderOf(path);
-          const documentation = all.find(
-            (other) => folderOf(other) === folder && nameOf(other) === DOCUMENTATION,
-          );
-          return {
-            folder,
-            path,
-            locale: context.sourceLocale,
-            ...(documentation === undefined ? {} : { documentation }),
-          };
+      const catalogs: SourceCatalog[] = [];
+      for (const path of all.filter((p) => nameOf(p) === context.sourceLocale)) {
+        const folder = folderOf(path);
+        const key = catalogKey(folder === PROJECT_ROOT ? ROOT_KEY : folder);
+        if (!key.ok) return err({ code: 'formats.unsupported-project', reason: path });
+        const documentation = all.find(
+          (other) => folderOf(other) === folder && nameOf(other) === DOCUMENTATION,
+        );
+        catalogs.push({
+          key: key.value,
+          path,
+          locale: context.sourceLocale,
+          ...(documentation === undefined ? {} : { documentation }),
         });
+      }
       const locales = new Set<LocaleId>([context.sourceLocale]);
       for (const path of all) {
         const locale = localeId(nameOf(path));
@@ -235,7 +237,7 @@ export function fakeCatalogPlugin(
       const layout: CatalogLayout = {
         locales: [...locales].sort(),
         listCatalogs: () => Promise.resolve(ok(catalogs)),
-        targetPathFor: (catalog, locale) => pathIn(catalog.folder, `${locale}${EXTENSION}`),
+        targetPathFor: (catalog, locale) => pathIn(folderOf(catalog.path), `${locale}${EXTENSION}`),
       };
       return ok(layout);
     },

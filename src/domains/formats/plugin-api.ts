@@ -12,7 +12,13 @@ export { localeId, type LocaleId } from '#kernel/locale-id';
 
 // Documents and messages
 export { documentKey, type DocumentKey, type SourceDocument } from '#domains/document';
-export { messageKey, type Message, type MessageKey } from '#domains/catalog';
+export {
+  catalogKey,
+  messageKey,
+  type CatalogKey,
+  type Message,
+  type MessageKey,
+} from '#domains/catalog';
 
 // The contracts plugins implement, and what they receive
 export type { Detection, DetectionConfidence } from './domain/detection.ts';

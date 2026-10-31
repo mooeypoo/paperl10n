@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import type { Message, MessageKey } from '#domains/catalog';
+import type { CatalogKey, Message, MessageKey } from '#domains/catalog';
 import type { LocaleId } from '#kernel/locale-id';
 import type { ProjectPath } from '#kernel/project-path';
 import type { Result } from '#kernel/result';
@@ -30,14 +30,15 @@ export interface CatalogFormat {
 }
 
 /**
- * One catalog: a messages folder, with one file per locale (banana-i18n's `i18n/en.json`,
- * `i18n/he.json`, and `i18n/qqq.json` for documentation). Its folder is its identity, as a key is
- * a page's.
+ * One catalog: a set of messages with one file per locale, laid out the system's way. banana-i18n
+ * keeps a messages folder (`i18n/en.json`, `i18n/he.json`, and `i18n/qqq.json` for
+ * documentation); gettext keeps a domain's files in a folder per locale
+ * (`locale/he/LC_MESSAGES/myapp.po`) or side by side (`po/he.po`), from a template (`.pot`).
  */
 export interface SourceCatalog {
-  /** Project-relative; unique among the project's catalogs. */
-  readonly folder: ProjectPath;
-  /** The source locale's file, inside the folder. */
+  /** Its identity, chosen by the plugin (a folder, a domain); unique among the project's catalogs. */
+  readonly key: CatalogKey;
+  /** The source locale's file (or template). */
   readonly path: ProjectPath;
   readonly locale: LocaleId;
   /** The file documenting each message (banana-i18n's `qqq.json`), when the catalog has one. */
@@ -50,9 +51,9 @@ export interface CatalogLayout {
   readonly locales: readonly LocaleId[];
   /** Every catalog, in a stable order. */
   listCatalogs(): Promise<Result<readonly SourceCatalog[], PluginError>>;
-  /** Where `catalog`'s file for `locale` lives, inside its folder. Pure: the file may not exist
-   * yet. For the source locale itself, it's the catalog's own path. Systems name these files
-   * their own way (`pt-br.json` for `pt-BR`); the plugin knows the mapping. */
+  /** Where `catalog`'s file for `locale` lives, in the layout this project uses. Pure: the file
+   * may not exist yet. For the source locale itself, it's the catalog's own path. Systems name
+   * these files their own way (`pt-br.json` for `pt-BR`); the plugin knows the mapping. */
   targetPathFor(catalog: SourceCatalog, locale: LocaleId): Result<ProjectPath, PluginError>;
 }
 

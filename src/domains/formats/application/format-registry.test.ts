@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { catalogKey } from '#domains/catalog';
 import { documentKey, type SourceDocument } from '#domains/document';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
@@ -72,7 +73,7 @@ function detecting(confidence: 'certain' | 'likely' | 'fallback'): Partial<Docum
 }
 
 const catalog: SourceCatalog = {
-  folder: path('i18n'),
+  key: unwrap(catalogKey('i18n')),
   path: path('i18n/en.json'),
   locale: locale('en'),
 };
@@ -88,7 +89,7 @@ function catalogModule(id: string, overrides: Partial<CatalogFormat> = {}): Plug
           locales: [locale('en'), locale('he')],
           listCatalogs: () => Promise.resolve(ok([catalog])),
           targetPathFor: (source: SourceCatalog, target: LocaleId) =>
-            ok(path(`${source.folder}/${target}.json`)),
+            ok(path(`${source.key}/${target}.json`)),
         }),
       ),
     parse: () => ok(parsed),

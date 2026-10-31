@@ -7,7 +7,7 @@ import { documentKey, type SourceDocument } from '#domains/document';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { projectPath, type ProjectPath } from '#kernel/project-path';
 import { err, ok } from '#kernel/result';
-import { messageKey } from '#domains/catalog';
+import { catalogKey, messageKey } from '#domains/catalog';
 import type { Detection } from '../domain/detection.ts';
 import type {
   CatalogFormat,
@@ -334,10 +334,11 @@ describe('the plugin contract kit, for catalog plugins', () => {
     expect(await runCatalog(catalogWith({}))).toEqual([]);
   });
 
-  const listing = 'lists catalogs in a stable order, each folder once, with its files there';
+  const listing =
+    'lists catalogs in a stable order, each key once, in the source locale, with their files';
   const locales = "lists the project's catalog locales once each, the source locale included";
   const mapping =
-    'maps each catalog to its own file for the source locale, and to distinct files in its folder for the others';
+    'maps each catalog to its own file for the source locale, and to distinct new files for the others';
   const roundTrip =
     'parses every catalog file with unique keys, and writes it back unchanged without changes';
   const editing = 'changes only the messages it is told to, and only where they are';
@@ -356,16 +357,16 @@ describe('the plugin contract kit, for catalog plugins', () => {
       'a listing order that changes',
       withCatalogs((c) => (flips++ % 2 ? [...c].reverse() : [...c])),
     ],
-    [listing, 'a folder listed twice', withCatalogs((c) => [...c, ...c])],
+    [listing, 'a catalog listed twice', withCatalogs((c) => [...c, ...c])],
     [
       listing,
-      'a source file that does not exist',
-      withCatalogs((c) => c.map((x) => ({ ...x, path: path(`${x.folder}/missing.cat`) }))),
+      'two catalogs with one key',
+      withCatalogs((c) => c.map((x) => ({ ...x, key: unwrap(catalogKey('same')) }))),
     ],
     [
       listing,
-      'a source file outside its folder',
-      withCatalogs((c) => c.map((x) => ({ ...x, folder: path(`elsewhere/${x.folder}`) }))),
+      'a source file that does not exist',
+      withCatalogs((c) => c.map((x) => ({ ...x, path: path(`${x.key}/missing.cat`) }))),
     ],
     [
       listing,
@@ -374,8 +375,8 @@ describe('the plugin contract kit, for catalog plugins', () => {
     ],
     [
       listing,
-      'documentation outside the folder',
-      withCatalogs((c) => c.map((x) => ({ ...x, documentation: path('i18n/qqq.cat') }))),
+      'documentation that does not exist',
+      withCatalogs((c) => c.map((x) => ({ ...x, documentation: path(`${x.key}/missing.cat`) }))),
     ],
     [
       listing,
@@ -393,7 +394,7 @@ describe('the plugin contract kit, for catalog plugins', () => {
       'the source locale mapped elsewhere',
       withCatalogLayout((good) => ({
         targetPathFor: (c, l) =>
-          l === locale('en') ? ok(path(`${c.folder}/source.cat`)) : good.targetPathFor(c, l),
+          l === locale('en') ? ok(path(`${c.key}/source.cat`)) : good.targetPathFor(c, l),
       })),
     ],
     [
@@ -405,10 +406,10 @@ describe('the plugin contract kit, for catalog plugins', () => {
     ],
     [
       mapping,
-      'a target outside the folder',
+      'two catalogs mapped to one file',
       withCatalogLayout((good) => ({
         targetPathFor: (c, l) =>
-          l === locale('fr') ? ok(path(`${c.folder}-fr.cat`)) : good.targetPathFor(c, l),
+          l === locale('fr') ? ok(path('fr.cat')) : good.targetPathFor(c, l),
       })),
     ],
     [
@@ -416,7 +417,7 @@ describe('the plugin contract kit, for catalog plugins', () => {
       'a target on the documentation',
       withCatalogLayout((good) => ({
         targetPathFor: (c, l) =>
-          l === locale('fr') ? ok(path(`${c.folder}/qqq.cat`)) : good.targetPathFor(c, l),
+          l === locale('fr') ? ok(path(`${c.key}/qqq.cat`)) : good.targetPathFor(c, l),
       })),
     ],
     [

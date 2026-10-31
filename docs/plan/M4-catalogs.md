@@ -75,7 +75,8 @@ banana-i18n keeps one JSON file per locale in a messages folder (`i18n/en.json`,
 | C. Scan only | Misses nothing obvious, but can't be corrected. |
 
 **Each messages folder is one catalog**, identified by its folder (like a page's document key), with
-one file per locale. A folder without the target's file lists every message as missing; the file is
+one file per locale. (C1 made the identity a catalog key, which banana-i18n sets to the folder; see
+its done-notes.) A folder without the target's file lists every message as missing; the file is
 written on the first save, as a new page is.
 
 Single-file layouts (all locales in one JSON, which jQuery.i18n also allows) aren't in M4.
@@ -239,10 +240,18 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
   version bump.
   - *Done-notes:* plugin API version 3 (`SUPPORTED_API_VERSIONS` is `[3]`; both built-in plugins
     moved). The contract is in [the formats doc](../domains/formats.md#catalogformat):
-    - **Catalogs by folder:** `listCatalogs` returns `SourceCatalog`s (folder, source file, locale,
-      and the documentation file when there is one), named like `SourceDocument`. The layout's
+    - **Catalogs by key:** `listCatalogs` returns `SourceCatalog`s (key, source file, locale, and
+      the documentation file when there is one), named like `SourceDocument`. The layout's
       `locales` lists the locales the catalogs have files for, and `targetPathFor(catalog, locale)`
       replaces `catalogPathFor`, naming the file the system's way (`pt-br.json`).
+    - **Revised with the maintainer: a key, not a folder.** C1 first identified a catalog by its
+      folder, as question 2 said. gettext's common layout keeps a folder per locale
+      (`locale/he/LC_MESSAGES/myapp.po`), so a catalog's files aren't in one folder, and several
+      catalogs (domains) share each folder. A `CatalogKey` (`catalogKey`, in `catalog`) is chosen
+      by the plugin: banana-i18n uses the messages folder, gettext the domain. The layout stays the
+      system's: the plugin detects it and `targetPathFor` answers in it; a plugin option covers
+      what files can't tell, and each plugin's fixtures check its real paths. The kit dropped its
+      "inside the folder" rules and checks unique keys instead.
     - **`serialize` takes a `CatalogEdit`:** the source's parsed file, the target's (or `null` for a
       new file), and the changes. The sketch's `serialize(original, changes)` couldn't place a new
       message in source order or shape a new file like the source (question 8), so the source is
@@ -264,13 +273,13 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
       kit caught a bug in it while being written (a changed last line gained a line break).
     - Tests: the kit against 36 broken catalog plugins, one or more per check; the registry's
       guarded catalog view (calls passed through, crashes, errors with the plugin id);
-      `placeholderProblems`; `messageKey`; a catalog plugin written against `#plugin-api` alone;
-      the frozen export list (`messageKey` added).
+      `placeholderProblems`; `catalogKey` and `messageKey`; a catalog plugin written against
+      `#plugin-api` alone; the frozen export list (`catalogKey` and `messageKey` added).
     - Mutation checks, each failing tests: each assertion of the catalog checks and of
-      `placeholderProblems` dropped in turn, the kit always picking document checks, the registry dropping `locales` or not guarding
-      `targetPathFor`, and `messageKey` accepting the empty key. Two survived at first and got an
-      isolating broken plugin each: targets outside their folder (the case also mapped two
-      catalogs to one file) and "set back" (nothing broke only that).
+      `placeholderProblems` dropped in turn, the kit always picking document checks, the registry
+      dropping `locales` or not guarding `targetPathFor`, and `catalogKey` or `messageKey`
+      accepting the empty key. "Set back" survived at first (nothing broke only that) and got an
+      isolating broken plugin.
 - **C2, the plugin:** `catalog-banana` (detection, layout, parse, serialize, scan) with fixtures and
   round-trip tests.
 - **C3, catalogs in the domain:** messages, status (question 3), and validation (question 5).
