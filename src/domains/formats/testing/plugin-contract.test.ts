@@ -7,12 +7,11 @@ import { documentKey, type SourceDocument } from '#domains/document';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { projectPath, type ProjectPath } from '#kernel/project-path';
 import { err, ok } from '#kernel/result';
-import { catalogKey, messageKey } from '#domains/catalog';
+import { catalogKey, messageKey, type PlaceholderToken } from '#domains/catalog';
 import type { Detection } from '../domain/detection.ts';
 import type {
   CatalogFormat,
   CatalogLayout,
-  PlaceholderToken,
   SourceCatalog,
 } from '../application/ports/catalog-format.ts';
 import type { DocumentFormat, DocumentLayout } from '../application/ports/document-format.ts';

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import type { PlaceholderToken } from '#domains/catalog';
 import type { SourceDocument } from '#domains/document';
 import type { LocaleId } from '#kernel/locale-id';
 import type { ProjectPath } from '#kernel/project-path';
@@ -11,7 +12,6 @@ import type {
   CatalogFormat,
   CatalogLayout,
   ParsedCatalog,
-  PlaceholderToken,
   SourceCatalog,
 } from './ports/catalog-format.ts';
 import type { DocumentFormat, ProjectLocale } from './ports/document-format.ts';

@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { catalogKey, messageKey, type Message, type MessageKey } from '#domains/catalog';
+import {
+  catalogKey,
+  messageKey,
+  type Message,
+  type MessageKey,
+  type PlaceholderToken,
+} from '#domains/catalog';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
@@ -9,7 +15,6 @@ import type {
   CatalogFormat,
   CatalogLayout,
   ParsedCatalog,
-  PlaceholderToken,
   SourceCatalog,
 } from '../application/ports/catalog-format.ts';
 import type { PluginError } from '../application/ports/plugin-error.ts';

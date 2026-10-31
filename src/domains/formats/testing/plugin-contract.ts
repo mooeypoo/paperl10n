@@ -6,7 +6,7 @@
 // catalog plugins the catalog checks.
 import { basename } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { messageKey, type MessageKey } from '#domains/catalog';
+import { messageKey, type MessageKey, type PlaceholderToken } from '#domains/catalog';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import type { ProjectPath } from '#kernel/project-path';
 import type { Result } from '#kernel/result';
@@ -22,7 +22,6 @@ import {
 import type {
   MessageChange,
   ParsedCatalog,
-  PlaceholderToken,
   SourceCatalog,
 } from '../application/ports/catalog-format.ts';
 import type { FormatError } from '../application/ports/plugin-error.ts';

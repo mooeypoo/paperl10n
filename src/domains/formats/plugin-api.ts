@@ -18,6 +18,8 @@ export {
   type CatalogKey,
   type Message,
   type MessageKey,
+  type PlaceholderKind,
+  type PlaceholderToken,
 } from '#domains/catalog';
 
 // The contracts plugins implement, and what they receive
@@ -36,8 +38,6 @@ export type {
   CatalogLayout,
   MessageChange,
   ParsedCatalog,
-  PlaceholderKind,
-  PlaceholderToken,
   SourceCatalog,
 } from './application/ports/catalog-format.ts';
 export type { FormatPlugin, PluginHost, PluginModule } from './application/ports/plugin-module.ts';
