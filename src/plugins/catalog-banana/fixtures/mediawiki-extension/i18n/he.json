@@ -1,0 +1,11 @@
+{
+	"@metadata": {
+		"authors": [
+			"Moriel"
+		]
+	},
+	"example-desc": "מציג [[Special:Example|דוגמאות]] {{GENDER:$1|לו|לה|להם}}.",
+	"example-link": "ראו את [https://www.mediawiki.org/wiki/Extension:Example המדריך] ב{{SITENAME}}.",
+	"example-removed": "הודעה שכבר לא קיימת במקור",
+	"example-last": "הודעה אחרונה"
+}

@@ -1,0 +1,7 @@
+{
+    "@metadata": {
+        "authors": ["Bob"]
+    },
+    "app-title": "Application exemple",
+    "app-welcome": "Bienvenue, $1 !"
+}

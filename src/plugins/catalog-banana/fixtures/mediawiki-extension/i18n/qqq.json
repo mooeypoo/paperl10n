@@ -1,0 +1,12 @@
+{
+	"@metadata": {
+		"authors": [
+			"Moriel"
+		]
+	},
+	"example-desc": "{{desc|name=Example}}\n\nParameters:\n* $1 - the user name, for GENDER",
+	"example-count": "Parameters:\n* $1 - the number of examples",
+	"example-link": "Link text to the manual.",
+	"example-bold": "Parameters:\n* $1 - user name\n* $2 - quote",
+	"example-last": "The last message."
+}

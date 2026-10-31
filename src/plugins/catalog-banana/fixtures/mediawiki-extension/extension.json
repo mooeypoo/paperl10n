@@ -1,0 +1,11 @@
+{
+	"name": "Example",
+	"version": "1.0.0",
+	"MessagesDirs": {
+		"Example": [
+			"i18n",
+			"i18n/api"
+		]
+	},
+	"manifest_version": 2
+}

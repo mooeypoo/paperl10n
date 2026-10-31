@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1 done, C2 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C2 done, C3 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -282,6 +282,41 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
       isolating broken plugin.
 - **C2, the plugin:** `catalog-banana` (detection, layout, parse, serialize, scan) with fixtures and
   round-trip tests.
+  - *Done-notes:* `src/plugins/catalog-banana/`, described in its
+    [README](../../src/plugins/catalog-banana/README.md). Not yet in `app/plugins.ts`: opening a
+    project uses only document formats until C4, so registering it now would only add detection.
+    - **Layout (question 2):** the `dirs` option, else `MessagesDirs` in `extension.json` or
+      `skin.json` (a folder or a list, in order), else a scan for folders holding the source's file
+      with `@metadata` or a `qqq.json` beside it. The catalog key is the folder (`.` for the root).
+      A locale's file is an existing one matching it ignoring case, else a lowercase name, as
+      MediaWiki writes them, unless the folder's names keep case. The scan also finds sample
+      catalogs (fixtures, examples): `dirs` leaves them out.
+    - **Reading and writing (question 8):** a strict JSON reader that keeps each member's offsets,
+      and a patcher over them: a changed value, a removal with its comma, an insertion after the
+      nearest earlier source message (with the file's indentation, `": "`, and line endings), and
+      a new file shaped like the source with empty `authors`. Escaping follows the file. No JSON
+      library: `JSON.parse` loses offsets, and no dependency was added.
+    - **Scanner (question 5's kinds):** templates and links matched with their own closing
+      brackets and scanned inside, so tokens nest by construction; `PLURAL` and `GENDER` in any
+      case, with the parameter before the first top-level `|`; external links need a URL.
+    - **Fixtures:** a MediaWiki extension (two folders through `MessagesDirs`, `pt-br.json` escaped,
+      a Hebrew file with a key the source no longer has), a jQuery.i18n app (no `qqq.json`; a CRLF,
+      fully escaped Hebrew file; a French file without a final newline), a copy of Paper Lion's own
+      messages, a folder found only through `dirs`, and a project that isn't banana-i18n. The
+      contract kit runs on all five, so Paper Lion's real messages round-trip byte for byte and
+      survive the edit checks.
+    - Tests: the JSON reader (escapes, BOM, 14 kinds of malformed text) and patcher (each kind of
+      change, each placement, styles: tabs, spaces, CRLF, one line, escaped, mixed); the scanner
+      (23 cases: nesting, unclosed syntax, crossing brackets, offsets with surrogate pairs);
+      detection, layout, options, and errors.
+    - Mutation checks, each failing tests: every rule of the reader (BOM, duplicates, strings
+      only, trailing text, control characters, escapes), the patcher (same text untouched, each
+      removal and placement, separator, indentation, escaping, final newline, empty authors), the
+      scanner (nesting, case, scanning inside, tag bounds and names, URLs), and the layout (case,
+      `MessagesDirs` forms, `qqq.json`, documentation, options, the root key). Survivors at first, each resolved: the short `\u` escape (its test text failed
+      later anyway; now isolated), the indentation taken from the first member (a test where it
+      differs), a parameter guard that can't trigger (removed: digits never cross a range's end),
+      and folder trimming that `projectPath` already does (removed).
 - **C3, catalogs in the domain:** messages, status (question 3), and validation (question 5).
 - **C4, opening and listing:** projects with either kind (question 1), catalogs in the sidebar with
   progress (question 10).

@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Moriel"
+		]
+	},
+	"apihelp-example-summary": "{{doc-apihelp-summary|example}}",
+	"apihelp-example-param-limit": "{{doc-apihelp-param|example|limit}}"
+}

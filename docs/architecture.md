@@ -133,8 +133,9 @@ guarded views: every plugin call returns a Result; a throw becomes formats.plugi
 - Every plugin runs the shared contract kit (`describePluginContract` from `#plugin-api/testing`)
   and its own fixture tests. The plugin API's export list is frozen by a test.
 - Built in: **`format-starlight`** (Astro Starlight sites, the first real system, M1) and
-  **`format-stub`** (folder per locale, the reference plugin). Others (`format-vitepress`,
-  `catalog-banana`, …) follow the same shape.
+  **`format-stub`** (folder per locale, the reference plugin). **`catalog-banana`** (banana-i18n
+  message catalogs, M4) is written and tested, and joins `app/plugins.ts` when projects open with
+  catalogs (M4 C4). Others (`format-vitepress`, `catalog-gettext`, …) follow the same shape.
 
 ## Data flow: opening a project
 

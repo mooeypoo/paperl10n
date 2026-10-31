@@ -1,0 +1,10 @@
+{
+    "@metadata": {
+        "authors": ["Alice"],
+        "last-updated": "2026-10-01",
+        "message-documentation": "qqq"
+    },
+    "app-title": "Example app",
+    "app-welcome": "Welcome, $1!",
+    "app-items": "You have {{PLURAL:$1|one item|$1 items}}."
+}

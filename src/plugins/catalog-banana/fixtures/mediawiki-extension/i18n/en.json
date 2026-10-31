@@ -1,0 +1,12 @@
+{
+	"@metadata": {
+		"authors": [
+			"Moriel"
+		]
+	},
+	"example-desc": "Shows [[Special:Example|examples]] to {{GENDER:$1|him|her|them}}.",
+	"example-count": "There {{PLURAL:$1|is one example|are $1 examples}}.",
+	"example-link": "See [https://www.mediawiki.org/wiki/Extension:Example the manual] on {{SITENAME}}.",
+	"example-bold": "<strong>$1</strong> said: \"$2\"",
+	"example-last": "Last message"
+}

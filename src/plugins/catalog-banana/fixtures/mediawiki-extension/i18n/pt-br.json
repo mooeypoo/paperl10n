@@ -1,0 +1,6 @@
+{
+	"@metadata": {
+		"authors": []
+	},
+	"example-count": "H\u00e1 {{PLURAL:$1|um exemplo|$1 exemplos}}."
+}
