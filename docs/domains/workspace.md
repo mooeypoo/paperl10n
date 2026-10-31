@@ -147,6 +147,17 @@ writes nothing.
 `createStatusUpdates()`: one per app. Changes to the same status file run one at a time, so two
 marks made at once can't both read the old file and lose one.
 
+### Checking a translation: `checkTranslation(projectId, { key, text })`
+
+`createCheckTranslation({ sessions, parser })`: checks `text`, a page's translation as it's written
+now (saved or not), against the page's source on disk, and returns the preservation hints (per
+section pair when the text's sections pair, and for the page) and both rendered lengths
+([the rules](translation.md#rules-preservation-hints-and-length)). Each side is parsed as its own
+file would be (MDX for `.mdx`), and the translation's links are read in the source's form through
+the format plugin (`sourceLinkTarget`); a mapping that fails leaves the link as written. It only
+reads. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
+`workspace.unknown-document`, `workspace.document-unreadable` (the source), or a `FormatError`.
+
 ### Target languages: `suggestTargetLanguages`, `searchTargetLanguages`, `chooseTargetLocale`
 
 What the language picker needs, all on the open project's catalog and never offering the source:

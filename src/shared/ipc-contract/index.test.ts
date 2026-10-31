@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { blockKinds, type BlockKind, type InlineKind } from '#domains/document';
+import { hintKinds } from '#domains/translation';
 import {
   apiMethods,
   blockKindDtos,
+  hintKindDtos,
   channelFor,
   errorCodes,
   type ApiMethod,
@@ -34,5 +36,9 @@ describe('the IPC contract', () => {
     expect([...blockKindDtos]).toEqual([...blockKinds]);
     expectTypeOf<BlockDto['kind']>().toEqualTypeOf<BlockKind>();
     expectTypeOf<InlineSpanDto['kind']>().toEqualTypeOf<InlineKind>();
+  });
+
+  it('has the same hint kinds as the translation domain', () => {
+    expect([...hintKindDtos]).toEqual([...hintKinds]);
   });
 });

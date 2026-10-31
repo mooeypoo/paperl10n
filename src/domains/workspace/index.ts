@@ -34,6 +34,11 @@ export {
   type SourceDocumentList,
 } from './application/list-source-documents.ts';
 export {
+  createCheckTranslation,
+  type CheckTranslation,
+  type CheckTranslationError,
+} from './application/check-translation.ts';
+export {
   createMarkExistingUpToDate,
   createMarkUpToDate,
   type MarkExistingUpToDate,

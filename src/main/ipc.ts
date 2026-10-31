@@ -52,6 +52,12 @@ export const argumentValidators: Readonly<
     isDocumentKey(request.key) &&
     isDocumentText(request.text) &&
     (request.base === null || isDocumentText(request.base)),
+  checkTranslation: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'key', 'text']) &&
+    isProjectId(request.projectId) &&
+    isDocumentKey(request.key) &&
+    isDocumentText(request.text),
   discardDraft: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key']) &&
@@ -194,6 +200,15 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
         key: request.key,
         text: request.text,
         base: request.base,
+      });
+    }
+    case 'checkTranslation': {
+      // checked by argumentValidators
+      const [request] = args as [{ projectId: string; key: string; text: string }];
+      return api.checkTranslation({
+        projectId: request.projectId,
+        key: request.key,
+        text: request.text,
       });
     }
     case 'discardDraft': {

@@ -263,6 +263,25 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     const pair = await api.readDocumentPair({ projectId, key: 'guide/getting-started' });
     expect(pair.ok && pair.value.draft).toBeNull();
   },
+  checkTranslation: async () => {
+    const { api } = rendererApi();
+    const projectId = await openBasic(api);
+    // The source: "# Welcome" and "This is the home page." The translation, unsaved, adds a link.
+    const text = '# ברוכים הבאים\n\nזה [דף](/x/) הבית.\n';
+    expect(await api.checkTranslation({ projectId, key: 'index', text })).toEqual({
+      ok: true,
+      value: {
+        page: [{ kind: 'link', missing: [], extra: ['/x/'] }],
+        sections: [[{ kind: 'link', missing: [], extra: ['/x/'] }]],
+        // Characters other than whitespace, without syntax or the link's target.
+        length: { source: 25, translation: 20 },
+      },
+    });
+    expect(await api.checkTranslation({ projectId, key: 'nope', text })).toMatchObject({
+      ok: false,
+      error: { code: 'workspace.unknown-document' },
+    });
+  },
   markUpToDate: async () => {
     const folder = await copyOfBasic();
     const { api } = rendererApi(folder);

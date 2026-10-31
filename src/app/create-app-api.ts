@@ -4,6 +4,7 @@
 import type { MarkdownParser } from '#domains/document';
 import { createFormatRegistry, type PluginModule, type RegistryError } from '#domains/formats';
 import {
+  createCheckTranslation,
   createChooseTargetLocale,
   createDiscardDraft,
   createListSourceDocuments,
@@ -68,6 +69,7 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
     discardDraft: createDiscardDraft({ sessions: deps.sessions, drafts: deps.drafts }),
     markUpToDate: createMarkUpToDate(marking),
     markExistingUpToDate: createMarkExistingUpToDate(marking),
+    checkTranslation: createCheckTranslation({ sessions: deps.sessions, parser: deps.parser }),
   });
   return ok(guardApi(handlers, deps.onUnexpected));
 }

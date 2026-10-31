@@ -72,6 +72,25 @@ Other code imports `#domains/translation`. Decisions: [M3 plan](../plan/M3-secti
 5. Places are the blocks' ranges in the source's text; a removal is before the block that
    follows it, or after the section's last block.
 
+## Rules (preservation hints and length)
+
+1. **Hints are neutral notes, never errors or status** (PRD §6): things a translation usually
+   keeps as is, when the source and the translation don't have the same ones. The things are the
+   document's preserved elements ([document](document.md)): code blocks (by language), links and
+   images (by target), components (by tag name), and frontmatter keys.
+2. **Compared as multisets, per kind:** order doesn't matter, repeats do. A hint lists the values
+   only the source has (`missing`, in the source's order) and those only the translation has
+   (`extra`). Kinds without a difference aren't listed.
+3. **Per section pair**, when the translation as written pairs with the source (the section rules
+   above), so a link moved to another section shows; a pair with only one side has none. **And for
+   the page**, always.
+4. **A translation's links are read in the source's form** through the format plugin
+   (`sourceLinkTarget`: `/he/guide/` → `/guide/`), so localized links aren't flagged. Images
+   aren't mapped. The source's links are compared as written.
+5. **Length as rendered:** characters other than whitespace, without Markdown syntax, link
+   targets, code blocks, HTML, MDX lines, link definitions, container fences, and the frontmatter.
+   Characters, not words (word counts mean little across scripts). Information only.
+
 ## The status file
 
 `version` (1) and `pages`: each document key's record, a list of sections. A section has `kind`,
@@ -83,4 +102,4 @@ part of the format: changing either is a new version.
 
 ## Later (M3)
 
-Preservation hints and the length note.
+The hints and the length note in the UI (S5d).

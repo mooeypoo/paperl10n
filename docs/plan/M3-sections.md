@@ -477,6 +477,29 @@ the last step.
         lookahead for the segment's end (the segment pattern already stops there).
   - **S5c, hints and length in main:** comparing the preserved elements per paired section (or
     the page), the rendered length, and a use case the editor calls as the translation changes.
+    - *Done-notes:* `translation/domain/hints.ts` (`preservationHints`: per kind, multiset
+      differences) and `translation/application/translation-check.ts` (`checkTranslation`: per
+      section pair when the text pairs, and for the page; `renderedLength`). In `workspace`,
+      `checkTranslation(projectId, { key, text })` reads the source from disk, parses both sides
+      as their files would be, and maps the translation's links through the plugin. A new IPC
+      method, `checkTranslation`, with `TranslationCheckDto` (`hintKindDtos` kept equal to the
+      domain's by a test). The rules are in
+      [the domain doc](../domains/translation.md#rules-preservation-hints-and-length).
+      - **Why main, and the text sent:** the hints must follow the translation as it's typed, and
+        link mapping is the plugin's (in main). The editor sends the text after typing pauses
+        (S5d); parsing a page takes milliseconds.
+      - **Pairing the text as written,** not as the page opened: hints for a section that no
+        longer pairs would be wrong. When it doesn't pair, only the page's hints come back.
+      - Tests: the hints (table: order, repeats, a link pointing elsewhere, languages, kinds kept
+        apart), the check (per section and for the page, a link moved to another section, mapped
+        links and which ones are asked about, an element starting a section, unpaired text,
+        one-sided pairs), the length (table), the use case (success, the plugin's mapping and a
+        failing one, MDX, and each error), the IPC validator, and the method end to end with the
+        real parser.
+      - Mutation checks, each failing tests: repeats ignored, no extras, images mapped, a
+        section's end inclusive, the source's links mapped, one-sided pairs hinted, code, whitespace,
+        or link targets counted in the length, a failed mapping blanked, the translation never
+        parsed as MDX, and the text unchecked at the IPC boundary.
   - **S5d, hints and length in the UI.**
 - **S6, full-page sync:** loose scroll sync and, if needed, the per-document split level.
 - **S7, docs and the PRD:** the decisions into the PRD (its own PR, for approval).

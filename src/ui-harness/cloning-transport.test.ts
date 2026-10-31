@@ -51,6 +51,11 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
     saveDocument: ({ key }) => Promise.resolve({ ok: true, value: { path: key, written: true } }),
     saveDraft: () => Promise.resolve({ ok: true, value: null }),
     discardDraft: () => Promise.resolve({ ok: true, value: null }),
+    checkTranslation: () =>
+      Promise.resolve({
+        ok: true,
+        value: { page: [], sections: null, length: { source: 0, translation: 0 } },
+      }),
     markUpToDate: () =>
       Promise.resolve({
         ok: true,

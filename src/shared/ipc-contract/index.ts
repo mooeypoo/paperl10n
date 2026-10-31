@@ -90,6 +90,34 @@ export interface SourceChangesDto {
   readonly removals: readonly { readonly offset: number; readonly side: 'before' | 'after' }[];
 }
 
+/** Kept equal to the `translation` domain's hint kinds by a test. */
+export const hintKindDtos = [
+  'code-block',
+  'link',
+  'image',
+  'component',
+  'frontmatter-key',
+] as const;
+
+/** A kind of thing a translation usually keeps as is, which it doesn't have the same of. */
+export interface PreservationHintDto {
+  readonly kind: (typeof hintKindDtos)[number];
+  /** Values (a link's target, a code block's language, a tag or key name) only the source has. */
+  readonly missing: readonly string[];
+  /** Values only the translation has (its links read in the source's form). */
+  readonly extra: readonly string[];
+}
+
+/** A translation as it's written, checked against its source. Information only, never a status. */
+export interface TranslationCheckDto {
+  /** The whole page's hints. */
+  readonly page: readonly PreservationHintDto[];
+  /** Each section pair's, by pair index, when the text's sections pair (`null`: they don't). */
+  readonly sections: readonly (readonly PreservationHintDto[])[] | null;
+  /** Each one's length as rendered, in characters other than whitespace. */
+  readonly length: { readonly source: number; readonly translation: number };
+}
+
 /** Kept equal to the `document` domain's block kinds by a test. */
 export const blockKindDtos = [
   'frontmatter',
@@ -282,6 +310,15 @@ export interface PaperLionApi {
     readonly text: string;
     readonly base: string | null;
   }): Promise<Result<null, ErrorDto>>;
+  /**
+   * Checks a page's translation as it's written now (saved or not) against its source: the
+   * preservation hints and both lengths. Reads only.
+   */
+  checkTranslation(request: {
+    readonly projectId: string;
+    readonly key: string;
+    readonly text: string;
+  }): Promise<Result<TranslationCheckDto, ErrorDto>>;
   /** Forgets a page's draft (its edits were dropped). */
   discardDraft(request: {
     readonly projectId: string;
@@ -326,6 +363,7 @@ export const apiMethods = [
   'discardDraft',
   'markUpToDate',
   'markExistingUpToDate',
+  'checkTranslation',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.
