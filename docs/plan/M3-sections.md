@@ -1,6 +1,6 @@
 # M3 discussion: sections, source changes, and hints
 
-Status: **decided (2026-10-29); S1–S4 done, S5 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-29); S1–S4 done, S5 in progress.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M3: "Section view with per-section status and progress, the full-page view, source-change
@@ -438,7 +438,29 @@ the last step.
         blocks share it (blocks never share a line, and CodeMirror merges line marks anyway).
       - A screen-reader check is in [follow-ups](follow-ups.md).
 - **S5, hints and length:** preservation hints per section (with the plugin's link mapping, if
-  chosen) and the length note.
+  chosen) and the length note.  In four PRs:
+  - **S5a, preserved elements in the parse:** the `document` domain's parse lists what a
+    translation usually keeps as is: links and images (by target), code blocks (by language),
+    components (by tag name), and frontmatter keys.
+    - *Done-notes:* `ParsedDocument.preserved` (`PreservedElement`: kind, range, and the value
+      compared), filled by the Lezer adapter from its tree, and `frontmatterKeys` in
+      `document/domain/` (YAML and TOML top-level keys, without a YAML library). The rules are in
+      [the domain doc](../domains/document.md#the-parser); an invariant (in order, inside a block)
+      joins `parsedDocumentProblems`. The test parsers return none.
+      - Tests: the parser contract (links, images, and definitions with their targets; an image in a
+        link; code blocks with and without a language; components inline and in blocks, not closing
+        tags or comments; frontmatter keys; nothing in code; offsets after a BOM and CRLF), the
+        frontmatter keys (table: nested keys, list items, comments, quoted keys, URLs in values,
+        TOML tables, CRLF), and the new invariants.
+      - Mutation checks, each failing tests: a reference-style link counted without a target,
+        images read as links, the whole info string as the language, closing tags counted,
+        offsets not shifted past the frontmatter, indented YAML keys read, indented code blocks
+        missed, and either invariant dropped. One survived and was removed as redundant: sorting
+        the elements (the tree is walked in order, after the frontmatter's keys).
+  - **S5b, link targets in the source's form:** the optional plugin method.
+  - **S5c, hints and length in main:** comparing the preserved elements per paired section (or
+    the page), the rendered length, and a use case the editor calls as the translation changes.
+  - **S5d, hints and length in the UI.**
 - **S6, full-page sync:** loose scroll sync and, if needed, the per-document split level.
 - **S7, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

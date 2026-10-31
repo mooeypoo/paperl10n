@@ -4,13 +4,14 @@
 // is mapped to our model here and nowhere else.
 import type { SyntaxNodeRef, Tree } from '@lezer/common';
 import { markdownSyntax } from '#markdown-syntax';
-import { findFrontmatter } from '../domain/frontmatter.ts';
+import { findFrontmatter, frontmatterKeys } from '../domain/frontmatter.ts';
 import type {
   Block,
   BlockKind,
   InlineKind,
   InlineSpan,
   ParsedDocument,
+  PreservedElement,
 } from '../domain/parsed-document.ts';
 import type { MarkdownParser } from '../application/ports/markdown-parser.ts';
 
@@ -96,6 +97,62 @@ function inlineSpans(tree: Tree, text: string): InlineSpan[] {
   return ordered;
 }
 
+/** An opening HTML or component tag's name: `<Badge`, `<my-el`, `<Tabs.Item`; not `</x` or `<!--`. */
+const openingTag = /<([A-Za-z][\w.:-]*)(?=[\s/>]|$)/g;
+
+/** What a translation usually keeps as is (`PreservedElement`), in order of their start. */
+function preservedElements(tree: Tree, text: string): PreservedElement[] {
+  const found: PreservedElement[] = [];
+  const add = (kind: PreservedElement['kind'], from: number, to: number, value: string) => {
+    found.push({ kind, range: { start: from, end: withoutLineEnding(text, from, to) }, value });
+  };
+  const tags = (from: number, to: number) => {
+    for (const match of text.slice(from, to).matchAll(openingTag)) {
+      const start = from + match.index;
+      add('component', start, start + match[0].length, match[1] ?? '');
+    }
+  };
+  tree.iterate({
+    enter(node) {
+      switch (node.name) {
+        case 'Link':
+        case 'Image':
+        case 'Autolink':
+        case 'LinkReference': {
+          // A reference-style use (`[text][ref]`) has no target of its own: its definition does.
+          const url = node.node.getChild('URL');
+          if (url !== null) {
+            add(
+              node.name === 'Image' ? 'image' : 'link',
+              node.from,
+              node.to,
+              text.slice(url.from, url.to),
+            );
+          }
+          return;
+        }
+        case 'FencedCode': {
+          const info = node.node.getChild('CodeInfo');
+          const language =
+            info === null ? '' : (text.slice(info.from, info.to).split(/\s/)[0] ?? '');
+          add('code-block', node.from, node.to, language);
+          return false;
+        }
+        case 'CodeBlock':
+          add('code-block', node.from, node.to, '');
+          return false;
+        case 'HTMLTag':
+        case 'HTMLBlock':
+          tags(node.from, node.to);
+          return false;
+        default:
+          return;
+      }
+    },
+  });
+  return found.filter((element) => element.range.end > element.range.start);
+}
+
 export function createLezerMarkdownParser(): MarkdownParser {
   return {
     parse(text, options): ParsedDocument {
@@ -104,7 +161,15 @@ export function createLezerMarkdownParser(): MarkdownParser {
         frontmatter === null ? [] : [{ kind: 'frontmatter', range: frontmatter.range }];
       // Parse only the body (after a BOM or frontmatter), keeping offsets into the whole text.
       const bodyStart = frontmatter?.bodyStart ?? (text.startsWith('\uFEFF') ? 1 : 0);
-      if (bodyStart >= text.length) return { text, blocks, inline: [] };
+      const keys: PreservedElement[] =
+        frontmatter === null
+          ? []
+          : frontmatterKeys(text, frontmatter).map(({ name, range }) => ({
+              kind: 'frontmatter-key',
+              range,
+              value: name,
+            }));
+      if (bodyStart >= text.length) return { text, blocks, inline: [], preserved: keys };
 
       // Lezer reports positions relative to what it parsed, so shift them into the whole text.
       const body = text.slice(bodyStart);
@@ -125,7 +190,15 @@ export function createLezerMarkdownParser(): MarkdownParser {
         .filter((span) =>
           blocks.some((b) => b.range.start <= span.range.start && span.range.end <= b.range.end),
         );
-      return { text, blocks, inline };
+      // In order: the frontmatter comes first, and the tree is walked in document order.
+      const preserved = [
+        ...keys,
+        ...preservedElements(tree, body).map((element) => ({
+          ...element,
+          range: { start: element.range.start + bodyStart, end: element.range.end + bodyStart },
+        })),
+      ];
+      return { text, blocks, inline, preserved };
     },
   };
 }

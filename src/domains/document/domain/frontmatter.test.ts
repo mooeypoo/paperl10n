@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { findFrontmatter } from './frontmatter.ts';
+import { findFrontmatter, frontmatterKeys } from './frontmatter.ts';
 
 describe('findFrontmatter', () => {
   it.each<[string, string, { format: string; range: [number, number]; bodyStart: number }]>([
@@ -33,5 +33,52 @@ describe('findFrontmatter', () => {
     ['an empty document', ''],
   ])('finds none with %s', (_description, text) => {
     expect(findFrontmatter(text)).toBeNull();
+  });
+});
+
+describe('frontmatterKeys', () => {
+  const keys = (text: string) => {
+    const location = findFrontmatter(text);
+    if (location === null) throw new Error('test setup');
+    return frontmatterKeys(text, location).map(({ name, range }) => [
+      name,
+      text.slice(range.start, range.end),
+    ]);
+  };
+
+  it.each<[string, string, string[][]]>([
+    [
+      'top-level YAML keys, not nested ones, list items, or comments',
+      '---\ntitle: Hi\nsidebar:\n  order: 2\ntags:\n  - a\n# note: x\ndescription: "a: b"\n---\n',
+      [
+        ['title', 'title'],
+        ['sidebar', 'sidebar'],
+        ['tags', 'tags'],
+        ['description', 'description'],
+      ],
+    ],
+    [
+      'quoted YAML keys, without their quotes',
+      '---\n"a b": 1\n\'c\': 2\n---\n',
+      [
+        ['a b', '"a b"'],
+        ['c', "'c'"],
+      ],
+    ],
+    ['a colon inside a value, or a URL', '---\nurl: https://x.org\n---\n', [['url', 'url']]],
+    ['not a key without a space after its colon', '---\nhttp://x\n---\n', []],
+    [
+      'TOML keys and tables',
+      '+++\ntitle = "Hi"\n[params]\n  author = "x"\n[[menu]]\n+++\n',
+      [
+        ['title', 'title'],
+        ['params', '[params]'],
+        ['menu', '[[menu]]'],
+      ],
+    ],
+    ['CRLF lines', '---\r\ntitle: Hi\r\n---\r\n', [['title', 'title']]],
+    ['an empty frontmatter', '---\n---\n', []],
+  ])('reads %s', (_description, text, expected) => {
+    expect(keys(text)).toEqual(expected);
   });
 });

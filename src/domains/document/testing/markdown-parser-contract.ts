@@ -147,6 +147,76 @@ export function describeMarkdownParserContract(name: string, parser: MarkdownPar
       expect(spansOf(document, 'markup')).toEqual(['<kbd>', '</kbd>', '<Badge text="New" />']);
     });
 
+    describe('finds what a translation usually keeps as is', () => {
+      const preserved = (text: string, mdx = false) =>
+        parse(text, mdx).preserved.map(({ kind, range, value }) => [
+          kind,
+          value,
+          text.slice(range.start, range.end),
+        ]);
+
+      it('links, images, and link definitions, with their targets', () => {
+        const text =
+          'See [the guide](/guide/), ![a logo](logo.png "Logo"), <https://x.org>, and [ref][r].\n\n' +
+          '[r]: /reference/\n';
+        expect(preserved(text)).toEqual([
+          ['link', '/guide/', '[the guide](/guide/)'],
+          ['image', 'logo.png', '![a logo](logo.png "Logo")'],
+          ['link', 'https://x.org', '<https://x.org>'],
+          ['link', '/reference/', '[r]: /reference/'],
+        ]);
+      });
+
+      it('an image inside a link, after it', () => {
+        expect(
+          preserved('[![badge](b.svg)](/ci/)\n').map(([kind, value]) => [kind, value]),
+        ).toEqual([
+          ['link', '/ci/'],
+          ['image', 'b.svg'],
+        ]);
+      });
+
+      it('code blocks with their language, and indented ones without', () => {
+        const text =
+          '```ts title="a.ts"\nlet a;\n```\n\n~~~\nplain\n~~~\n\n    indented\n\nInline `code` isn\'t.\n';
+        expect(preserved(text).map(([kind, value]) => [kind, value])).toEqual([
+          ['code-block', 'ts'],
+          ['code-block', ''],
+          ['code-block', ''],
+        ]);
+      });
+
+      it('components and HTML tags, inline or as blocks, by their opening tag', () => {
+        const text =
+          'Press <kbd>Ctrl</kbd> or <Badge text="New" />.\n\n<Card title="A">\n\nBody\n\n</Card>\n\n<!-- a comment -->\n';
+        expect(preserved(text, true).map(([kind, value]) => [kind, value])).toEqual([
+          ['component', 'kbd'],
+          ['component', 'Badge'],
+          ['component', 'Card'],
+        ]);
+      });
+
+      it('the frontmatter’s top-level keys', () => {
+        const text = '---\ntitle: Hi\nsidebar:\n  order: 1\n---\n\nText with [a link](/x/).\n';
+        expect(preserved(text).map(([kind, value]) => [kind, value])).toEqual([
+          ['frontmatter-key', 'title'],
+          ['frontmatter-key', 'sidebar'],
+          ['link', '/x/'],
+        ]);
+      });
+
+      it('nothing in a code block, and nothing in plain prose', () => {
+        expect(preserved('```md\n[not a link](/x/) <Badge />\n```\n\nJust words.\n')).toEqual([
+          ['code-block', 'md', '```md\n[not a link](/x/) <Badge />\n```'],
+        ]);
+      });
+
+      it('at offsets into the whole text, after a BOM', () => {
+        const text = '\uFEFFA [link](/x/).\r\n';
+        expect(preserved(text)).toEqual([['link', '/x/', '[link](/x/)']]);
+      });
+    });
+
     it('finds headings inside containers', () => {
       const document = parse(':::caution\n## Careful\n\nText\n:::\n');
       expect(kinds(document)).toEqual([

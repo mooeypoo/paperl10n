@@ -39,6 +39,37 @@ export function findFrontmatter(text: string): FrontmatterLocation | null {
   return null;
 }
 
+/**
+ * The frontmatter's top-level keys, in order: YAML `key:` lines without indentation, or TOML
+ * `key =` lines and `[table]` headers. Comments, list items, and nested keys aren't keys. Quoted
+ * keys are read without their quotes.
+ */
+export function frontmatterKeys(
+  text: string,
+  location: FrontmatterLocation,
+): { readonly name: string; readonly range: TextRange }[] {
+  const keys: { name: string; range: TextRange }[] = [];
+  const pattern =
+    location.format === 'yaml'
+      ? /^(?:"([^"\n]+)"|'([^'\n]+)'|([^\s#:'"\-[{][^:\n]*?)):(?=\s|$)/
+      : /^(?:\[\[?([^\]\n]+)\]\]?|"([^"\n]+)"|([A-Za-z0-9_.-]+))\s*(?:=|$)/;
+  // The lines between the fences.
+  let lineStart = nextLine(text, lineEnd(text, location.range.start));
+  const closing = location.range.end - 3;
+  while (lineStart < closing) {
+    const end = lineEnd(text, lineStart);
+    const line = text.slice(lineStart, end).replace(/\r$/, '');
+    const match = pattern.exec(line);
+    const name = (match?.[1] ?? match?.[2] ?? match?.[3])?.trim();
+    if (match !== null && name !== undefined && name !== '') {
+      const keyEnd = lineStart + match[0].replace(/\s*[:=]?$/, '').length;
+      keys.push({ name, range: { start: lineStart, end: keyEnd } });
+    }
+    lineStart = nextLine(text, end);
+  }
+  return keys;
+}
+
 function lineEnd(text: string, from: number): number {
   const newline = text.indexOf('\n', from);
   return newline === -1 ? text.length : newline;

@@ -46,12 +46,34 @@ export interface InlineSpan {
   readonly range: TextRange;
 }
 
+/** Things a translation usually keeps as they are (PRD §6, preservation hints). */
+export type PreservedKind =
+  /** A fenced or indented code block; its value is the fence's language (`''`: none). */
+  | 'code-block'
+  /** A link's target: inline, autolink, or a link definition's (`[ref]: /x`). */
+  | 'link'
+  /** An image's target. */
+  | 'image'
+  /** An opening HTML or MDX component tag, by name (`Badge`, `img`). */
+  | 'component'
+  /** A top-level frontmatter key. */
+  | 'frontmatter-key';
+
+export interface PreservedElement {
+  readonly kind: PreservedKind;
+  readonly range: TextRange;
+  /** What's compared: the language, the target, or the name (see `PreservedKind`). */
+  readonly value: string;
+}
+
 export interface ParsedDocument {
   readonly text: string;
   /** In order, never overlapping. Only whitespace (or a leading BOM) lies between them. */
   readonly blocks: readonly Block[];
   /** In order, never overlapping, each inside a block. */
   readonly inline: readonly InlineSpan[];
+  /** In order of their start, each inside a block (an image may sit inside a link). */
+  readonly preserved: readonly PreservedElement[];
 }
 
 /**
@@ -60,7 +82,7 @@ export interface ParsedDocument {
  */
 export function parsedDocumentProblems(document: ParsedDocument): string[] {
   const problems: string[] = [];
-  const { text, blocks, inline } = document;
+  const { text, blocks, inline, preserved } = document;
   let previousEnd = 0;
   blocks.forEach((block, index) => {
     const { start, end } = block.range;
@@ -89,6 +111,18 @@ export function parsedDocumentProblems(document: ParsedDocument): string[] {
       problems.push(`${where} isn't inside a block`);
     }
     previousSpanEnd = end;
+  });
+
+  let previousStart = 0;
+  preserved.forEach((element, index) => {
+    const { start, end } = element.range;
+    const where = `preserved ${String(index)} (${element.kind} [${String(start)}, ${String(end)}))`;
+    if (start < previousStart) problems.push(`${where} starts before the previous one`);
+    if (end <= start) problems.push(`${where} is empty`);
+    if (!blocks.some((block) => block.range.start <= start && end <= block.range.end)) {
+      problems.push(`${where} isn't inside a block`);
+    }
+    previousStart = start;
   });
   return problems;
 }

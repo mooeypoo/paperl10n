@@ -15,7 +15,7 @@ function parsed(...parts: [Block['kind'], string, number?][]): ParsedDocument {
     text += part;
     return depth === undefined ? { kind, range } : { kind, range, depth };
   });
-  return { text: `${text}\n`, blocks, inline: [] };
+  return { text: `${text}\n`, blocks, inline: [], preserved: [] };
 }
 
 describe('sectionFingerprints', () => {
@@ -124,7 +124,7 @@ describe('documentChanges', () => {
   });
 
   it('places a removal at the start when every section was removed', () => {
-    const empty = { text: '', blocks: [], inline: [] };
+    const empty = { text: '', blocks: [], inline: [], preserved: [] };
     expect(documentChanges(empty, record)).toEqual({
       blocks: [],
       removals: [{ offset: 0, side: 'before' }],
