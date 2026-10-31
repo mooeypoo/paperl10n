@@ -23,7 +23,7 @@ async function openWith(
   settings: object = { targetLocale: 'he' },
   drafts: DraftStore = new InMemoryDraftStore(),
 ) {
-  const registry = createFormatRegistry([plugin], { apiVersion: 2 });
+  const registry = createFormatRegistry([plugin], { apiVersion: 3 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opened = await createOpenProject({
@@ -136,7 +136,7 @@ describe('listSourceDocuments', () => {
   });
 
   it('passes a target path error through, with the format id', async () => {
-    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 2 });
+    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 3 });
     if (base.kind !== 'document') throw new Error('test setup');
     const plugin = fakeDocumentPlugin('format-fake', {
       ...detects('likely'),

@@ -7,12 +7,12 @@ import { compareMatches, type Detection, type DetectionConfidence } from '../dom
 import type { FormatId } from '../domain/format-id.ts';
 import { parsePluginManifest, type PluginManifest } from '../domain/plugin-manifest.ts';
 import type {
+  CatalogEdit,
   CatalogFormat,
   CatalogLayout,
-  CatalogLocation,
-  MessageChange,
   ParsedCatalog,
   PlaceholderToken,
+  SourceCatalog,
 } from './ports/catalog-format.ts';
 import type { DocumentFormat, ProjectLocale } from './ports/document-format.ts';
 import type { FormatContext } from './ports/format-context.ts';
@@ -39,8 +39,9 @@ export interface RegisteredDocumentFormat {
 }
 
 export interface GuardedCatalogLayout {
-  listCatalogs(): Promise<Result<readonly CatalogLocation[], FormatError>>;
-  catalogPathFor(target: LocaleId): Result<ProjectPath, FormatError>;
+  readonly locales: readonly LocaleId[];
+  listCatalogs(): Promise<Result<readonly SourceCatalog[], FormatError>>;
+  targetPathFor(catalog: SourceCatalog, locale: LocaleId): Result<ProjectPath, FormatError>;
 }
 
 export interface RegisteredCatalogFormat {
@@ -48,11 +49,8 @@ export interface RegisteredCatalogFormat {
   readonly manifest: PluginManifest;
   detect(files: ProjectFiles): Promise<Result<Detection, FormatError>>;
   open(context: FormatContext): Promise<Result<GuardedCatalogLayout, FormatError>>;
-  parse(text: string, location: CatalogLocation): Result<ParsedCatalog, FormatError>;
-  serialize(
-    original: ParsedCatalog,
-    changes: readonly MessageChange[],
-  ): Result<string, FormatError>;
+  parse(text: string): Result<ParsedCatalog, FormatError>;
+  serialize(edit: CatalogEdit): Result<string, FormatError>;
   scanPlaceholders(text: string): Result<readonly PlaceholderToken[], FormatError>;
 }
 
@@ -156,12 +154,13 @@ function guardCatalogFormat(
       if (!layout.ok) return layout;
       const inner: CatalogLayout = layout.value;
       return ok({
+        locales: inner.locales,
         listCatalogs: () => guardAsync(id, () => inner.listCatalogs()),
-        catalogPathFor: (target) => guard(id, () => inner.catalogPathFor(target)),
+        targetPathFor: (catalog, locale) => guard(id, () => inner.targetPathFor(catalog, locale)),
       });
     },
-    parse: (text, location) => guard(id, () => plugin.parse(text, location)),
-    serialize: (original, changes) => guard(id, () => plugin.serialize(original, changes)),
+    parse: (text) => guard(id, () => plugin.parse(text)),
+    serialize: (edit) => guard(id, () => plugin.serialize(edit)),
     scanPlaceholders: (text) => guard(id, () => ok(plugin.placeholders.scan(text))),
   };
 }
@@ -218,7 +217,7 @@ export function createFormatRegistry(
       });
       continue;
     }
-    // Plugin API v1 has no optional capabilities, so there's nothing to check yet. When one is
+    // The plugin API has no optional capabilities yet, so there's nothing to check yet. When one is
     // added (with its method), check here that a plugin declaring it implements it:
     // problem 'missing-capability'.
 

@@ -38,7 +38,7 @@ async function openWith(
   plugin: PluginModule = fakeDocumentPlugin('format-fake', detects('likely')),
   settings: object = { targetLocale: 'he' },
 ) {
-  const registry = createFormatRegistry([plugin], { apiVersion: 2 });
+  const registry = createFormatRegistry([plugin], { apiVersion: 3 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opened = await createOpenProject({
@@ -60,7 +60,7 @@ async function openWith(
 
 /** The fake plugin, with its layout's link mapping replaced. */
 function mapping(sourceLinkTarget: (target: string) => string): PluginModule {
-  const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 2 });
+  const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 3 });
   if (base.kind !== 'document') throw new Error('test setup');
   return fakeDocumentPlugin('format-fake', {
     ...detects('likely'),
@@ -195,7 +195,7 @@ describe('checkTranslation', () => {
       error: { code: 'formats.unsupported-project', reason: 'no docs', formatId: 'format-fake' },
     });
 
-    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 2 });
+    const base = fakeDocumentPlugin('format-fake').create({ apiVersion: 3 });
     if (base.kind !== 'document') throw new Error('test setup');
     const noTarget = fakeDocumentPlugin('format-fake', {
       ...detects('likely'),

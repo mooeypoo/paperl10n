@@ -20,7 +20,7 @@ const path = (raw: string) => {
 /** Opens a project (en → he, one translated page) and returns saving and a way to read files. */
 async function opened(tree: FileTree = {}, settings: object = { targetLocale: 'he' }) {
   const registry = createFormatRegistry([fakeDocumentPlugin('format-fake', detects('likely'))], {
-    apiVersion: 2,
+    apiVersion: 3,
   });
   if (!registry.ok) throw new Error('test setup: registry');
   const drafts = new InMemoryDraftStore();

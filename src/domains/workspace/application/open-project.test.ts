@@ -32,7 +32,7 @@ const catalogBanana: PluginModule = {
 };
 
 function registryOf(plugins: PluginModule[]): FormatRegistry {
-  const registry = createFormatRegistry(plugins, { apiVersion: 2 });
+  const registry = createFormatRegistry(plugins, { apiVersion: 3 });
   if (!registry.ok) throw new Error(`test setup: ${JSON.stringify(registry.error)}`);
   return registry.value;
 }

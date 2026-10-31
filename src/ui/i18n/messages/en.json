@@ -22,6 +22,7 @@
   "paperl10n-error-workspace-unknown-project": "That project isn't open anymore. Open it again.",
   "paperl10n-error-formats-invalid-options": "The options for $1 are invalid: $2",
   "paperl10n-error-formats-unsupported-project": "$1 can't work with this project: $2",
+  "paperl10n-error-formats-invalid-catalog": "$1 can't read this catalog file: $2",
   "paperl10n-error-formats-file-access": "$1 couldn't read $2 ($3).",
   "paperl10n-error-formats-plugin-failed": "The $1 plugin failed unexpectedly: $2",
   "paperl10n-error-internal-unexpected": "Something went wrong inside Paper Lion. Please report it.",

@@ -4,3 +4,4 @@
 export { InMemoryProjectFiles, type FileTree } from '../adapters/in-memory-project-files.ts';
 export { describeProjectFilesContract } from './project-files-contract.ts';
 export { detects, fakeDocumentPlugin, fakeManifest } from './fake-plugins.ts';
+export { fakeCatalogPlugin } from './fake-catalog-plugin.ts';

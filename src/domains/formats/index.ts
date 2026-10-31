@@ -27,7 +27,16 @@ export type {
   DocumentLayout,
   ProjectLocale,
 } from './application/ports/document-format.ts';
-export type { CatalogFormat, CatalogLayout } from './application/ports/catalog-format.ts';
+export type {
+  CatalogEdit,
+  CatalogFormat,
+  CatalogLayout,
+  MessageChange,
+  ParsedCatalog,
+  PlaceholderKind,
+  PlaceholderToken,
+  SourceCatalog,
+} from './application/ports/catalog-format.ts';
 export type { FormatPlugin, PluginHost, PluginModule } from './application/ports/plugin-module.ts';
 export {
   createFormatRegistry,

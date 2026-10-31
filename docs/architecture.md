@@ -246,7 +246,7 @@ And for the work ahead:
 | Pairing by section, status (missing/draft/translated/outdated), source-change tracking | done in M3: `translation/domain/`, read from the project by `workspace` |
 | Drafts (unsaved edits) | done in M2: the `DraftStore` port in `workspace/application/`, adapters in `workspace/adapters/` (the use cases that need it are workspace's, so no new domain edge) |
 | Sidecar state (status, source-change tracking) | done in M3: the status file (`.paperl10n/status/<locale>.json`), read and written through `workspace`'s `ProjectFiles` and `ProjectWriter` (no new port) |
-| Placeholder/plural validation | `catalog/domain/`, using the plugin's `placeholders.scan` |
+| Placeholder/plural validation | `catalog/domain/`, over the typed tokens of the plugin's `placeholders.scan` |
 | Atomic file writes | a `ProjectWriter` port in `formats/application/`, an adapter beside `node-project-files` |
 | File watching (external changes) | a port in `workspace/application/`, an `fs.watch` adapter |
 | The locale picker and language data | `locale/` (designed first: [`plan/M1-languages.md`](plan/M1-languages.md)) |

@@ -21,7 +21,7 @@ const source = 'Intro\n## A\na\n## B\nb\n';
 
 async function openWith(tree: FileTree, settings: object = { targetLocale: 'he' }) {
   const registry = createFormatRegistry([fakeDocumentPlugin('format-fake', detects('likely'))], {
-    apiVersion: 2,
+    apiVersion: 3,
   });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);

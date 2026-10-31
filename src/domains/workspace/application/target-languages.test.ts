@@ -12,7 +12,7 @@ import { createSearchTargetLanguages, createSuggestTargetLanguages } from './tar
 async function opened(settings: Record<string, unknown> = { targetLocale: 'he' }) {
   const registry = createFormatRegistry(
     [fakeDocumentPlugin('format-fake', detects('likely'), ['he', 'qaa-x-folder'])],
-    { apiVersion: 2 },
+    { apiVersion: 3 },
   );
   if (!registry.ok) throw new Error('test setup: registry');
   const sessions = new InMemoryProjectSessions(randomUUID);

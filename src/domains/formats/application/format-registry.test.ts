@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { catalogKey } from '#domains/catalog';
 import { documentKey, type SourceDocument } from '#domains/document';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
 import { err, ok } from '#kernel/result';
 import { InMemoryProjectFiles } from '../adapters/in-memory-project-files.ts';
 import type { Detection } from '../domain/detection.ts';
-import type { CatalogFormat, CatalogLocation, ParsedCatalog } from './ports/catalog-format.ts';
+import type { CatalogFormat, ParsedCatalog, SourceCatalog } from './ports/catalog-format.ts';
 import type { DocumentFormat, DocumentLayout } from './ports/document-format.ts';
 import type { FormatContext } from './ports/format-context.ts';
 import type { PluginHost, PluginModule } from './ports/plugin-module.ts';
 import { createFormatRegistry, type FormatRegistry } from './format-registry.ts';
 
-const host: PluginHost = { apiVersion: 2 };
+const host: PluginHost = { apiVersion: 3 };
 
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: unknown }): T {
   if (!result.ok) throw new Error(`test setup: ${JSON.stringify(result.error)}`);
@@ -30,7 +31,7 @@ function manifest(
     id,
     packageName: `@paperl10n/${id}`,
     kind,
-    apiVersion: 2,
+    apiVersion: 3,
     version: '0.1.0',
     displayName: id,
     description: 'test plugin',
@@ -71,12 +72,12 @@ function detecting(confidence: 'certain' | 'likely' | 'fallback'): Partial<Docum
   return { detect: () => Promise.resolve<Detection>({ matches: true, confidence, evidence: [] }) };
 }
 
-const location: CatalogLocation = {
+const catalog: SourceCatalog = {
+  key: unwrap(catalogKey('i18n')),
   path: path('i18n/en.json'),
   locale: locale('en'),
-  role: 'messages',
 };
-const parsed: ParsedCatalog = { location, messages: [], source: '{}' };
+const parsed: ParsedCatalog = { text: '{}', messages: [] };
 
 function catalogModule(id: string, overrides: Partial<CatalogFormat> = {}): PluginModule {
   const plugin: CatalogFormat = {
@@ -85,13 +86,15 @@ function catalogModule(id: string, overrides: Partial<CatalogFormat> = {}): Plug
     open: () =>
       Promise.resolve(
         ok({
-          listCatalogs: () => Promise.resolve(ok([location])),
-          catalogPathFor: (target: LocaleId) => ok(path(`i18n/${target}.json`)),
+          locales: [locale('en'), locale('he')],
+          listCatalogs: () => Promise.resolve(ok([catalog])),
+          targetPathFor: (source: SourceCatalog, target: LocaleId) =>
+            ok(path(`${source.key}/${target}.json`)),
         }),
       ),
     parse: () => ok(parsed),
     serialize: () => ok('{}'),
-    placeholders: { scan: () => [{ text: '$1', start: 0, end: 2 }] },
+    placeholders: { scan: () => [{ kind: 'parameter', text: '$1', start: 0, end: 2 }] },
     ...overrides,
   };
   return { manifest: manifest(id), create: () => plugin };
@@ -375,6 +378,7 @@ describe('guarded document formats', () => {
 });
 
 describe('guarded catalog formats', () => {
+  const edit = { source: parsed, target: null, changes: [] };
   function catalogFormat(overrides: Partial<CatalogFormat>) {
     const format = registry([catalogModule('catalog-a', overrides)]).find('catalog-a');
     if (format?.kind !== 'catalog') throw new Error('test setup');
@@ -385,13 +389,17 @@ describe('guarded catalog formats', () => {
     const format = catalogFormat({});
     expect(await format.detect(files)).toEqual({ ok: true, value: { matches: false } });
     const layout = unwrap(await format.open(context));
-    expect(await layout.listCatalogs()).toEqual({ ok: true, value: [location] });
-    expect(layout.catalogPathFor(locale('he'))).toEqual({ ok: true, value: 'i18n/he.json' });
-    expect(format.parse('{}', location)).toEqual({ ok: true, value: parsed });
-    expect(format.serialize(parsed, [])).toEqual({ ok: true, value: '{}' });
+    expect(layout.locales).toEqual(['en', 'he']);
+    expect(await layout.listCatalogs()).toEqual({ ok: true, value: [catalog] });
+    expect(layout.targetPathFor(catalog, locale('he'))).toEqual({
+      ok: true,
+      value: 'i18n/he.json',
+    });
+    expect(format.parse('{}')).toEqual({ ok: true, value: parsed });
+    expect(format.serialize(edit)).toEqual({ ok: true, value: '{}' });
     expect(format.scanPlaceholders('$1')).toEqual({
       ok: true,
-      value: [{ text: '$1', start: 0, end: 2 }],
+      value: [{ kind: 'parameter', text: '$1', start: 0, end: 2 }],
     });
   });
 
@@ -401,29 +409,33 @@ describe('guarded catalog formats', () => {
       error: { code: 'formats.plugin-failed', formatId: 'catalog-a', reason: 'boom' },
     };
     const format = catalogFormat({ parse: boom, serialize: boom, placeholders: { scan: boom } });
-    expect(format.parse('{}', location)).toEqual(failed);
-    expect(format.serialize(parsed, [])).toEqual(failed);
+    expect(format.parse('{}')).toEqual(failed);
+    expect(format.serialize(edit)).toEqual(failed);
     expect(format.scanPlaceholders('$1')).toEqual(failed);
 
     const crashingLayout = catalogFormat({
       open: () =>
         Promise.resolve(
-          ok({ listCatalogs: () => Promise.reject(new Error('boom')), catalogPathFor: boom }),
+          ok({
+            locales: [],
+            listCatalogs: () => Promise.reject(new Error('boom')),
+            targetPathFor: boom,
+          }),
         ),
     });
     const layout = unwrap(await crashingLayout.open(context));
     expect(await layout.listCatalogs()).toEqual(failed);
-    expect(layout.catalogPathFor(locale('he'))).toEqual(failed);
+    expect(layout.targetPathFor(catalog, locale('he'))).toEqual(failed);
     expect(await catalogFormat({ open: boom }).open(context)).toEqual(failed);
   });
 
   it('adds the plugin id to errors the plugin returns', () => {
     const format = catalogFormat({
-      parse: () => err({ code: 'formats.unsupported-project', reason: 'not JSON' }),
+      parse: () => err({ code: 'formats.invalid-catalog', reason: 'not JSON' }),
     });
-    expect(format.parse('x', location)).toEqual({
+    expect(format.parse('x')).toEqual({
       ok: false,
-      error: { code: 'formats.unsupported-project', reason: 'not JSON', formatId: 'catalog-a' },
+      error: { code: 'formats.invalid-catalog', reason: 'not JSON', formatId: 'catalog-a' },
     });
   });
 });

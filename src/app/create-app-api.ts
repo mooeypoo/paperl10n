@@ -40,7 +40,7 @@ export interface AppDependencies {
 
 /** Builds the full API. Fails only if the plugin set is broken, which is a bug to fix at startup. */
 export function createAppApi(deps: AppDependencies): Result<PaperLionApi, RegistryError> {
-  const registry = createFormatRegistry(deps.plugins, { apiVersion: 2 });
+  const registry = createFormatRegistry(deps.plugins, { apiVersion: 3 });
   if (!registry.ok) return registry;
   const statusUpdates = createStatusUpdates();
   const marking = { sessions: deps.sessions, parser: deps.parser, updates: statusUpdates };
