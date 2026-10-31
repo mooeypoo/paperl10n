@@ -60,3 +60,7 @@ it came from. When one is picked up, it moves into that milestone's plan and is 
   editor's text box, so a screen reader reads them with its content. Check with NVDA or Orca;
   if it reads badly, move the status out of the text box (an `aria-hidden` bar, with the
   buttons' names carrying the status).
+- **Source changes with a screen reader.** The changed and new blocks (S4b) are marked by a tint
+  and a line mark only; the page's note, the section bars, and the "Text removed here" markers are
+  text. Check what a screen reader gets in the source pane, and whether the marked lines need a
+  description too.

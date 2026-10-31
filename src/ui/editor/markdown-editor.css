@@ -16,13 +16,17 @@
   outline-offset: var(--pl-space-1);
 }
 
+/* The scroller reaches a little into the space before the text, and the content gives it back,
+   so the text stays put while a line's mark (source changes, below) has room there unclipped. */
 .cm-editor .cm-scroller {
+  margin-inline-start: calc(-1 * var(--pl-space-2));
   font-family: inherit;
   line-height: inherit;
 }
 
 .cm-editor .cm-content {
   padding-block: 0;
+  padding-inline-start: var(--pl-space-2);
   caret-color: var(--pl-color-ink);
 }
 
@@ -193,4 +197,34 @@
 .cm-section-bar-mark:disabled {
   cursor: default;
   opacity: 0.6;
+}
+
+/* What changed in the source since it was marked up to date (source-changes.ts): a tint, and a
+   mark at the inline start, solid for a changed block and dashed for a new one. */
+/* The mark sits in the room before the text, so marked lines' text stays where it was. */
+.cm-editor .cm-source-change {
+  margin-inline-start: calc(-1 * var(--pl-space-2));
+  padding-inline-start: calc(var(--pl-space-2) - 3px);
+  border-inline-start: 3px solid var(--pl-color-warn);
+  background: var(--pl-color-warn-surface);
+}
+
+.cm-editor .cm-source-change[data-change='added'] {
+  border-inline-start-style: dashed;
+}
+
+.cm-source-removed {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
+  padding-block: var(--pl-space-1);
+  color: var(--pl-color-warn);
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+}
+
+.cm-source-removed::after {
+  content: '';
+  flex: 1;
+  border-block-start: 1px dashed var(--pl-color-warn);
 }

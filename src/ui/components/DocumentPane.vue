@@ -5,6 +5,7 @@ import type { EditorView } from '@codemirror/view';
 import { computed, ref, useId, useTemplateRef } from 'vue';
 import type { LinkEdit } from '../editor/link-editing';
 import type { SectionBars } from '../editor/section-status';
+import type { SourceChangeMarks } from '../editor/source-changes';
 import type { EditorSnapshot } from '../editor/markdown-editor';
 import { isolated, useI18n } from '../i18n/i18n';
 import LinkDialog from './LinkDialog.vue';
@@ -30,8 +31,17 @@ withDefaults(
     sectionsShown?: boolean;
     /** Each section's status bar in the section view (see MarkdownEditor). */
     sectionBars?: SectionBars | null;
+    /** What changed in the source since it was marked (see MarkdownEditor). */
+    sourceChanges?: SourceChangeMarks | null;
   }>(),
-  { saved: true, startable: false, sectionStarts: null, sectionsShown: false, sectionBars: null },
+  {
+    saved: true,
+    startable: false,
+    sectionStarts: null,
+    sectionsShown: false,
+    sectionBars: null,
+    sourceChanges: null,
+  },
 );
 const emit = defineEmits<{
   start: [];
@@ -110,6 +120,7 @@ defineExpose({
         :section-starts="sectionStarts"
         :sections-shown="sectionsShown"
         :section-bars="sectionBars"
+        :source-changes="sourceChanges"
         @dirty="(dirty) => emit('dirty', dirty)"
         @change="emit('change')"
         @edit-link="(edit) => (linkEdit = edit)"

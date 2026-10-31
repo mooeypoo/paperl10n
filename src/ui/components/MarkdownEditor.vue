@@ -13,6 +13,7 @@ import {
 import { editorPosition } from '../editor/file-text';
 import type { LinkEdit } from '../editor/link-editing';
 import type { SectionBars } from '../editor/section-status';
+import type { SourceChangeMarks } from '../editor/source-changes';
 
 const props = defineProps<{
   /** The file's exact text. */
@@ -38,6 +39,8 @@ const props = defineProps<{
   sectionsShown?: boolean;
   /** Each section's status bar, by pair index, in the section view. */
   sectionBars?: SectionBars | null;
+  /** What changed in this source since it was marked, at offsets into `file` (as main read it). */
+  sourceChanges?: SourceChangeMarks | null;
 }>();
 /** `dirty`: the text has unsaved changes (sent on mount, and whenever that changes). `change`:
  * after each edit. `editLink`: show a form for a link, and answer through the request. */
@@ -79,6 +82,25 @@ const setSectionStarts = () => {
   );
   editor?.showSections(props.sectionsShown);
   editor?.setSectionBars(props.sectionBars ?? null);
+  setSourceChanges();
+};
+
+const setSourceChanges = () => {
+  const changes = props.sourceChanges ?? null;
+  const at = (offset: number) => editorPosition(props.file, offset);
+  editor?.setSourceChanges(
+    changes === null
+      ? null
+      : {
+          ...changes,
+          blocks: changes.blocks.map(({ kind, from, to }) => ({
+            kind,
+            from: at(from),
+            to: at(to),
+          })),
+          removals: changes.removals.map(({ at: offset, side }) => ({ at: at(offset), side })),
+        },
+  );
 };
 
 onMounted(() => {
@@ -106,6 +128,7 @@ watch(
     editor?.setSectionBars(bars ?? null);
   },
 );
+watch(() => props.sourceChanges, setSourceChanges);
 // Switching views keeps the starts where edits moved them.
 watch(
   () => props.sectionsShown,

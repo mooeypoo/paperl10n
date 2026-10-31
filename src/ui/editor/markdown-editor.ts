@@ -19,6 +19,7 @@ import { linkLabel } from './markdown-links.ts';
 import { isDirty, markSaved, savePointChanged, savePointExtension } from './save-point.ts';
 import { headingCount, sectionView, setSectionAnchors, showSections } from './section-alignment.ts';
 import { sectionStatus, setSectionBars, type SectionBars } from './section-status.ts';
+import { setSourceChanges, sourceChanges, type SourceChangeMarks } from './source-changes.ts';
 
 /** How the editable area is presented: changing it keeps the text and its history. */
 export interface EditorPresentation {
@@ -70,6 +71,8 @@ export interface MarkdownEditor {
   showSections(shown: boolean): void;
   /** Each section's status bar in the section view (`null`: none). */
   setSectionBars(bars: SectionBars | null): void;
+  /** What changed in this source since it was marked up to date (`null`: nothing shown). */
+  setSourceChanges(changes: SourceChangeMarks | null): void;
   /** How many top-level headings of `depth` the text has now (`null`: not parsed that far). */
   headingCount(depth: number): number | null;
   destroy(): void;
@@ -94,6 +97,7 @@ export function editorState(options: MarkdownEditorOptions): EditorState {
       livePreview,
       sectionView,
       sectionStatus,
+      sourceChanges,
       linkEditing((edit) => onEditLink?.(edit)),
       history(),
       keymap.of([...defaultKeymap, ...historyKeymap]),
@@ -143,6 +147,9 @@ export function createMarkdownEditor(
     },
     setSectionBars: (bars) => {
       view.dispatch({ effects: setSectionBars.of(bars) });
+    },
+    setSourceChanges: (changes) => {
+      view.dispatch({ effects: setSourceChanges.of(changes) });
     },
     showSections: (on) => {
       view.dispatch({ effects: showSections.of(on) });
