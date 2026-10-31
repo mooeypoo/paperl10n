@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Shared fixtures for UI tests: a fake client with scripted answers.
 import type {
+  CatalogDetailDto,
   CatalogListDto,
   DocumentPairDto,
   DocumentStatusDto,
@@ -120,6 +121,8 @@ export function fakeClient(
     list?: ListAnswer[];
     /** The answer to listing catalogs (default: none). */
     catalogs?: Result<CatalogListDto, ErrorDto>;
+    /** Answers to reading a catalog, by its key. */
+    readCatalog?: Readonly<Record<string, Result<CatalogDetailDto, ErrorDto>>>;
     /** Answers by document key; a key without one gets a plain pair. */
     read?: Readonly<Record<string, ReadAnswer>>;
     /** The picker's sections before typing (default: Hebrew in the project, French suggested). */
@@ -169,6 +172,13 @@ export function fakeClient(
           value: { catalogs: [], statusFile: { exists: false, problem: null } },
         },
       );
+    },
+    readCatalog: ({ projectId, key }) => {
+      calls.push(`readCatalog:${projectId}:${key}`);
+      const answer = answers.readCatalog?.[key];
+      return answer === undefined
+        ? Promise.reject(new Error(`no scripted catalog "${key}"`))
+        : Promise.resolve(structuredClone(answer));
     },
     readDocumentPair: ({ projectId, key }) => {
       calls.push(`readDocumentPair:${projectId}:${key}`);

@@ -19,6 +19,13 @@ export const argumentValidators: Readonly<
     rest.length === 0 && hasExactly(request, ['projectId']) && isProjectId(request.projectId),
   listCatalogs: ([request, ...rest]) =>
     rest.length === 0 && hasExactly(request, ['projectId']) && isProjectId(request.projectId),
+  readCatalog: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'key']) &&
+    isProjectId(request.projectId) &&
+    typeof request.key === 'string' &&
+    request.key.length > 0 &&
+    request.key.length <= 1000,
   readDocumentPair: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key']) &&
@@ -159,6 +166,10 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
     case 'listCatalogs': {
       const [request] = args as [{ projectId: string }]; // checked by argumentValidators
       return api.listCatalogs({ projectId: request.projectId });
+    }
+    case 'readCatalog': {
+      const [request] = args as [{ projectId: string; key: string }]; // checked by argumentValidators
+      return api.readCatalog({ projectId: request.projectId, key: request.key });
     }
     case 'readDocumentPair': {
       const [request] = args as [{ projectId: string; key: string }]; // checked by argumentValidators

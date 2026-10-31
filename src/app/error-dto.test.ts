@@ -70,6 +70,10 @@ const cases: [AppError, ErrorDto][] = [
     },
   ],
   [
+    { code: 'workspace.unknown-catalog', key: 'i18n' },
+    { code: 'workspace.unknown-catalog', params: { key: 'i18n' }, details: [] },
+  ],
+  [
     { code: 'workspace.unknown-project' },
     { code: 'workspace.unknown-project', params: {}, details: [] },
   ],

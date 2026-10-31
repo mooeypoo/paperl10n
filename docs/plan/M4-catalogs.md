@@ -421,6 +421,33 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         count always shown, a catalog's problem hidden, the sidebar's name, and the
         no-documents note shown without pages.
 - **C5, the message list:** reading a catalog, the rows, search and filters, not-in-source keys.
+  In two PRs:
+  - **C5a, reading a catalog (main):** `readCatalog`, a use case and IPC method.
+    - *Done-notes:* described in [the workspace doc](../domains/workspace.md).
+      - Each source message comes with its documentation, translation, status, and **the token
+        ranges of both its source and its translation** (question 6: tokens come with the
+        catalog when it's read; the translation's too, so the rows can isolate them before C6's
+        editor exists). The DTO carries each token's kind and range only; compared values stay
+        in main, where the checks run. The not-in-source messages come with their tokens.
+      - **A documentation file that can't be read doesn't block** the catalog: the messages show
+        none, and `documentationProblem` says why. A scanner that fails gives no tokens. The source
+        and target files must read.
+      - `workspace.unknown-catalog` is new (with messages in en, he, qqq).
+      - **Measured** (question 11, PRD §9) on a generated 5,000-message banana-i18n catalog (half
+        translated, each with a plural, a link, and a tag), through the real plugin, in the main
+        process: listing about 21 ms, reading about 81 ms (scanning 7,500 texts included). No
+        change was needed on this side; the list's rendering is C5b's to measure.
+      - Tests: reading (every field, statuses from the status file, tokens on both sides and on
+        not-in-source messages), no target or documentation file, unreadable documentation, an
+        unreadable status file, a failing scanner, an unreadable source, a translation the format
+        can't read, an unknown catalog, a project without catalogs, the layout's errors, an unknown
+        project, no target; and `readCatalog` end to end over IPC on the MediaWiki fixture.
+      - Mutation checks, each failing tests: documentation errors blocking, tokens on a failing
+        scan, status without the record, `targetExists`, a project without catalogs, the
+        documentation path, and a translation's read error. One survived (not-in-source tokens,
+        untested) and got a test.
+  - **C5b, the message list (UI):** opening a catalog from the sidebar shows its rows (key,
+    source, translation, status), with search, a status filter, and not-in-source keys apart.
 - **C6, the message editor:** the expanded row with CodeMirror, `qqq`, checks from main (question 6),
   and keyboard navigation.
 - **C7, saving:** patching, new files, drafts, the conflict check, and recording status.

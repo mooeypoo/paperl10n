@@ -28,6 +28,7 @@ export function guardApi(api: PaperLionApi, onUnexpected: OnUnexpected): PaperLi
     listSourceDocuments: (request) =>
       guard('listSourceDocuments', onUnexpected, () => api.listSourceDocuments(request)),
     listCatalogs: (request) => guard('listCatalogs', onUnexpected, () => api.listCatalogs(request)),
+    readCatalog: (request) => guard('readCatalog', onUnexpected, () => api.readCatalog(request)),
     readDocumentPair: (request) =>
       guard('readDocumentPair', onUnexpected, () => api.readDocumentPair(request)),
     suggestTargetLanguages: (request) =>
