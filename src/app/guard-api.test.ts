@@ -34,6 +34,22 @@ describe('guardApi', () => {
               statusFile: { exists: false, problem: null },
             }),
           ),
+        listCatalogs: ({ projectId }) =>
+          Promise.resolve(
+            ok({
+              catalogs: [
+                {
+                  key: projectId,
+                  sourcePath: 'a',
+                  targetPath: 'b',
+                  targetExists: false,
+                  progress: null,
+                  problem: null,
+                },
+              ],
+              statusFile: { exists: false, problem: null },
+            }),
+          ),
         readDocumentPair: ({ key }) =>
           Promise.resolve(
             ok({
@@ -85,6 +101,22 @@ describe('guardApi', () => {
             targetExists: false,
             hasDraft: false,
             status: 'missing',
+          },
+        ],
+        statusFile: { exists: false, problem: null },
+      },
+    });
+    expect(await api.listCatalogs({ projectId: 'p' })).toEqual({
+      ok: true,
+      value: {
+        catalogs: [
+          {
+            key: 'p',
+            sourcePath: 'a',
+            targetPath: 'b',
+            targetExists: false,
+            progress: null,
+            problem: null,
           },
         ],
         statusFile: { exists: false, problem: null },
@@ -151,6 +183,9 @@ describe('guardApi', () => {
         listSourceDocuments: () => {
           throw new Error('sync boom');
         },
+        listCatalogs: () => {
+          throw new Error('sync boom');
+        },
         readDocumentPair: () => {
           throw new Error('sync boom');
         },
@@ -188,6 +223,7 @@ describe('guardApi', () => {
       {
         openProject: () => Promise.reject(new Error('async boom')),
         listSourceDocuments: () => Promise.reject(new Error('async boom')),
+        listCatalogs: () => Promise.reject(new Error('async boom')),
         readDocumentPair: () => Promise.reject(new Error('async boom')),
         suggestTargetLanguages: () => Promise.reject(new Error('async boom')),
         searchTargetLanguages: () => Promise.reject(new Error('async boom')),
@@ -209,6 +245,7 @@ describe('guardApi', () => {
     };
     expect(await api.openProject()).toEqual(unexpected);
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual(unexpected);
+    expect(await api.listCatalogs({ projectId: 'p' })).toEqual(unexpected);
     expect(await api.readDocumentPair({ projectId: 'p', key: 'k' })).toEqual(unexpected);
     expect(
       await api.suggestTargetLanguages({
@@ -237,6 +274,7 @@ describe('guardApi', () => {
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
+      'listCatalogs',
       'readDocumentPair',
       'suggestTargetLanguages',
       'searchTargetLanguages',

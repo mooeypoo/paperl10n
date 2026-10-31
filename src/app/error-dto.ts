@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type {
+  CatalogReadError,
   ChooseTargetLocaleError,
   DraftError,
+  ListCatalogsError,
   ListSourceDocumentsError,
   MarkUpToDateError,
   OpenProjectError,
@@ -14,6 +16,8 @@ import type { ErrorDto } from '#ipc-contract';
 export type AppError =
   | OpenProjectError
   | ListSourceDocumentsError
+  | ListCatalogsError
+  | CatalogReadError
   | ReadDocumentPairError
   | TargetLanguagesError
   | ChooseTargetLocaleError
@@ -57,14 +61,16 @@ export function toErrorDto(error: AppError): ErrorDto {
       return dto({ file: error.path });
     case 'workspace.status-unreadable':
     case 'workspace.status-unwritable':
+    case 'workspace.catalog-unreadable':
       return dto({ file: error.cause.path, problem: error.cause.code });
     case 'workspace.status-invalid':
       return dto({ file: error.path }, [error.problem]);
     case 'workspace.status-unsupported':
       return dto({ file: error.path, version: String(error.version) });
     case 'workspace.unknown-document-format':
+    case 'workspace.unknown-catalog-format':
       return dto({ formatId: error.formatId });
-    case 'workspace.no-document-format':
+    case 'workspace.no-format':
       return dto(
         {},
         error.failures.map((f) => `${f.formatId}: ${f.code}`),

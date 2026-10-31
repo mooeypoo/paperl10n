@@ -4,12 +4,13 @@
 // adapter and format-stub, over a copy of its "basic" fixture on disk (choosing a target writes to
 // the config). Only the folder dialog is faked.
 import { randomUUID } from 'node:crypto';
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { FakeFolderPicker } from '#domain-testing/workspace';
+import { messageFingerprint } from '#domains/translation';
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { nodeDraftStore } from '#adapters/workspace/node-draft-store';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
@@ -24,6 +25,9 @@ const appUrl = 'file:///app/index.html';
 const basicFixture = fileURLToPath(
   new URL('../../src/plugins/format-stub/fixtures/basic', import.meta.url),
 );
+const extensionFixture = fileURLToPath(
+  new URL('../../src/plugins/catalog-banana/fixtures/mediawiki-extension', import.meta.url),
+);
 const copies: string[] = [];
 afterAll(async () => {
   await Promise.all(copies.map((copy) => rm(copy, { recursive: true, force: true })));
@@ -34,6 +38,36 @@ async function copyOfBasic(): Promise<string> {
   const copy = join(await mkdtemp(join(tmpdir(), 'paperl10n-ipc-')), 'basic');
   copies.push(copy);
   await cp(basicFixture, copy, { recursive: true, verbatimSymlinks: true });
+  return copy;
+}
+
+/** A copy of catalog-banana's MediaWiki extension, configured for Hebrew, with a status file
+ * recording one message as up to date and one against an older source. */
+async function copyOfExtension(): Promise<string> {
+  const copy = join(await mkdtemp(join(tmpdir(), 'paperl10n-ipc-')), 'extension');
+  copies.push(copy);
+  await cp(extensionFixture, copy, { recursive: true });
+  await writeFile(
+    join(copy, 'paperl10n.config.json'),
+    JSON.stringify({ sourceLocale: 'en', targetLocale: 'he' }),
+  );
+  const source = JSON.parse(await readFile(join(copy, 'i18n/en.json'), 'utf8')) as Record<
+    string,
+    string
+  >;
+  const desc = source['example-desc'] ?? '';
+  const status = {
+    version: 2,
+    pages: {},
+    catalogs: {
+      i18n: {
+        'example-desc': messageFingerprint(desc),
+        'example-last': messageFingerprint('An older source'),
+      },
+    },
+  };
+  await mkdir(join(copy, '.paperl10n/status'), { recursive: true });
+  await writeFile(join(copy, '.paperl10n/status/he.json'), JSON.stringify(status));
   return copy;
 }
 
@@ -113,6 +147,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
         sourceLocale: { id: 'en', direction: 'ltr' },
         targetLocale: { id: 'he', direction: 'rtl' },
         documentFormat: { id: 'format-stub', displayName: 'Folder per locale (stub)' },
+        catalogFormat: null,
         warnings: [],
       },
     });
@@ -142,6 +177,53 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
           },
         ],
         statusFile: { exists: false, problem: null },
+      },
+    });
+  },
+  listCatalogs: async () => {
+    // A project with catalogs only: no document format, and its pages list empty.
+    const { api } = rendererApi(await copyOfExtension());
+    const opened = await api.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    expect([opened.value.documentFormat, opened.value.catalogFormat]).toEqual([
+      null,
+      { id: 'catalog-banana', displayName: 'banana-i18n' },
+    ]);
+    const { projectId } = opened.value;
+    expect(await api.listSourceDocuments({ projectId })).toMatchObject({
+      ok: true,
+      value: { documents: [] },
+    });
+    expect(await api.listCatalogs({ projectId })).toEqual({
+      ok: true,
+      value: {
+        catalogs: [
+          {
+            key: 'i18n',
+            sourcePath: 'i18n/en.json',
+            targetPath: 'i18n/he.json',
+            targetExists: true,
+            progress: {
+              total: 5,
+              byStatus: { missing: 2, draft: 1, translated: 1, outdated: 1 },
+              notInSource: 1,
+            },
+            problem: null,
+          },
+          {
+            key: 'i18n/api',
+            sourcePath: 'i18n/api/en.json',
+            targetPath: 'i18n/api/he.json',
+            targetExists: false,
+            progress: {
+              total: 2,
+              byStatus: { missing: 2, draft: 0, translated: 0, outdated: 0 },
+              notInSource: 0,
+            },
+            problem: null,
+          },
+        ],
+        statusFile: { exists: true, problem: null },
       },
     });
   },

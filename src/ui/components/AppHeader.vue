@@ -15,6 +15,12 @@ const { t, locale } = useI18n();
 const languages = Object.keys(uiLocales);
 const source = computed(() => props.summary?.sourceLocale ?? null);
 const target = computed(() => props.summary?.targetLocale ?? null);
+/** The project's formats: its pages', then its catalogs', whichever it has. */
+const formats = computed(() =>
+  [props.summary?.documentFormat, props.summary?.catalogFormat].filter(
+    (format) => format !== null && format !== undefined,
+  ),
+);
 
 function onLanguageChange(event: Event): void {
   const value = (event.target as HTMLSelectElement).value;
@@ -32,10 +38,12 @@ function onLanguageChange(event: Event): void {
     <template v-if="summary !== null && source !== null">
       <p class="header-project">
         <strong>{{ summary.name }}</strong>
-        <span aria-hidden="true">·</span>
-        <span :title="t('paperl10n-project-format', summary.documentFormat.displayName)">
-          {{ summary.documentFormat.displayName }}
-        </span>
+        <template v-for="format in formats" :key="format.id">
+          <span aria-hidden="true">·</span>
+          <span :title="t('paperl10n-project-format', format.displayName)">
+            {{ format.displayName }}
+          </span>
+        </template>
       </p>
       <p class="header-languages">
         <span v-if="target !== null" class="visually-hidden">

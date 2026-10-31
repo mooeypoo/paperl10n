@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type {
+  GuardedCatalogLayout,
   GuardedDocumentLayout,
   ProjectFiles,
+  RegisteredCatalogFormat,
   RegisteredDocumentFormat,
 } from '#domains/formats';
 import type { LanguageCatalog, Locale } from '#domains/locale';
@@ -22,8 +24,21 @@ export interface OpenedProject {
   readonly targetLocale: Locale | null;
   /** The bundled catalog with this project's own languages (config and locale folders) added. */
   readonly catalog: LanguageCatalog;
-  readonly documentFormat: RegisteredDocumentFormat;
+  /** The project's pages: its document format and layout; `null` when it has none. */
+  readonly documents: ProjectDocuments | null;
+  /** The project's message catalogs: its catalog format and layout; `null` when it has none. A
+   * project has pages, catalogs, or both. */
+  readonly catalogs: ProjectCatalogs | null;
+}
+
+export interface ProjectDocuments {
+  readonly format: RegisteredDocumentFormat;
   readonly layout: GuardedDocumentLayout;
+}
+
+export interface ProjectCatalogs {
+  readonly format: RegisteredCatalogFormat;
+  readonly layout: GuardedCatalogLayout;
 }
 
 /** The projects open in this session, by opaque id. Behavior: `describeProjectSessionsContract`. */

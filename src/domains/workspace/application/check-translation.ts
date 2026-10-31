@@ -7,6 +7,7 @@ import type { MarkdownParser } from '#domains/document';
 import { checkTranslation, type TranslationCheck } from '#domains/translation';
 import { err, ok, type Result } from '#kernel/result';
 import type { ProjectSessions } from './ports/project-sessions.ts';
+import { findDocument } from './find-document.ts';
 
 export type CheckTranslationError =
   | { readonly code: 'workspace.unknown-project' }
@@ -35,11 +36,10 @@ export function createCheckTranslation(deps: {
     const targetLocale = project.targetLocale;
     if (targetLocale === null) return err({ code: 'workspace.no-target-locale' });
 
-    const documents = await project.layout.listSourceDocuments();
-    if (!documents.ok) return documents;
-    const document = documents.value.find((candidate) => candidate.key === key);
-    if (document === undefined) return err({ code: 'workspace.unknown-document', key });
-    const targetPath = project.layout.targetPathFor(document, targetLocale.id);
+    const found = await findDocument(project, key);
+    if (!found.ok) return found;
+    const { document, layout } = found.value;
+    const targetPath = layout.targetPathFor(document, targetLocale.id);
     if (!targetPath.ok) return targetPath;
 
     const sourceText = await project.files.readText(document.path);
@@ -49,7 +49,7 @@ export function createCheckTranslation(deps: {
     const translation = deps.parser.parse(text, { mdx: targetPath.value.endsWith('.mdx') });
     // A plugin whose mapping fails leaves the link as written: a hint is never worth an error.
     const sourceLinkTarget = (target: string) => {
-      const mapped = project.layout.sourceLinkTarget(target, targetLocale.id);
+      const mapped = layout.sourceLinkTarget(target, targetLocale.id);
       return mapped.ok ? mapped.value : target;
     };
     return ok(checkTranslation(source, translation, sourceLinkTarget));

@@ -9,6 +9,7 @@ const summary: ProjectSummaryDto = {
   sourceLocale: { id: 'en', direction: 'ltr' },
   targetLocale: { id: 'he', direction: 'rtl' },
   documentFormat: { id: 'format-stub', displayName: 'Folder per locale (stub)' },
+  catalogFormat: null,
   warnings: [],
 };
 
@@ -28,6 +29,11 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
   return {
     openProject: () => Promise.resolve({ ok: true, value: summary }),
     listSourceDocuments: () => Promise.resolve({ ok: true, value: listed }),
+    listCatalogs: () =>
+      Promise.resolve({
+        ok: true,
+        value: { catalogs: [], statusFile: { exists: false, problem: null } },
+      }),
     readDocumentPair: ({ key }) =>
       Promise.resolve({
         ok: true,
