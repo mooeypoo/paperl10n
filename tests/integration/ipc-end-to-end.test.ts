@@ -41,16 +41,12 @@ async function copyOfBasic(): Promise<string> {
   return copy;
 }
 
-/** A copy of catalog-banana's MediaWiki extension, configured for Hebrew, with a status file
+/** A copy of catalog-banana's MediaWiki extension (its config targets Hebrew), with a status file
  * recording one message as up to date and one against an older source. */
 async function copyOfExtension(): Promise<string> {
   const copy = join(await mkdtemp(join(tmpdir(), 'paperl10n-ipc-')), 'extension');
   copies.push(copy);
   await cp(extensionFixture, copy, { recursive: true });
-  await writeFile(
-    join(copy, 'paperl10n.config.json'),
-    JSON.stringify({ sourceLocale: 'en', targetLocale: 'he' }),
-  );
   const source = JSON.parse(await readFile(join(copy, 'i18n/en.json'), 'utf8')) as Record<
     string,
     string

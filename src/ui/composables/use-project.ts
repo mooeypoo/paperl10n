@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type {
+  CatalogDto,
   ErrorDto,
   PageStatusDto,
   PaperLionApi,
@@ -12,6 +13,8 @@ import { ref, shallowRef, type Ref, type ShallowRef } from 'vue';
 export interface ProjectState {
   readonly summary: ShallowRef<ProjectSummaryDto | null>;
   readonly documents: ShallowRef<readonly SourceDocumentDto[]>;
+  /** The project's message catalogs; `null` when it has no catalog format. */
+  readonly catalogs: ShallowRef<readonly CatalogDto[] | null>;
   /** The target language's status file, as last listed. */
   readonly statusFile: ShallowRef<SourceDocumentListDto['statusFile']>;
   readonly error: ShallowRef<ErrorDto | null>;
@@ -43,10 +46,23 @@ const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, det
 export function useProject(client: PaperLionApi): ProjectState {
   const summary = shallowRef<ProjectSummaryDto | null>(null);
   const documents = shallowRef<readonly SourceDocumentDto[]>([]);
+  const catalogs = shallowRef<readonly CatalogDto[] | null>(null);
   const statusFile = shallowRef<SourceDocumentListDto['statusFile']>(noStatusFile);
   const error = shallowRef<ErrorDto | null>(null);
   const busy = ref(false);
   let latest = 0;
+
+  /** The project's catalogs, when it has a catalog format: no request otherwise. */
+  async function listCatalogs(
+    project: ProjectSummaryDto,
+  ): Promise<
+    | { readonly ok: true; readonly value: readonly CatalogDto[] | null }
+    | { readonly ok: false; readonly error: ErrorDto }
+  > {
+    if (project.catalogFormat === null) return { ok: true, value: null };
+    const listed = await client.listCatalogs({ projectId: project.projectId });
+    return listed.ok ? { ok: true, value: listed.value.catalogs } : listed;
+  }
 
   async function open(): Promise<void> {
     const request = ++latest;
@@ -64,6 +80,7 @@ export function useProject(client: PaperLionApi): ProjectState {
         error.value = null;
         summary.value = opened.value;
         documents.value = [];
+        catalogs.value = opened.value.catalogFormat === null ? null : [];
         statusFile.value = noStatusFile;
         return;
       }
@@ -73,9 +90,16 @@ export function useProject(client: PaperLionApi): ProjectState {
         error.value = listed.error;
         return;
       }
+      const listedCatalogs = await listCatalogs(opened.value);
+      if (request !== latest) return;
+      if (!listedCatalogs.ok) {
+        error.value = listedCatalogs.error;
+        return;
+      }
       error.value = null;
       summary.value = opened.value;
       documents.value = listed.value.documents;
+      catalogs.value = listedCatalogs.value;
       statusFile.value = listed.value.statusFile;
     } catch {
       // The app's API never rejects (ADR 0007); a rejection means the transport itself broke.
@@ -94,17 +118,23 @@ export function useProject(client: PaperLionApi): ProjectState {
       const chosen = await client.chooseTargetLocale({ projectId: current.projectId, language });
       if (!chosen.ok) return chosen.error;
       const listed = await client.listSourceDocuments({ projectId: current.projectId });
+      const listedCatalogs = await listCatalogs(current);
       if (request !== latest) return null;
       summary.value = { ...current, targetLocale: chosen.value };
-      if (listed.ok) {
-        error.value = null;
-        documents.value = listed.value.documents;
-        statusFile.value = listed.value.statusFile;
-      } else {
-        error.value = listed.error;
+      // The target is chosen either way; a listing that fails shows its error over empty lists.
+      const failed = (listError: ErrorDto) => {
+        error.value = listError;
         documents.value = [];
+        catalogs.value = current.catalogFormat === null ? null : [];
         statusFile.value = noStatusFile;
-      }
+        return null;
+      };
+      if (!listed.ok) return failed(listed.error);
+      if (!listedCatalogs.ok) return failed(listedCatalogs.error);
+      error.value = null;
+      documents.value = listed.value.documents;
+      catalogs.value = listedCatalogs.value;
+      statusFile.value = listed.value.statusFile;
       return null;
     } catch {
       return transportFailed;
@@ -154,6 +184,7 @@ export function useProject(client: PaperLionApi): ProjectState {
   return {
     summary,
     documents,
+    catalogs,
     statusFile,
     error,
     busy,
