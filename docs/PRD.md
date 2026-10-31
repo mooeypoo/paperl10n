@@ -62,10 +62,12 @@ adding a plugin, not rewriting the app.
 | Message | One key with its source text, target text, and documentation. |
 | Format plugin | An adapter that knows how a specific system finds, reads, and writes translations. |
 | Section | The part of a longform document from one heading to the next heading of the same or a higher level. Sections are the unit Paper Lion **pairs** between source and translation; within a section the translation is free-form. |
-| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document** and to **each section**; for catalogs, to **each message**. |
-| Source change | A change in the source document since its translation was last marked up to date. Shown on the source side, as a reference. |
+| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document** and to **each section**; for catalogs, to **each message**. `missing`: no translation (or, for a section, nothing paired with it). `draft`: never marked up to date. `translated` (shown as "up to date"): marked up to date, and the source is unchanged since. `outdated`: marked once, and the source changed since. |
+| Mark up to date | The translator's explicit statement that a section, a page, or (once, for a project translated before Paper Lion) every existing translation matches the source as it is now. Never a side effect of saving. |
+| Status file | `.paperl10n/status/<locale>.json` in the project, one per target language, committed with the translations: for each page, a fingerprint of each source block as it was when marked up to date. Never a published file. |
+| Source change | A change in the source document since its translation was last marked up to date: a block changed, added, or removed. Shown on the source side, as a reference. Paper Lion knows which blocks changed, not their old wording. |
 | Draft (unsaved edits) | A page's edits that aren't saved to its file yet, kept in Paper Lion's own data folder (never in the project) so a crash or a restart doesn't lose them. Not the `draft` status below. |
-| Preservation hint | A neutral note that something usually kept as is (code blocks, link targets, images, components, frontmatter keys) appears a different number of times in the translation. A hint, never an error. |
+| Preservation hint | A neutral note that something usually kept as is (code blocks, link targets, images, components, frontmatter keys) appears a different number of times in a section of the translation, or the page. A hint, never an error. |
 
 ## 7. Core experiences
 
@@ -85,31 +87,53 @@ adding a plugin, not rewriting the app.
   overwrite. The file (and any missing folders) is written on the first save, so starting and
   walking away leaves nothing behind.
 - **Section view (default):** the document is split into **sections at its headings**, and source
-  and translation sections are paired in order. Each pair is shown side by side, headings on their
-  own row, so the translator always sees which part of the source they're working on. Progress
-  counts sections ("3 of 5 sections up to date"), and each section has its own status (translated,
-  draft, outdated, or not translated yet). The split level is the document's top section level
-  (usually `##`), and can be changed per document.
-- **When sections don't pair up** (the translation has a different number of headings at that
-  level, or they're at different levels), Paper Lion says so plainly, shows which part it could
-  pair, and offers the full-page view. It never guesses a pairing.
+  and translation sections are paired in order. The two editors are aligned so each pair of
+  headings sits side by side, so the translator always sees which part of the source they're
+  working on. Progress counts sections ("Sections up to date: 3 of 5"), and each section shows its
+  status at its heading, with "Mark up to date"; the page has "Mark page up to date".
+- **The split level** is the shallowest heading level in the source's body (usually `##`), except
+  that a lone `# Title` over the sections doesn't count. The text before the first heading at that
+  level is the intro, and the frontmatter is its own part; both pair by place. Deeper headings stay
+  inside their section, and a long section without subheadings stays one section. Only real
+  headings count (not a `#` line in code, a list, or a quote; headings inside `:::` containers do).
+  The translation is split at the same level. Changing the level for one document is deferred
+  until a real site needs it (see §11).
+- **The view is chosen when the page opens.** Sections that pair open the section view. When they
+  don't (the translation has a different number of headings at that level, or they're at a
+  different level), the page opens in the full-page view with a note saying why. It never guesses
+  a pairing. While editing, the view stays as it opened: if the sections stop matching, a note says
+  so, and the page is paired again when it's reopened.
 - **Full-page view (secondary):** both whole documents side by side, for reading the flow or for
   translations that are deliberately structured differently.
+- **Status is explicit.** A page or section becomes up to date only when the translator marks it,
+  never on save. A project translated before Paper Lion starts with every translation as a
+  draft, and the page list offers, once, to mark all existing translations up to date. Marking is
+  refused if the source changed on disk since the page was opened, so a version the translator
+  hasn't read is never marked. A status file that can't be read (a merge conflict, say) never
+  stops work: the page list says why, and marking waits until it's fixed.
 - **Within a section, the source is a reference, not a template.** A translation may split, merge,
   reorder, or restructure paragraphs and lists. Paper Lion never claims that a paragraph, block,
   or line is "missing" or "extra", and never pushes toward the same structure, word count, or line
   count.
 - **Source changes:** when the source changed after the translation was last marked up to date,
-  the changed parts are highlighted **in the source pane**, so the translator knows what to revisit.
-- **Preservation hints:** neutral notes about things usually kept as is (code blocks, link
-  targets, images, components, frontmatter keys) whose counts differ between source and
-  translation.
-- **Length, as information only:** a document-level comparison of the rendered text's length
-  (for example "about 20% of the source"), useful for spotting an obviously unfinished
-  translation. Never per block, never a warning threshold: lengths differ naturally between
-  languages.
-- **Loose scroll sync (full-page view, optional):** scrolling follows paired section headings,
-  and otherwise relative position. It's a navigation aid, not a correctness check.
+  the changed and new blocks are highlighted **in the source pane** (a tint and a line mark, solid
+  for changed and dashed for new), and a marker shows where text was removed, so the translator
+  knows what to revisit. A changed section says so at its heading. Nothing is marked in the
+  translation: what to change there is the translator's call.
+- **Preservation hints:** neutral notes about things usually kept as is whose counts differ between
+  a source section and its pair (or the whole page, in the full-page view or when sections don't
+  pair): code blocks (by language, not contents), link and image targets, components (by tag
+  name), and frontmatter keys. They follow the translation as it's typed. Link targets are
+  compared in the source's form: the format plugin can map a localized link (`/he/guide/`) back to
+  the source's (`/guide/`); without that, links compare as written.
+- **Length, as information only:** a page-level comparison of the rendered text's length, in
+  characters (for example "About 20% of the source's length"), useful for spotting an obviously
+  unfinished translation. Never per block or section, never a warning threshold: lengths differ
+  naturally between languages.
+- **Scrolling:** in a window wide enough for the panes side by side, each pane scrolls on its own.
+  In the section view they're locked together, paired headings level. In the full-page view they
+  sync loosely: paired headings line up as they pass, and otherwise relative position. A "Scroll
+  together" toggle (on by default) turns that off. It's a navigation aid, not a correctness check.
 - Frontmatter is part of the editable text today (M2: the whole file is edited as text). Later,
   it's edited as fields, with per-field "translatable or keep as-is" rules set by the plugin.
 - Toggle between raw Markdown and a rendered preview per pane. Custom components get a placeholder
@@ -167,6 +191,7 @@ Two plugin families share one registration mechanism:
 
 - **Longform format** (`DocumentFormat`): detect the project, list source documents, resolve the
   target path for a locale, and give the translatable and keep-as-is rules for frontmatter.
+  Optionally, map a translation's link target to the source's form, for preservation hints.
   - Initial: VitePress, Astro Starlight. Later: Nuxt Content, Docusaurus, plain folder-per-locale.
 - **Catalog format** (`CatalogFormat`): locate catalogs, parse a catalog into messages, serialize
   messages back, and declare its placeholder or plural syntax for validation.
@@ -203,8 +228,9 @@ Principles:
   and heading marks hidden away from the caret). Decisions and step notes in
   `docs/plan/M2-editing.md`.
 - **M3: Sections, changes, and hints.** Section view with per-section status and progress, the
-  full-page view, source-change highlighting (needs the outdated-detection decision below),
-  preservation hints, the length comparison, and loose scroll sync.
+  full-page view, source-change highlighting, preservation hints, the length comparison, and loose
+  scroll sync. Done, except changing the split level per document (deferred). Decisions and step
+  notes in `docs/plan/M3-sections.md`.
 - **M4: banana-i18n.** Catalog list, split message editor, `qqq` docs, and validation.
 - **M5: Second plugins.** VitePress + gettext `.po`, to prove the plugin contracts hold.
 
@@ -212,18 +238,23 @@ Principles:
 - ~~**Visual editing approach**~~ **Decided in M2:** live-preview decorations on a CodeMirror 6
   Markdown editor, so Markdown stays the single source of truth and round-trip safety holds by
   construction. A spike over bidi samples confirmed it; ProseMirror/Tiptap was the fallback.
-- **Outdated detection:** how do we know the source changed after translating? Options include git
-  history, a stored source hash in a sidecar file, or a frontmatter field. Which is least intrusive?
+- ~~**Outdated detection**~~ **Decided in M3:** a status file in the project, one per target
+  language (`.paperl10n/status/<locale>.json`), committed with the translations, holding a
+  fingerprint of each source block from when it was marked up to date. It never touches a
+  published file and works without git. It shows which blocks changed, not their old wording;
+  showing that from git could come with git awareness.
 - **Finer-grained pairing (revisit later):** pairing below the section level (paragraphs or
   blocks) for projects that want strict structural parity. Deliberately not a starting point:
   sections are paired, and the text within them is free.
-- **Section split level:** default to the document's top section level, but how should a document
-  with uneven heading levels, or with long sections that have no subheadings, be handled?
+- ~~**Section split level**~~ **Decided in M3:** the rules in §7.2 (the shallowest level, a lone
+  title skipped, an intro, deeper headings and long sections kept whole). Still open: whether a
+  real site needs the level changed per document (it would be stored in the status file, so it's
+  shared).
 - **Custom components and images in the live preview** (Vue in VitePress, MDX-like in Astro):
   chips, thumbnails, or a placeholder render? How much preview is worth building?
 - **Git awareness:** show diffs and branch info, or stay out of git entirely?
 - **More than one target:** a three-pane view (source + two targets) someday?
 - **Assistive translation:** an optional, pluggable MT or LLM suggestion provider behind a port, off
   by default?
-- **Sidecar state:** where does status live: next to the project, or in app data? (Drafts were
-  decided in M2: in app data, never in the project.)
+- ~~**Sidecar state**~~ **Decided:** status lives next to the project, in its status file
+  (M3), so it's shared with co-translators; drafts live in app data, never in the project (M2).
