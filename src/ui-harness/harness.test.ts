@@ -68,6 +68,20 @@ describe('the UI harness', () => {
     expect(target?.textContent).toContain("This page isn't translated yet.");
   });
 
+  it('opens a banana-i18n extension and lists its catalogs with their progress', async () => {
+    const element = await openWith('catalog-banana/mediawiki-extension');
+    expect(element.querySelector('.header-project')?.textContent).toContain('banana-i18n');
+    const catalogs = [...element.querySelectorAll('nav .catalogs-item')].map((item) =>
+      [...item.children].map((part) => part.textContent.trim()),
+    );
+    // No status file: the existing Hebrew translations are drafts, none up to date yet.
+    expect(catalogs).toEqual([
+      ['i18n', '0 of 5 up to date'],
+      ['i18n/api', '0 of 2 up to date'],
+    ]);
+    expect(element.querySelectorAll('section[lang]')).toHaveLength(0);
+  });
+
   it('shows the real error for an unknown fixture', async () => {
     const element = await openWith('format-stub/nope');
     expect(element.querySelector('[role="alert"]')).not.toBeNull();
