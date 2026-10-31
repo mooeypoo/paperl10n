@@ -27,6 +27,14 @@ export {
   type ListCatalogsError,
 } from './application/list-catalogs.ts';
 export type { CatalogReadError } from './application/catalog-files.ts';
+export {
+  createReadCatalog,
+  type CatalogMessageEntry,
+  type NotInSourceEntry,
+  type ReadCatalog,
+  type ReadCatalogError,
+  type ReadCatalogResult,
+} from './application/read-catalog.ts';
 export type {
   OpenedProject,
   ProjectCatalogs,

@@ -41,6 +41,22 @@ function setup() {
       calls.push(['listCatalogs', request]);
       return Promise.resolve(ok({ catalogs: [], statusFile: { exists: false, problem: null } }));
     },
+    readCatalog: (request) => {
+      calls.push(['readCatalog', request]);
+      return Promise.resolve(
+        ok({
+          key: request.key,
+          sourcePath: 'a',
+          targetPath: 'b',
+          targetExists: false,
+          documentationPath: null,
+          messages: [],
+          notInSource: [],
+          documentationProblem: null,
+          statusFile: { exists: false, problem: null },
+        }),
+      );
+    },
     readDocumentPair: (request) => {
       calls.push(['readDocumentPair', request]);
       return Promise.resolve(
@@ -131,6 +147,10 @@ describe('registerApi', () => {
       ok: true,
       value: { catalogs: [], statusFile: { exists: false, problem: null } },
     });
+    expect(await send('readCatalog', trusted, { projectId: 'p1', key: 'i18n' })).toMatchObject({
+      ok: true,
+      value: { key: 'i18n' },
+    });
     expect(await send('readDocumentPair', trusted, { projectId: 'p1', key: 'k' })).toMatchObject({
       ok: true,
     });
@@ -173,6 +193,7 @@ describe('registerApi', () => {
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
       ['listCatalogs', { projectId: 'p1' }],
+      ['readCatalog', { projectId: 'p1', key: 'i18n' }],
       ['readDocumentPair', { projectId: 'p1', key: 'k' }],
       ['suggestTargetLanguages', suggest],
       ['searchTargetLanguages', search],
@@ -251,6 +272,19 @@ describe('argumentValidators', () => {
     ['an extra argument', [{ projectId: 'abc' }, 'more'], false],
   ])('listCatalogs: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.listCatalogs(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a project id and a key', [{ projectId: 'abc', key: 'i18n/api' }], true],
+    ['no arguments', [], false],
+    ['no key', [{ projectId: 'abc' }], false],
+    ['an empty key', [{ projectId: 'abc', key: '' }], false],
+    ['a numeric key', [{ projectId: 'abc', key: 1 }], false],
+    ['a very long key', [{ projectId: 'abc', key: 'x'.repeat(1001) }], false],
+    ['an extra field', [{ projectId: 'abc', key: 'i18n', path: '/etc' }], false],
+    ['an extra argument', [{ projectId: 'abc', key: 'i18n' }, 'more'], false],
+  ])('readCatalog: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.readCatalog(args)).toBe(valid);
   });
 
   it.each<[string, unknown[], boolean]>([
