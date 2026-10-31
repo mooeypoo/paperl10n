@@ -103,13 +103,13 @@ export function createMarkUpToDate(deps: Dependencies): MarkUpToDate {
           sections === null ? 'all' : new Set(sections),
         ),
       );
-      const written = await project.writer.writeText(path, serializeStatusFile({ pages }), {
+      // Everything else in the file (other pages, catalogs) is written back as read.
+      const file = { ...status.value.file, pages };
+      const written = await project.writer.writeText(path, serializeStatusFile(file), {
         createFolders: true,
       });
       if (!written.ok) return err({ code: 'workspace.status-unwritable', cause: written.error });
-      return ok(
-        documentStatus(source, { pages }, key, await project.files.exists(targetPath.value)),
-      );
+      return ok(documentStatus(source, file, key, await project.files.exists(targetPath.value)));
     });
   };
 }
@@ -146,7 +146,8 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
         marked.push(document.key);
       }
       if (marked.length === 0) return ok({ marked });
-      const written = await project.writer.writeText(path, serializeStatusFile({ pages }), {
+      const file = { ...status.value.file, pages };
+      const written = await project.writer.writeText(path, serializeStatusFile(file), {
         createFolders: true,
       });
       if (!written.ok) return err({ code: 'workspace.status-unwritable', cause: written.error });

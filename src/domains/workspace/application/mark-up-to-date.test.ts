@@ -71,6 +71,9 @@ async function openWith(tree: FileTree, settings: object = { targetLocale: 'he' 
 
 const noChanges = { blocks: [], removals: [] };
 
+const catalogsSection = `  "catalogs": {\n    "i18n": {\n      "greeting": "${'0'.repeat(16)}"\n    }\n  }`;
+const withCatalogs = `{\n  "version": 2,\n  "pages": {},\n${catalogsSection}\n}\n`;
+
 const translated = { 'en/index.md': source, 'he/index.md': 'מבוא\n## א\nא\n## ב\nב\n' };
 
 describe('markUpToDate', () => {
@@ -186,15 +189,22 @@ describe('markUpToDate', () => {
     expect(await app.statusFile()).toBe(conflicted);
   });
 
+  it('keeps the catalogs the status file records', async () => {
+    const app = await openWith({ ...translated, [STATUS]: withCatalogs });
+    const { sourceFingerprint } = await app.opened();
+    await app.mark(app.projectId, { key: 'index', sourceFingerprint, sections: null });
+    expect(await app.statusFile()).toContain(catalogsSection);
+  });
+
   it('never overwrites a status file from a newer Paper Lion', async () => {
-    const newer = '{"version":2,"pages":{}}';
+    const newer = '{"version":3,"pages":{}}';
     const app = await openWith({ ...translated, [STATUS]: newer });
     const { sourceFingerprint } = await app.opened();
     expect(
       await app.mark(app.projectId, { key: 'index', sourceFingerprint, sections: null }),
     ).toEqual({
       ok: false,
-      error: { code: 'workspace.status-unsupported', path: STATUS, version: 2 },
+      error: { code: 'workspace.status-unsupported', path: STATUS, version: 3 },
     });
     expect(await app.statusFile()).toBe(newer);
   });
@@ -283,6 +293,12 @@ describe('markExistingUpToDate', () => {
       value: { marked: ['index'] },
     });
     expect(await app.statuses()).toEqual({ about: 'draft', index: 'translated', new: 'missing' });
+  });
+
+  it('keeps the catalogs the status file records', async () => {
+    const app = await openWith({ ...tree, [STATUS]: withCatalogs });
+    await app.markExisting(app.projectId);
+    expect(await app.statusFile()).toContain(catalogsSection);
   });
 
   it('writes nothing when there’s nothing to mark', async () => {

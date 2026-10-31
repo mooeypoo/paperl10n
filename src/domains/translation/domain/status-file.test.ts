@@ -23,6 +23,7 @@ const status: StatusFile = {
     ['about', [{ kind: 'heading', heading: f('c'), marked: null }]],
     ['empty', []],
   ]),
+  catalogs: new Map(),
 };
 
 const text = `{
@@ -53,7 +54,10 @@ describe('serializeStatusFile', () => {
 
   it('sorts keys by code unit, not by locale', () => {
     const keys = ['b', 'B', 'a/z', 'a', 'é'];
-    const written = serializeStatusFile({ pages: new Map(keys.map((key) => [key, []])) });
+    const written = serializeStatusFile({
+      pages: new Map(keys.map((key) => [key, []])),
+      catalogs: new Map(),
+    });
     expect([...written.matchAll(/^ {4}"([^"]+)"/gm)].map((match) => match[1])).toEqual([
       'B',
       'a',
@@ -80,6 +84,7 @@ describe('parseStatusFile', () => {
       ok: true,
       value: {
         pages: new Map([['about', [{ kind: 'heading', heading: f('c'), marked: [f('c')] }]]]),
+        catalogs: new Map(),
       },
     });
   });
@@ -90,9 +95,9 @@ describe('parseStatusFile', () => {
   });
 
   it('refuses a newer version', () => {
-    expect(parseStatusFile('{"version":2,"pages":{}}')).toEqual({
+    expect(parseStatusFile('{"version":3,"pages":{}}')).toEqual({
       ok: false,
-      error: { code: 'translation.status-file-unsupported', version: 2 },
+      error: { code: 'translation.status-file-unsupported', version: 3 },
     });
   });
 
@@ -107,6 +112,31 @@ describe('parseStatusFile', () => {
       '"version" must be a positive whole number',
     ],
     ['no pages', '{"version":1}', '"pages" must be an object keyed by document key'],
+    [
+      'catalogs in version 1',
+      '{"version":1,"pages":{},"catalogs":{}}',
+      '"catalogs" needs version 2',
+    ],
+    [
+      'catalogs as a list',
+      '{"version":2,"pages":{},"catalogs":[]}',
+      '"catalogs" must be an object keyed by catalog key',
+    ],
+    [
+      'a catalog not an object',
+      '{"version":2,"pages":{},"catalogs":{"i18n":[]}}',
+      'catalog "i18n" must be an object keyed by message key',
+    ],
+    [
+      'a message without a fingerprint',
+      '{"version":2,"pages":{},"catalogs":{"i18n":{"a":null}}}',
+      'catalog "i18n", message "a" must be a fingerprint',
+    ],
+    [
+      'a malformed message fingerprint',
+      '{"version":2,"pages":{},"catalogs":{"i18n":{"a":"abc"}}}',
+      'catalog "i18n", message "a" must be a fingerprint',
+    ],
     [
       'pages as a list',
       '{"version":1,"pages":[]}',
@@ -161,5 +191,79 @@ describe('parseStatusFile', () => {
     if (read.error.code !== 'translation.status-file-invalid') return;
     if (typeof problem === 'string') expect(read.error.problem).toBe(problem);
     else expect(read.error.problem).toMatch(problem);
+  });
+});
+
+describe('the catalogs section (version 2)', () => {
+  const catalogs: StatusFile = {
+    pages: new Map([['about', [{ kind: 'heading', heading: f('c'), marked: null }]]]),
+    catalogs: new Map([
+      ['i18n/api', new Map([['z', f('3')]])],
+      [
+        'i18n',
+        new Map([
+          ['b', f('2')],
+          ['a', f('1')],
+        ]),
+      ],
+      ['empty', new Map()],
+    ]),
+  };
+  const written = `{
+  "version": 2,
+  "pages": {
+    "about": [
+      {"kind":"heading","heading":"${f('c')}"}
+    ]
+  },
+  "catalogs": {
+    "i18n": {
+      "a": "${f('1')}",
+      "b": "${f('2')}"
+    },
+    "i18n/api": {
+      "z": "${f('3')}"
+    }
+  }
+}
+`;
+
+  it('writes catalogs and their messages sorted by key, one message per line, as version 2', () => {
+    expect(serializeStatusFile(catalogs)).toBe(written);
+  });
+
+  it('reads what was written (a catalog without messages is not kept)', () => {
+    const read = parseStatusFile(written);
+    expect(read.ok && [...read.value.catalogs.keys()]).toEqual(['i18n', 'i18n/api']);
+    expect(read.ok && read.value.catalogs.get('i18n')).toEqual(
+      new Map([
+        ['a', f('1')],
+        ['b', f('2')],
+      ]),
+    );
+    if (read.ok) expect(serializeStatusFile(read.value)).toBe(written);
+  });
+
+  it('writes version 1 while no catalog has a message, so page-only projects keep their format', () => {
+    const pagesOnly = { pages: status.pages, catalogs: new Map([['i18n', new Map()]]) };
+    expect(serializeStatusFile(pagesOnly)).toBe(text);
+  });
+
+  it('reads version 1 files as having no catalogs', () => {
+    const read = parseStatusFile(text);
+    expect(read.ok && read.value.catalogs).toEqual(new Map());
+  });
+
+  it('reads a version 2 file without catalogs, and keys named like object properties', () => {
+    const read = parseStatusFile(
+      `{"version":2,"pages":{},"catalogs":{"__proto__":{"constructor":"${f('1')}"}}}`,
+    );
+    expect(read.ok && read.value.catalogs).toEqual(
+      new Map([['__proto__', new Map([['constructor', f('1')]])]]),
+    );
+    expect(parseStatusFile('{"version":2,"pages":{}}')).toEqual({
+      ok: true,
+      value: emptyStatusFile,
+    });
   });
 });

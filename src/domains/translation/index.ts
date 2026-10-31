@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Public API of the `translation` domain: source↔target pairing by section, status
-// (missing/draft/translated/outdated), and source-change tracking.
+// Public API of the `translation` domain: source↔target pairing by section, status of pages and
+// messages (missing/draft/translated/outdated), and source-change tracking.
 // Other domains import this file only, as `#domains/translation`. See AGENTS.md.
 export {
   pairSections,
@@ -23,6 +23,14 @@ export {
   type SectionFingerprints,
   type SectionStatus,
 } from './domain/status.ts';
+export {
+  messageFingerprint,
+  messageStatus,
+  recordMessages,
+  type CatalogRecord,
+  type MessageStatus,
+  type RecordedMessage,
+} from './domain/message-status.ts';
 export {
   emptyStatusFile,
   parseStatusFile,
