@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import type { PlaceholderToken } from '#domains/catalog';
+import type { MessageWarning, PlaceholderToken } from '#domains/catalog';
 import type { ParsedDocument } from '#domains/document';
 import type { Locale } from '#domains/locale';
 import type { PreservationHint, Section, SectionPairing } from '#domains/translation';
 import type {
+  CheckMessage,
   CheckTranslation,
   ChooseTargetLocale,
   DiscardDraft,
@@ -29,6 +30,7 @@ import type {
   FormatDto,
   LanguageDto,
   LocaleDto,
+  MessageWarningDto,
   PaperLionApi,
   PlaceholderTokenDto,
   SectionPairingDto,
@@ -51,10 +53,17 @@ export interface UseCases {
   readonly markUpToDate: MarkUpToDate;
   readonly markExistingUpToDate: MarkExistingUpToDate;
   readonly checkTranslation: CheckTranslation;
+  readonly checkMessage: CheckMessage;
 }
 
 function toTokenDto(token: PlaceholderToken): PlaceholderTokenDto {
   return { kind: token.kind, start: token.start, end: token.end };
+}
+
+function toWarningDto(warning: MessageWarning): MessageWarningDto {
+  return warning.kind === 'unbalanced'
+    ? { kind: warning.kind, brackets: warning.brackets }
+    : { kind: warning.kind, token: warning.token, value: warning.value };
 }
 
 function toFormatDto(format: FormatName | null): FormatDto | null {
@@ -301,6 +310,15 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         page: hints(page),
         sections: sections === null ? null : sections.map(hints),
         length: { source: length.source, translation: length.translation },
+      });
+    },
+
+    async checkMessage({ projectId, catalog, key, text }) {
+      const result = await useCases.checkMessage(projectId, { catalog, key, text });
+      if (!result.ok) return err(toErrorDto(result.error));
+      return ok({
+        tokens: result.value.tokens.map(toTokenDto),
+        warnings: result.value.warnings.map(toWarningDto),
       });
     },
 

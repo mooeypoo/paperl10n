@@ -40,6 +40,7 @@ export function guardApi(api: PaperLionApi, onUnexpected: OnUnexpected): PaperLi
     discardDraft: (request) => guard('discardDraft', onUnexpected, () => api.discardDraft(request)),
     checkTranslation: (request) =>
       guard('checkTranslation', onUnexpected, () => api.checkTranslation(request)),
+    checkMessage: (request) => guard('checkMessage', onUnexpected, () => api.checkMessage(request)),
     markUpToDate: (request) => guard('markUpToDate', onUnexpected, () => api.markUpToDate(request)),
     markExistingUpToDate: (request) =>
       guard('markExistingUpToDate', onUnexpected, () => api.markExistingUpToDate(request)),

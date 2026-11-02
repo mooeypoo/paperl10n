@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { MessageWarning, PlaceholderKind } from '#domains/catalog';
 import { blockKinds, type BlockKind, type InlineKind } from '#domains/document';
 import { hintKinds } from '#domains/translation';
 import {
@@ -11,6 +12,8 @@ import {
   type ApiMethod,
   type BlockDto,
   type InlineSpanDto,
+  type MessageWarningDto,
+  type PlaceholderTokenDto,
 } from '#ipc-contract';
 
 describe('the IPC contract', () => {
@@ -40,5 +43,10 @@ describe('the IPC contract', () => {
 
   it('has the same hint kinds as the translation domain', () => {
     expect([...hintKindDtos]).toEqual([...hintKinds]);
+  });
+
+  it('has the same placeholder kinds and message warnings as the catalog domain', () => {
+    expectTypeOf<PlaceholderTokenDto['kind']>().toEqualTypeOf<PlaceholderKind>();
+    expectTypeOf<MessageWarningDto>().toEqualTypeOf<MessageWarning>();
   });
 });

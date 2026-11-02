@@ -63,6 +63,13 @@ export function createApi(invoke: Invoke): PaperLionApi {
         key: request.key,
         text: request.text,
       }) as ReturnType<PaperLionApi['checkTranslation']>,
+    checkMessage: (request) =>
+      invoke(channelFor('checkMessage'), {
+        projectId: request.projectId,
+        catalog: request.catalog,
+        key: request.key,
+        text: request.text,
+      }) as ReturnType<PaperLionApi['checkMessage']>,
     discardDraft: (request) =>
       invoke(channelFor('discardDraft'), {
         projectId: request.projectId,

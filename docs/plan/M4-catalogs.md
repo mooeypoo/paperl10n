@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C5 done, C6 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C5 done, C6a done, C6b next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -489,7 +489,33 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         an older read replacing a newer one (which survived at first, and got `useCatalog`'s
         test).
 - **C6, the message editor:** the expanded row with CodeMirror, `qqq`, checks from main (question 6),
-  and keyboard navigation.
+  and keyboard navigation. In two PRs, as C5:
+  - **C6a, the check in main:** `checkMessage` over IPC, for the editor to call as the translator
+    types.
+    - *Done-notes:*
+      - **`checkMessage(projectId, { catalog, key, text })`** (`workspace`): the text's tokens, as
+        the plugin's scanner finds them, and `catalog`'s warnings against the source message.
+        The source is read from disk on each check, so a source changed since the catalog opened
+        is checked against as it is now. Reads only; no target language needed.
+      - **`workspace.unknown-message`** is new (the source has no such key: it changed on disk),
+        with messages in en, he, qqq.
+      - `findCatalog` (like `findDocument`) and `scanText` are now shared by `readCatalog` and
+        `checkMessage`. The IPC key validators became one `isKey`; a message's text is bounded
+        at 100,000 UTF-16 code units.
+      - The contract's `MessageWarningDto` and token kinds are kept equal to the `catalog`
+        domain's by a type test.
+      - Tests: the tokens and every kind of warning, a clean translation, a catalog without a
+        translation file, an empty text, a failing scanner, the source as it is on disk now, a
+        source the format can't read, each error (unknown message, catalog, and project, an
+        unreadable source, a project without catalogs, the layout's errors); validation of each
+        argument; and `checkMessage` end to end over IPC on the MediaWiki fixture.
+      - Mutation checks, each failing tests: each error passed through or dropped, the text's
+        tokens from the source, the source's tokens dropped, the error's catalog, a failing
+        scanner throwing, the listing's error, each argument's validation and bound, main and the
+        preload swapping fields, warnings dropped, and the error's DTO. One survived at first (a
+        `[]` imbalance never crossed IPC) and got a case in the end-to-end test.
+  - **C6b, the editor (UI):** the expanded row, its `qqq`, the marks and warnings from C6a, and
+    moving between messages from the keyboard.
 - **C7, saving:** patching, new files, drafts, the conflict check, and recording status.
 - **C8, previews:** plural and gender (question 7).
 - **C9, docs and the PRD:** the decisions into the PRD (its own PR, for approval).

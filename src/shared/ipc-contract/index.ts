@@ -128,6 +128,32 @@ export interface CatalogMessageDto {
   readonly translationTokens: readonly PlaceholderTokenDto[];
 }
 
+/**
+ * What a message's translation lost or gained against its source: a token the source has and it
+ * doesn't (`missing`), one it has and the source doesn't (`unexpected`), compared by `value` (a
+ * parameter's text, a plural's or gender's parameter, a link's target, a tag's name), or brackets
+ * that don't balance as the source's do. Warnings only, never blocking a save.
+ */
+export type MessageWarningDto =
+  | {
+      readonly kind: 'missing';
+      readonly token: PlaceholderTokenDto['kind'];
+      readonly value: string;
+    }
+  | {
+      readonly kind: 'unexpected';
+      readonly token: PlaceholderTokenDto['kind'];
+      readonly value: string;
+    }
+  | { readonly kind: 'unbalanced'; readonly brackets: '{}' | '[]' };
+
+/** A message's translation as it's written, checked against its source. */
+export interface MessageCheckDto {
+  /** The translation's tokens, for the editor to mark. */
+  readonly tokens: readonly PlaceholderTokenDto[];
+  readonly warnings: readonly MessageWarningDto[];
+}
+
 /** A catalog for the target language, read: its messages, and the translation's extra keys. */
 export interface CatalogDetailDto {
   readonly key: string;
@@ -332,6 +358,7 @@ export const errorCodes = [
   'workspace.status-unwritable',
   'workspace.catalog-unreadable',
   'workspace.unknown-catalog',
+  'workspace.unknown-message',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.invalid-catalog',
@@ -420,6 +447,16 @@ export interface PaperLionApi {
     readonly key: string;
     readonly text: string;
   }): Promise<Result<TranslationCheckDto, ErrorDto>>;
+  /**
+   * Checks a message's translation as it's written now (saved or not) against its source message:
+   * its tokens and the warnings. Reads only.
+   */
+  checkMessage(request: {
+    readonly projectId: string;
+    readonly catalog: string;
+    readonly key: string;
+    readonly text: string;
+  }): Promise<Result<MessageCheckDto, ErrorDto>>;
   /** Forgets a page's draft (its edits were dropped). */
   discardDraft(request: {
     readonly projectId: string;
@@ -467,6 +504,7 @@ export const apiMethods = [
   'markUpToDate',
   'markExistingUpToDate',
   'checkTranslation',
+  'checkMessage',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

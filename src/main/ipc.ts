@@ -23,16 +23,12 @@ export const argumentValidators: Readonly<
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key']) &&
     isProjectId(request.projectId) &&
-    typeof request.key === 'string' &&
-    request.key.length > 0 &&
-    request.key.length <= 1000,
+    isKey(request.key),
   readDocumentPair: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key']) &&
     isProjectId(request.projectId) &&
-    typeof request.key === 'string' &&
-    request.key.length > 0 &&
-    request.key.length <= 1000,
+    isKey(request.key),
   suggestTargetLanguages: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'recent', 'systemLanguages', 'uiLanguage']) &&
@@ -51,32 +47,39 @@ export const argumentValidators: Readonly<
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key', 'text', 'base']) &&
     isProjectId(request.projectId) &&
-    isDocumentKey(request.key) &&
+    isKey(request.key) &&
     isDocumentText(request.text) &&
     (request.base === null || isDocumentText(request.base)),
   saveDraft: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key', 'text', 'base']) &&
     isProjectId(request.projectId) &&
-    isDocumentKey(request.key) &&
+    isKey(request.key) &&
     isDocumentText(request.text) &&
     (request.base === null || isDocumentText(request.base)),
   checkTranslation: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key', 'text']) &&
     isProjectId(request.projectId) &&
-    isDocumentKey(request.key) &&
+    isKey(request.key) &&
     isDocumentText(request.text),
+  checkMessage: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'catalog', 'key', 'text']) &&
+    isProjectId(request.projectId) &&
+    isKey(request.catalog) &&
+    isKey(request.key) &&
+    isMessageText(request.text),
   discardDraft: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key']) &&
     isProjectId(request.projectId) &&
-    isDocumentKey(request.key),
+    isKey(request.key),
   markUpToDate: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key', 'sourceFingerprint', 'sections']) &&
     isProjectId(request.projectId) &&
-    isDocumentKey(request.key) &&
+    isKey(request.key) &&
     typeof request.sourceFingerprint === 'string' &&
     request.sourceFingerprint.length <= 100 &&
     (request.sections === null || isSectionList(request.sections)),
@@ -103,13 +106,19 @@ function isProjectId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 200;
 }
 
-function isDocumentKey(value: unknown): value is string {
+/** A page's, catalog's, or message's key. */
+function isKey(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 1000;
 }
 
 /** A page's text: generous, but bounded (10 million UTF-16 code units, about 20 MB). */
 function isDocumentText(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 10_000_000;
+}
+
+/** A message's text: far more than any message needs (100,000 UTF-16 code units). */
+function isMessageText(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 100_000;
 }
 
 /** Section indices: whole numbers, in order, none twice, and not absurdly many. */
@@ -224,6 +233,16 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
       const [request] = args as [{ projectId: string; key: string; text: string }];
       return api.checkTranslation({
         projectId: request.projectId,
+        key: request.key,
+        text: request.text,
+      });
+    }
+    case 'checkMessage': {
+      // checked by argumentValidators
+      const [request] = args as [{ projectId: string; catalog: string; key: string; text: string }];
+      return api.checkMessage({
+        projectId: request.projectId,
+        catalog: request.catalog,
         key: request.key,
         text: request.text,
       });

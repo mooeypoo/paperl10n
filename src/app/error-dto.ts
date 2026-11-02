@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type {
   CatalogReadError,
+  CheckMessageError,
   ChooseTargetLocaleError,
   DraftError,
   ListCatalogsError,
@@ -25,7 +26,8 @@ export type AppError =
   | ChooseTargetLocaleError
   | SaveDocumentError
   | DraftError
-  | MarkUpToDateError;
+  | MarkUpToDateError
+  | CheckMessageError;
 
 /** Turns a use-case error into the plain DTO the UI shows a message for. Exhaustive by lint. */
 export function toErrorDto(error: AppError): ErrorDto {
@@ -56,6 +58,8 @@ export function toErrorDto(error: AppError): ErrorDto {
     case 'workspace.unknown-catalog':
     case 'workspace.unknown-document':
       return dto({ key: error.key });
+    case 'workspace.unknown-message':
+      return dto({ catalog: error.catalog, key: error.key });
     case 'workspace.document-unreadable':
     case 'workspace.document-unwritable':
       return dto({ file: error.cause.path, problem: error.cause.code });

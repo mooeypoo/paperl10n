@@ -91,6 +91,7 @@ describe('guardApi', () => {
         discardDraft: () => Promise.resolve(ok(null)),
         checkTranslation: () =>
           Promise.resolve(ok({ page: [], sections: null, length: { source: 3, translation: 2 } })),
+        checkMessage: () => Promise.resolve(ok({ tokens: [], warnings: [] })),
         markUpToDate: () =>
           Promise.resolve(
             ok({
@@ -197,6 +198,9 @@ describe('guardApi', () => {
       ok({ page: 'translated', sections: ['translated'], changes: { blocks: [], removals: [] } }),
     );
     expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(ok({ marked: ['k'] }));
+    expect(await api.checkMessage({ projectId: 'p', catalog: 'c', key: 'k', text: 'x' })).toEqual(
+      ok({ tokens: [], warnings: [] }),
+    );
     expect(calls).toEqual([]);
   });
 
@@ -246,6 +250,9 @@ describe('guardApi', () => {
         checkTranslation: () => {
           throw new Error('sync boom');
         },
+        checkMessage: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -265,6 +272,7 @@ describe('guardApi', () => {
         markUpToDate: () => Promise.reject(new Error('async boom')),
         markExistingUpToDate: () => Promise.reject(new Error('async boom')),
         checkTranslation: () => Promise.reject(new Error('async boom')),
+        checkMessage: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -303,6 +311,9 @@ describe('guardApi', () => {
     ).toEqual(unexpected);
     expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(unexpected);
     expect(await api.checkTranslation({ projectId: 'p', key: 'k', text: 'x' })).toEqual(unexpected);
+    expect(await api.checkMessage({ projectId: 'p', catalog: 'c', key: 'k', text: 'x' })).toEqual(
+      unexpected,
+    );
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
@@ -318,6 +329,7 @@ describe('guardApi', () => {
       'markUpToDate',
       'markExistingUpToDate',
       'checkTranslation',
+      'checkMessage',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });
