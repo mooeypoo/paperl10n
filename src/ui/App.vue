@@ -4,12 +4,14 @@ import type { ErrorDto } from '#ipc-contract';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import { useClient } from './client';
 import AppHeader from './components/AppHeader.vue';
+import CatalogView from './components/CatalogView.vue';
 import ConflictDialog from './components/ConflictDialog.vue';
 import DocumentView from './components/DocumentView.vue';
 import LanguagePicker from './components/LanguagePicker.vue';
 import PagesSidebar from './components/PagesSidebar.vue';
 import UnsavedChangesDialog from './components/UnsavedChangesDialog.vue';
 import WelcomeState from './components/WelcomeState.vue';
+import { useCatalog } from './composables/use-catalog';
 import { useDocumentPair } from './composables/use-document-pair';
 import { usePages } from './composables/use-pages';
 import { useProject } from './composables/use-project';
@@ -28,6 +30,16 @@ const { summary, documents, catalogs, statusFile, error, busy } = project;
 const projectId = computed(() => summary.value?.projectId ?? null);
 const { query, matches, selectedKey, selected } = usePages(documents, projectId);
 const reading = useDocumentPair(client, projectId, selectedKey);
+// The catalog shown in the main area; `null` shows the selected page. A project without pages
+// opens on its first catalog.
+const selectedCatalog = ref<string | null>(null);
+watch([catalogs, projectId], ([list, id], [, previousId]) => {
+  const listed = (key: string | null) => list?.some((catalog) => catalog.key === key) ?? false;
+  if (id === previousId && (selectedCatalog.value === null || listed(selectedCatalog.value)))
+    return;
+  selectedCatalog.value = summary.value?.documentFormat === null ? (list?.[0]?.key ?? null) : null;
+});
+const catalogReading = useCatalog(client, projectId, selectedCatalog);
 const { pair, loading } = reading;
 const readError = reading.error;
 const errorText = computed(() => (error.value === null ? '' : errorMessage(error.value, t)));
@@ -123,7 +135,16 @@ function open(): void {
 }
 
 function selectPage(key: string): void {
+  if (selectedCatalog.value !== null) {
+    selectedCatalog.value = null;
+    selectedKey.value = key;
+    return;
+  }
   if (key !== selectedKey.value) guard(() => (selectedKey.value = key));
+}
+
+function selectCatalog(key: string): void {
+  if (key !== selectedCatalog.value) guard(() => (selectedCatalog.value = key));
 }
 
 // Ctrl+S (Cmd+S on macOS) saves, wherever the focus is. `code` matches the key's place, so it
@@ -251,13 +272,15 @@ async function chooseTarget(tag: string): Promise<void> {
         :documents="documents"
         :catalogs="catalogs"
         :matches="matches"
-        :selected-key="selectedKey"
+        :selected-key="selectedCatalog === null ? selectedKey : null"
+        :selected-catalog="selectedCatalog"
         :unsaved-key="dirty ? selectedKey : null"
         :offer-existing="offerExisting"
         :marking-existing="markingExisting"
         :mark-existing-error="markExistingError"
         :marked-existing="markedExisting"
         @select="selectPage"
+        @select-catalog="selectCatalog"
         @mark-existing="markExisting"
         @dismiss-existing="existingPutOff = true"
       />
@@ -290,6 +313,14 @@ async function chooseTarget(tag: string): Promise<void> {
             {{ t('paperl10n-choose-target') }}
           </button>
         </div>
+        <CatalogView
+          v-else-if="selectedCatalog !== null"
+          :detail="catalogReading.detail.value"
+          :loading="catalogReading.loading.value"
+          :error="catalogReading.error.value"
+          :source-locale="summary.sourceLocale"
+          :target-locale="summary.targetLocale"
+        />
         <DocumentView
           v-else-if="selected !== null"
           ref="documentView"
@@ -325,7 +356,6 @@ async function chooseTarget(tag: string): Promise<void> {
           @mark-section="(index) => translationStatus.markSection(index)"
           @reopen="guard(() => reading.reload())"
         />
-        <!-- A project with catalogs only lists them in the sidebar (opening one: M4 plan, C5). -->
         <p v-else-if="summary.documentFormat !== null" class="app-empty">
           {{ t('paperl10n-no-documents') }}
         </p>

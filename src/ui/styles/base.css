@@ -84,3 +84,30 @@ textarea {
     animation: none !important;
   }
 }
+
+/* A status as a dot, for pages and messages alike (`data-status`). */
+.pages-status {
+  flex: none;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border: 2px solid var(--pl-color-muted);
+  border-radius: 50%;
+}
+
+/* Each status has its own shape or fill, not only its color: missing is hollow, a draft filled
+   grey, up to date filled green, and outdated a diamond. */
+.pages-status[data-status='draft'] {
+  background: var(--pl-color-muted);
+}
+
+.pages-status[data-status='translated'] {
+  border-color: var(--pl-color-ok);
+  background: var(--pl-color-ok);
+}
+
+.pages-status[data-status='outdated'] {
+  border-color: var(--pl-color-warn);
+  border-radius: 1px;
+  background: var(--pl-color-warn);
+  transform: rotate(45deg);
+}

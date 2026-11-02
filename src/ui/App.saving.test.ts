@@ -186,6 +186,60 @@ describe('leaving a page with unsaved changes', () => {
     expect(targetEditor(element).state.doc.toString()).toBe('בית\n!');
   });
 
+  it('asks before showing a catalog, and shows it once the page is left', async () => {
+    const withCatalogs = {
+      ...summary,
+      catalogFormat: { id: 'catalog-banana', displayName: 'banana-i18n' },
+    };
+    const catalogs = {
+      ok: true as const,
+      value: {
+        catalogs: [
+          {
+            key: 'i18n',
+            sourcePath: 'i18n/en.json',
+            targetPath: 'i18n/he.json',
+            targetExists: true,
+            progress: null,
+            problem: null,
+          },
+        ],
+        statusFile: { exists: false, problem: null },
+      },
+    };
+    const detail = {
+      key: 'i18n',
+      sourcePath: 'i18n/en.json',
+      targetPath: 'i18n/he.json',
+      targetExists: true,
+      documentationPath: null,
+      messages: [],
+      notInSource: [],
+      documentationProblem: null,
+      statusFile: { exists: false, problem: null },
+    };
+    const { element, calls } = await dirtyIndex({
+      open: [{ ok: true, value: withCatalogs }],
+      catalogs,
+      readCatalog: { i18n: { ok: true, value: detail } },
+    });
+    page(element, 'i18n').click();
+    await flushPromises();
+    expect(unsavedDialog()?.open).toBe(true);
+    button(element, 'Cancel').click();
+    await flushPromises();
+    expect(element.querySelector('.catalog')).toBeNull();
+    expect(calls).not.toContain('readCatalog:p-1:i18n');
+
+    page(element, 'i18n').click();
+    await flushPromises();
+    button(element, "Don't save").click();
+    await flushPromises();
+    expect(element.querySelector('.catalog-title')?.textContent).toBe('i18n');
+    expect(page(element, 'i18n').getAttribute('aria-current')).toBe('page');
+    expect(page(element, 'index').hasAttribute('aria-current')).toBe(false);
+  });
+
   it("leaves without saving on Don't save", async () => {
     const { element, calls } = await dirtyIndex();
     page(element, 'guide/getting-started').click();

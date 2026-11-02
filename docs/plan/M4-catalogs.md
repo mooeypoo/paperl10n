@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C3 done, C4 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C5 done, C6 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -448,6 +448,46 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         untested) and got a test.
   - **C5b, the message list (UI):** opening a catalog from the sidebar shows its rows (key,
     source, translation, status), with search, a status filter, and not-in-source keys apart.
+    - *Done-notes:*
+      - **Selecting:** a catalog in the sidebar is a button; selecting it shows `CatalogView` in
+        the main area, after the unsaved-changes question when a page has unsaved changes.
+        Selecting a page goes back. A project without pages opens on its first catalog; with
+        pages, on its first page as before.
+      - **The rows:** key (isolated, left to right), source and translation (each with its
+        `lang` and `dir`), and status (the page list's shapes, moved to `base.css`, with the
+        status's name for screen readers). Each top-level token is a `<bdi dir="ltr">`
+        (`MessageText`, `tokenSegments`), so `$1` or `{{PLURAL:…}}` keeps its place in a Hebrew
+        sentence. A message's draft status reads "Draft: not saved in Paper Lion yet".
+      - **Search and filter:** key, source, and translation, every word; status filter "All",
+        "Needs work" (missing or outdated), or one status; "Showing X of Y". A new catalog starts
+        unfiltered. Not-in-source messages are listed apart, with a note that they're kept.
+      - A documentation file that can't be read shows a warning above the rows; a missing
+        translation file is noted beside the paths.
+      - **Measured, then decided with the maintainer (question 4's "virtualized if measuring shows
+        it needs to be"):** in Chromium, a production build, 5,000 rows took about 1 s to render
+        (2.8 s to open the catalog, 1.07 s to clear a search). **Rows are now a fixed height**,
+        long texts clamped to two lines, **and only the rows in view are rendered**
+        (`visibleRows`, `useVirtualRows`: the row height is read from a rendered row, so it
+        follows the font size; spacers keep the scroll; `aria-rowcount` and `aria-rowindex`
+        keep screen readers' place; the header row is sticky). After: opening about 0.29 s
+        (mostly reading), searching 29 ms, clearing 15 ms, scrolling to the middle 15 ms, with
+        about 20 rows in the DOM. The full text of a clamped message is for C6's open row.
+      - New messages (en, he, qqq) for the list's controls, columns, notes, and the message
+        draft status.
+      - Tests: the helpers (`tokenSegments`, `filterMessages`, `visibleRows`, table-driven),
+        `useCatalog` (loading, the newest of two reads, errors, no catalog), and through the
+        real entry point: opening on the first catalog, columns' languages and isolated tokens,
+        search and filter, a new catalog unfiltered, not-in-source messages, notes and
+        warnings, a read error, going between pages and catalogs, the unsaved-changes question
+        before a catalog, and a 1,000-message catalog rendering only a window that follows the
+        scroll. The UI harness opens the MediaWiki fixture on its first catalog.
+      - Mutation checks, each failing tests: nested tokens split out, trailing text dropped,
+        "Needs work" without outdated, search ignoring translations, overscan on either side,
+        not following the scroll, not back to the top, a new catalog keeping the search, no
+        spacer below, `aria-rowindex`, not opening the first catalog, no unsaved-changes
+        question, not going back to a page, the page still current while a catalog shows, and
+        an older read replacing a newer one (which survived at first, and got `useCatalog`'s
+        test).
 - **C6, the message editor:** the expanded row with CodeMirror, `qqq`, checks from main (question 6),
   and keyboard navigation.
 - **C7, saving:** patching, new files, drafts, the conflict check, and recording status.
