@@ -2,6 +2,7 @@
 import type {
   CatalogDto,
   ErrorDto,
+  MarkedExistingDto,
   PageStatusDto,
   PaperLionApi,
   ProjectSummaryDto,
@@ -34,9 +35,9 @@ export interface ProjectState {
   setStatus(key: string, status: PageStatusDto): void;
   /**
    * Marks every existing translation never marked up to date (the one-time start), then lists the
-   * pages again. Returns the keys it marked, or the error.
+   * pages and catalogs again. Returns what it marked, or the error.
    */
-  markExisting(): Promise<{ readonly marked: readonly string[] } | { readonly error: ErrorDto }>;
+  markExisting(): Promise<MarkedExistingDto | { readonly error: ErrorDto }>;
   /** A catalog gained or lost its draft. */
   markCatalogDraft(key: string, hasDraft: boolean): void;
   /** Lists the catalogs again (after one was saved), for their progress. Failing changes nothing. */
@@ -162,11 +163,9 @@ export function useProject(client: PaperLionApi): ProjectState {
     documents.value = documents.value.map((document) => (document === entry ? changed : document));
   }
 
-  async function markExisting(): Promise<
-    { readonly marked: readonly string[] } | { readonly error: ErrorDto }
-  > {
+  async function markExisting(): Promise<MarkedExistingDto | { readonly error: ErrorDto }> {
     const current = summary.value;
-    if (current === null) return { marked: [] };
+    if (current === null) return { marked: [], markedMessages: 0 };
     const request = ++latest;
     busy.value = true;
     try {
@@ -177,7 +176,8 @@ export function useProject(client: PaperLionApi): ProjectState {
         documents.value = listed.value.documents;
         statusFile.value = listed.value.statusFile;
       }
-      return { marked: marked.value.marked };
+      await refreshCatalogs();
+      return marked.value;
     } catch {
       return { error: transportFailed };
     } finally {
@@ -195,6 +195,8 @@ export function useProject(client: PaperLionApi): ProjectState {
       const listed = await client.listCatalogs({ projectId: current.projectId });
       if (request === refreshed && listed.ok && summary.value === current) {
         catalogs.value = listed.value.catalogs;
+        // Saving a message may have written the status file.
+        statusFile.value = listed.value.statusFile;
       }
     } catch {
       // The list keeps showing what it had; the next refresh tries again.

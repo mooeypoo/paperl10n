@@ -52,7 +52,7 @@ describe('a project with catalogs only', () => {
     });
     expect(await createMarkExistingUpToDate(deps)(deps.projectId)).toEqual({
       ok: true,
-      value: { marked: [] },
+      value: { marked: [], markedMessages: 0 },
     });
   });
 

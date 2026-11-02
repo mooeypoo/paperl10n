@@ -7,13 +7,16 @@ import type { DocumentKey, MarkdownParser } from '#domains/document';
 import {
   blockFingerprint,
   markSections,
+  recordMessages,
   sectionFingerprints,
   serializeStatusFile,
+  type CatalogRecord,
   type PageRecord,
 } from '#domains/translation';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
-import type { ProjectSessions } from './ports/project-sessions.ts';
+import { readCatalogFile } from './catalog-files.ts';
+import type { OpenedProject, ProjectSessions } from './ports/project-sessions.ts';
 import type { FileWriteError } from './ports/project-writer.ts';
 import {
   documentStatus,
@@ -49,9 +52,17 @@ export type MarkUpToDate = (
   request: MarkUpToDateRequest,
 ) => Promise<Result<DocumentStatus, MarkUpToDateError>>;
 
+/** What marking existing translations marked. */
+export interface MarkedExisting {
+  /** The pages it marked. */
+  readonly marked: readonly DocumentKey[];
+  /** How many messages it recorded, over every catalog. */
+  readonly markedMessages: number;
+}
+
 export type MarkExistingUpToDate = (
   projectId: string,
-) => Promise<Result<{ readonly marked: readonly DocumentKey[] }, MarkUpToDateError>>;
+) => Promise<Result<MarkedExisting, MarkUpToDateError>>;
 
 interface Dependencies {
   readonly sessions: ProjectSessions;
@@ -115,9 +126,46 @@ export function createMarkUpToDate(deps: Dependencies): MarkUpToDate {
 }
 
 /**
+ * Records every translated message of the catalogs that have no record yet, against its source as
+ * it is now. A catalog whose files can't be read is left as it is: it lists with its problem.
+ */
+async function recordExistingMessages(
+  project: OpenedProject,
+  recorded: ReadonlyMap<string, CatalogRecord>,
+): Promise<Result<Map<string, CatalogRecord>, FormatError>> {
+  const records = new Map<string, CatalogRecord>();
+  const locale = project.targetLocale;
+  if (project.catalogs === null || locale === null) return ok(records);
+  const { format, layout } = project.catalogs;
+  const catalogs = await layout.listCatalogs();
+  if (!catalogs.ok) return catalogs;
+  for (const catalog of catalogs.value) {
+    if (recorded.has(catalog.key)) continue;
+    const targetPath = layout.targetPathFor(catalog, locale.id);
+    if (!targetPath.ok) return targetPath;
+    const source = await readCatalogFile(project, format, catalog.path);
+    const target = await readCatalogFile(project, format, targetPath.value);
+    if (!source.ok || !target.ok) continue;
+    const translations = new Map(target.value?.map((message) => [message.key, message.text]));
+    // A catalog with nothing translated gets an empty record, which the status file leaves out.
+    const record = recordMessages(
+      undefined,
+      (source.value ?? []).map((message) => ({
+        key: message.key,
+        source: message.text,
+        translation: translations.get(message.key) ?? null,
+      })),
+    );
+    records.set(catalog.key, record);
+  }
+  return ok(records);
+}
+
+/**
  * Marks every existing translation without a record up to date with its source as it is now: the
- * one-time start for a project translated before Paper Lion. Pages already recorded keep theirs.
- * Returns the keys of the pages it marked.
+ * one-time start for a project translated before Paper Lion. Pages and catalogs already recorded
+ * keep theirs; in the others, every translated message is recorded. Returns the keys of the
+ * pages it marked, and how many messages.
  */
 export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpToDate {
   return async (projectId) => {
@@ -125,10 +173,8 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
     const locale = project.targetLocale;
     if (locale === null) return err({ code: 'workspace.no-target-locale' });
-    // Pages only: catalogs are recorded as their messages are saved.
-    if (project.documents === null) return ok({ marked: [] });
-    const { layout } = project.documents;
-    const documents = await layout.listSourceDocuments();
+    const layout = project.documents?.layout ?? null;
+    const documents = layout === null ? ok([]) : await layout.listSourceDocuments();
     if (!documents.ok) return documents;
 
     const path = statusFilePath(locale.id);
@@ -138,7 +184,7 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
       const pages = new Map<string, PageRecord>(status.value.file.pages);
       const marked: DocumentKey[] = [];
       for (const document of documents.value) {
-        if (pages.has(document.key)) continue;
+        if (layout === null || pages.has(document.key)) continue;
         const targetPath = layout.targetPathFor(document, locale.id);
         if (!targetPath.ok) return targetPath;
         if (!(await project.files.exists(targetPath.value))) continue;
@@ -148,13 +194,18 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
         pages.set(document.key, markSections(sectionFingerprints(source), null, 'all'));
         marked.push(document.key);
       }
-      if (marked.length === 0) return ok({ marked });
-      const file = { ...status.value.file, pages };
+      const recorded = await recordExistingMessages(project, status.value.file.catalogs);
+      if (!recorded.ok) return recorded;
+      let markedMessages = 0;
+      for (const record of recorded.value.values()) markedMessages += record.size;
+      if (marked.length === 0 && markedMessages === 0) return ok({ marked, markedMessages });
+      const catalogs = new Map([...status.value.file.catalogs, ...recorded.value]);
+      const file = { ...status.value.file, pages, catalogs };
       const written = await project.writer.writeText(path, serializeStatusFile(file), {
         createFolders: true,
       });
       if (!written.ok) return err({ code: 'workspace.status-unwritable', cause: written.error });
-      return ok({ marked });
+      return ok({ marked, markedMessages });
     });
   };
 }

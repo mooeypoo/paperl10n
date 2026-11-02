@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import type { CatalogDto, ErrorDto, PageStatusDto, SourceDocumentDto } from '#ipc-contract';
 import { computed } from 'vue';
+import type { ExistingCount } from '../catalog/existing-count';
 import { errorMessage } from '../i18n/error-message';
 import { useI18n } from '../i18n/i18n';
 import AppIcon from './AppIcon.vue';
@@ -26,8 +27,8 @@ const props = withDefaults(
     /** Marking them is on its way. */
     markingExisting?: boolean;
     markExistingError?: ErrorDto | null;
-    /** How many pages marking existing translations marked, once it did. */
-    markedExisting?: number | null;
+    /** How many pages and messages marking existing translations marked, once it did. */
+    markedExisting?: ExistingCount | null;
   }>(),
   {
     showPages: true,
@@ -50,7 +51,20 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const count = (status: PageStatusDto) =>
   props.documents.filter((document) => document.status === status).length;
-const existing = computed(() => props.documents.filter((d) => d.targetExists).length);
+/** Translations never marked up to date (while nothing was): pages with one, translated messages. */
+const existing = computed<ExistingCount>(() => {
+  let messages = 0;
+  for (const catalog of props.catalogs ?? []) messages += catalog.progress?.byStatus.draft ?? 0;
+  return { pages: props.documents.filter((d) => d.targetExists).length, messages };
+});
+/** A message about pages, messages, or both, for the kinds counted. */
+function byKind(
+  keys: { readonly pages: string; readonly messages: string; readonly both: string },
+  { pages, messages }: ExistingCount,
+): string {
+  if (messages === 0) return t(keys.pages, pages);
+  return pages === 0 ? t(keys.messages, messages) : t(keys.both, pages, messages);
+}
 const statusNames: Readonly<Record<PageStatusDto, string>> = {
   missing: 'paperl10n-status-missing',
   draft: 'paperl10n-status-draft',
@@ -102,6 +116,49 @@ const progress = computed(() => {
 <template>
   <nav class="pages" :aria-label="t('paperl10n-sidebar')">
     <p v-if="progress !== null" class="pages-progress">{{ progress }}</p>
+    <div v-if="offerExisting && existing.pages + existing.messages > 0" class="pages-existing">
+      <p>
+        {{
+          byKind(
+            {
+              pages: 'paperl10n-mark-existing-prompt',
+              messages: 'paperl10n-mark-existing-prompt-messages',
+              both: 'paperl10n-mark-existing-prompt-both',
+            },
+            existing,
+          )
+        }}
+      </p>
+      <p v-if="markExistingError !== null" class="pages-existing-error" role="alert">
+        {{ errorMessage(markExistingError, t) }}
+      </p>
+      <div class="pages-existing-actions">
+        <button
+          type="button"
+          class="pl-button"
+          data-variant="primary"
+          :disabled="markingExisting"
+          @click="emit('markExisting')"
+        >
+          {{ t('paperl10n-mark-existing') }}
+        </button>
+        <button type="button" class="pl-button" @click="emit('dismissExisting')">
+          {{ t('paperl10n-mark-existing-later') }}
+        </button>
+      </div>
+    </div>
+    <p v-if="markedExisting !== null" class="pages-progress" role="status">
+      {{
+        byKind(
+          {
+            pages: 'paperl10n-mark-existing-done',
+            messages: 'paperl10n-mark-existing-done-messages',
+            both: 'paperl10n-mark-existing-done-both',
+          },
+          markedExisting,
+        )
+      }}
+    </p>
     <template v-if="showPages">
       <div class="pages-heading">
         <h2>{{ t('paperl10n-pages') }}</h2>
@@ -115,29 +172,6 @@ const progress = computed(() => {
       </div>
       <p v-if="count('outdated') > 0" class="pages-progress">
         {{ t('paperl10n-pages-outdated', count('outdated')) }}
-      </p>
-      <div v-if="offerExisting && existing > 0" class="pages-existing">
-        <p>{{ t('paperl10n-mark-existing-prompt', existing) }}</p>
-        <p v-if="markExistingError !== null" class="pages-existing-error" role="alert">
-          {{ errorMessage(markExistingError, t) }}
-        </p>
-        <div class="pages-existing-actions">
-          <button
-            type="button"
-            class="pl-button"
-            data-variant="primary"
-            :disabled="markingExisting"
-            @click="emit('markExisting')"
-          >
-            {{ t('paperl10n-mark-existing') }}
-          </button>
-          <button type="button" class="pl-button" @click="emit('dismissExisting')">
-            {{ t('paperl10n-mark-existing-later') }}
-          </button>
-        </div>
-      </div>
-      <p v-if="markedExisting !== null" class="pages-progress" role="status">
-        {{ t('paperl10n-mark-existing-done', markedExisting) }}
       </p>
       <label class="pages-search">
         <span class="visually-hidden">{{ t('paperl10n-find-page') }}</span>

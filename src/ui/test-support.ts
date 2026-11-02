@@ -13,6 +13,7 @@ import type {
   LanguageDto,
   LanguageSuggestionsDto,
   LocaleDto,
+  MarkedExistingDto,
   PaperLionApi,
   ProjectSummaryDto,
   SourceDocumentDto,
@@ -142,7 +143,7 @@ export function fakeClient(
     /** The answer to marking up to date (default: every section and the page translated). */
     mark?: Result<DocumentStatusDto, ErrorDto>;
     /** The answer to marking existing translations up to date (default: `index` marked). */
-    markExisting?: Result<{ marked: readonly string[] }, ErrorDto>;
+    markExisting?: Result<MarkedExistingDto, ErrorDto>;
     /** The answer to checking a translation (default: no hints, the same length). */
     check?: Result<TranslationCheckDto, ErrorDto>;
     /** The answer to checking a message (default: no tokens, no warnings). */
@@ -305,7 +306,9 @@ export function fakeClient(
     },
     markExistingUpToDate: ({ projectId }) => {
       calls.push(`markExistingUpToDate:${projectId}`);
-      return Promise.resolve(answers.markExisting ?? { ok: true, value: { marked: ['index'] } });
+      return Promise.resolve(
+        answers.markExisting ?? { ok: true, value: { marked: ['index'], markedMessages: 0 } },
+      );
     },
     chooseTargetLocale: ({ projectId, language: tag }) => {
       calls.push(`chooseTargetLocale:${projectId}:${tag}`);

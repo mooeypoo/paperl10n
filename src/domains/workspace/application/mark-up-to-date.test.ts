@@ -290,7 +290,7 @@ describe('markExistingUpToDate', () => {
     expect(await app.statuses()).toEqual({ about: 'draft', index: 'draft', new: 'missing' });
     expect(await app.markExisting(app.projectId)).toEqual({
       ok: true,
-      value: { marked: ['index'] },
+      value: { marked: ['index'], markedMessages: 0 },
     });
     expect(await app.statuses()).toEqual({ about: 'draft', index: 'translated', new: 'missing' });
   });
@@ -303,7 +303,10 @@ describe('markExistingUpToDate', () => {
 
   it('writes nothing when there’s nothing to mark', async () => {
     const app = await openWith({ 'en/new.md': 'New\n' });
-    expect(await app.markExisting(app.projectId)).toEqual({ ok: true, value: { marked: [] } });
+    expect(await app.markExisting(app.projectId)).toEqual({
+      ok: true,
+      value: { marked: [], markedMessages: 0 },
+    });
     expect(await app.statusFile()).toBeNull();
   });
 

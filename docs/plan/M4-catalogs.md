@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C6 and C7a–C7d done, C7e next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C7 done, C8 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -729,8 +729,37 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         catalog change cancels; "Remove all" skipping removed ones): removed; two tests didn't
         test what they said (stopping before the change was seen; "changed since" without a
         matching removal), and the legend was untested: each fixed.
-- **C7e, existing translations:** the one-time "Mark all existing translations up to date" offer
-  (question 3) covering catalogs too; today it covers pages only.
+  - **C7e, existing translations:** the one-time "Mark all existing translations up to date" offer
+    (question 3) covering catalogs too; it covered pages only.
+    - *Done-notes:*
+      - **In main** (`markExistingUpToDate`): every catalog the status file doesn't record yet has
+        each translated message recorded against its source as it is now, in the same single
+        write as the pages. Catalogs already recorded keep their records (as pages do); a catalog
+        whose source or translation can't be read is left as it is (it lists with its problem);
+        a message with an empty translation, or one the source no longer has, isn't recorded. It
+        answers `{ marked, markedMessages }`: the pages' keys and how many messages.
+      - **In the UI:** the offer moved out of the Pages group, so a project without pages gets it
+        too. It counts the pages with a translation and the messages never recorded (each
+        catalog's `draft`, all of them while there's no status file), and says pages, messages,
+        or both; so does the confirmation. After marking, the catalogs are listed again and the
+        open catalog read again (its edits stay). Listing the catalogs now also updates what the
+        app knows of the status file, so saving a message (which writes it) ends the offer, as
+        marking a page does.
+      - New messages (en, he, qqq): the prompt and the confirmation for messages, and for both.
+      - Tests: in main, the records (against the source now, with the pages, in one write), the
+        catalogs already recorded kept, an unreadable source or translation left alone, a project
+        without pages, nothing translated writing nothing, and the layout's errors writing
+        nothing; end to end over IPC on a copy of the MediaWiki fixture with its status file
+        removed; and through the real entry point: the offer in a project without pages (the
+        catalogs and the open one read again), pages and messages counted together, nothing left
+        to mark, and a save ending the offer.
+      - Mutation checks, each failing tests (15): the recorded catalogs skipped, an unreadable
+        file skipped (not ending the loop), the source recorded, the count, writing only when
+        something was marked (each half), the answer over IPC, listing the catalogs again (and
+        the status file with them), reading the open catalog again, the offer's count and
+        condition, and each wording. Survivors at first, each resolved: skipping an empty
+        record repeated the status file's own rule: removed; marking nothing was untested: a
+        test added.
 - **C8, previews:** plural and gender (question 7).
 - **C9, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

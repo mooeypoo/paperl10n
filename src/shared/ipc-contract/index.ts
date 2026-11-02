@@ -415,6 +415,12 @@ export interface ErrorDto {
 }
 
 /** Everything the renderer can ask of the main process. One method = one IPC channel. */
+/** What marking existing translations marked: the pages' keys, and how many messages. */
+export interface MarkedExistingDto {
+  readonly marked: readonly string[];
+  readonly markedMessages: number;
+}
+
 export interface PaperLionApi {
   /** Shows the folder picker, then opens the project. `null` means the user cancelled. */
   openProject(): Promise<Result<ProjectSummaryDto | null, ErrorDto>>;
@@ -544,11 +550,12 @@ export interface PaperLionApi {
   }): Promise<Result<DocumentStatusDto, ErrorDto>>;
   /**
    * Marks every existing translation that was never marked up to date with its source as it is
-   * now: the one-time start for a project translated before Paper Lion. Returns their keys.
+   * now: the one-time start for a project translated before Paper Lion. Pages and catalogs
+   * already recorded keep their records. Returns what it marked.
    */
   markExistingUpToDate(request: {
     readonly projectId: string;
-  }): Promise<Result<{ readonly marked: readonly string[] }, ErrorDto>>;
+  }): Promise<Result<MarkedExistingDto, ErrorDto>>;
   /** Makes a language the project's target and saves it to the config; returns it with its direction. */
   chooseTargetLocale(request: {
     readonly projectId: string;

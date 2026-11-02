@@ -255,8 +255,10 @@ errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.un
 
 `createMarkExistingUpToDate(…)`, `markExistingUpToDate(projectId)`: records every existing
 translation without a record as up to date with its source now (the one-time start for a project
-translated before Paper Lion), and returns their keys. Pages with a record keep it; nothing to mark
-writes nothing.
+translated before Paper Lion), and returns the pages' keys and how many messages
+(`{ marked, markedMessages }`). Pages and catalogs with a record keep it; in a catalog without
+one, every translated message the source has is recorded. A catalog whose files can't be read is
+left as it is. Everything is written at once; nothing to mark writes nothing.
 
 `createStatusUpdates()`: one per app. Changes to the same status file run one at a time, so two
 marks made at once can't both read the old file and lose one.
