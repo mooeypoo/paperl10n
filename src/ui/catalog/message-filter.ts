@@ -6,9 +6,14 @@ export type StatusFilter = 'all' | 'needs-work' | MessageStatusDto;
 
 const NEEDS_WORK: ReadonlySet<MessageStatusDto> = new Set(['missing', 'outdated']);
 
+/** A message needs work when it's missing or outdated. */
+export function needsWork(status: MessageStatusDto): boolean {
+  return NEEDS_WORK.has(status);
+}
+
 function hasStatus(message: CatalogMessageDto, filter: StatusFilter): boolean {
   if (filter === 'all') return true;
-  if (filter === 'needs-work') return NEEDS_WORK.has(message.status);
+  if (filter === 'needs-work') return needsWork(message.status);
   return message.status === filter;
 }
 

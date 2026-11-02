@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* The message editor's styles, in its shadow root (message-editor.ts), as a constructed
+   stylesheet beside CodeMirror's own. Rules start with .cm-editor so they outrank CodeMirror's
+   base theme. */
+
+.cm-editor {
+  min-block-size: 4.5rem;
+  border: 1px solid var(--pl-color-line);
+  border-radius: var(--pl-radius-md);
+  background: var(--pl-color-surface);
+  font-family: var(--pl-font-text);
+  font-size: var(--pl-text-md);
+  line-height: 1.55;
+}
+
+.cm-editor.cm-focused {
+  outline: 2px solid var(--pl-color-focus);
+  outline-offset: 1px;
+}
+
+.cm-editor .cm-scroller {
+  font-family: inherit;
+  line-height: inherit;
+}
+
+.cm-editor .cm-content {
+  padding-block: var(--pl-space-2);
+  padding-inline: var(--pl-space-3);
+  caret-color: var(--pl-color-ink);
+}
+
+.cm-editor .cm-line {
+  padding-inline: 0;
+}
+
+.cm-editor .cm-placeholder {
+  color: var(--pl-color-muted);
+}
+
+/* A token: the same look as in the list's rows (MessageText.vue). */
+.cm-editor .cm-msg-isolate {
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-color-code-surface);
+  color: var(--pl-color-markup);
+  font-family: var(--pl-font-mono);
+  font-size: 0.92em;
+}

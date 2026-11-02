@@ -315,6 +315,7 @@ async function chooseTarget(tag: string): Promise<void> {
         </div>
         <CatalogView
           v-else-if="selectedCatalog !== null"
+          :project-id="summary.projectId"
           :detail="catalogReading.detail.value"
           :loading="catalogReading.loading.value"
           :error="catalogReading.error.value"

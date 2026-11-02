@@ -1,27 +1,42 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
-import type { CatalogDetailDto, ErrorDto, LocaleDto, MessageStatusDto } from '#ipc-contract';
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
-import { filterMessages, type StatusFilter } from '../catalog/message-filter';
+import type {
+  CatalogDetailDto,
+  CatalogMessageDto,
+  ErrorDto,
+  LocaleDto,
+  MessageStatusDto,
+} from '#ipc-contract';
+import { computed, nextTick, ref, toRef, useTemplateRef, watch } from 'vue';
+import { useClient } from '../client';
+import { filterMessages, needsWork, type StatusFilter } from '../catalog/message-filter';
+import { stepTo, type Step } from '../catalog/message-navigation';
+import { useMessageCheck } from '../composables/use-message-check';
+import { useMessageEdits } from '../composables/use-message-edits';
 import { errorMessage } from '../i18n/error-message';
-import { useI18n } from '../i18n/i18n';
+import { isolated, useI18n } from '../i18n/i18n';
 import { useVirtualRows } from '../composables/use-virtual-rows';
 import { autonym } from '../i18n/language-name';
+import { warningMessage } from '../i18n/warning-message';
 import AppIcon from './AppIcon.vue';
+import MessageEditor from './MessageEditor.vue';
 import MessageText from './MessageText.vue';
 
-// A catalog's messages, read-only: one row per source message (key, source, translation,
-// status), with search and a status filter, and the translation's keys the source no longer has
-// listed apart. Each text column carries its language and direction. Rows are a fixed height, long
-// texts clamped to two lines, so only the rows in view are rendered (5,000 rows took a second).
+// A catalog's messages: one row per source message (key, source, translation, status), with
+// search and a status filter, and the translation's keys the source no longer has listed apart.
+// Each text column carries its language and direction. Rows are a fixed height, long texts
+// clamped to two lines, so only the rows in view are rendered (5,000 rows took a second). One row
+// at a time opens, taller: the whole source, its documentation, and an editor for the translation,
+// checked in main as it's written; keys move between messages from there.
 const props = defineProps<{
+  projectId: string;
   detail: CatalogDetailDto | null;
   loading: boolean;
   error: ErrorDto | null;
   sourceLocale: LocaleDto;
   targetLocale: LocaleDto;
 }>();
-const { t } = useI18n();
+const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 
 const query = ref('');
 const status = ref<StatusFilter>('all');
@@ -36,6 +51,27 @@ watch(
 const messages = computed(() => props.detail?.messages ?? []);
 const shown = computed(() => filterMessages(messages.value, query.value, status.value));
 
+const editing = useMessageEdits(toRef(props, 'detail'));
+/** Where the open message is among those shown (`null`: none open, or filtered out). */
+const openIndex = computed(() => {
+  const index = shown.value.findIndex((message) => message.key === editing.open.value);
+  return index === -1 ? null : index;
+});
+const openMessage = computed(() =>
+  openIndex.value === null ? null : (shown.value[openIndex.value] ?? null),
+);
+const checking = useMessageCheck(
+  useClient(),
+  toRef(props, 'projectId'),
+  computed(() => props.detail?.key ?? null),
+  editing.open,
+  () => (openMessage.value === null ? null : editing.textOf(openMessage.value)),
+);
+watch(checking.check, (answer) => {
+  if (answer !== null) editing.remember(answer.key, answer.text, answer.tokens);
+});
+const warnings = computed(() => checking.check.value?.warnings ?? []);
+
 /** A row's height before one is rendered to measure: `--catalog-row-height` at 16 px per rem. */
 const ROW_HEIGHT_FALLBACK = 72;
 const scrollBox = useTemplateRef<HTMLElement>('scrollBox');
@@ -43,6 +79,7 @@ const rows = useVirtualRows(
   scrollBox,
   computed(() => shown.value.length),
   ROW_HEIGHT_FALLBACK,
+  openIndex,
 );
 const rendered = computed(() =>
   shown.value
@@ -55,6 +92,94 @@ watch(shown, async () => {
   await nextTick();
   rows.measure();
 });
+
+/** The open message's editor, to focus it. */
+let openEditor: { focus(): void } | null = null;
+const setEditor = (component: unknown) => {
+  openEditor = component as { focus(): void } | null;
+};
+
+/** What the last move between messages found: nothing further that way, or `null`. */
+const moveNote = ref<string | null>(null);
+watch(editing.open, () => {
+  moveNote.value = null;
+});
+
+/** Opens the message shown at `index`, scrolls it into view, and puts the caret in its editor. */
+async function openAt(index: number): Promise<void> {
+  const message = shown.value[index];
+  if (message === undefined) return;
+  editing.open.value = message.key;
+  rows.scrollToRow(index);
+  await nextTick();
+  // Now rendered: measured at its open height, and scrolled to show all of it.
+  rows.measure();
+  rows.scrollToRow(index);
+  await nextTick();
+  openEditor?.focus();
+}
+
+/** Closes the open message, and gives the focus back to its row. */
+async function close(): Promise<void> {
+  const key = editing.open.value;
+  editing.open.value = null;
+  await nextTick();
+  rows.measure();
+  const row = [...(scrollBox.value?.querySelectorAll<HTMLElement>('tr[data-row]') ?? [])].find(
+    (candidate) => candidate.dataset.key === key,
+  );
+  row?.querySelector<HTMLButtonElement>('.catalog-row-button')?.focus();
+}
+
+function toggle(index: number, key: string): void {
+  if (editing.open.value === key) void close();
+  else void openAt(index);
+}
+
+/** A message needing work (missing or outdated) that hasn't been written since it opened. */
+const stillNeedsWork = (index: number) => {
+  const message = shown.value[index];
+  return message !== undefined && needsWork(message.status) && !editing.isEdited(message.key);
+};
+
+/** Moves to the next or previous message (`needingWork`: the next one needing work). */
+function move(step: Step, needingWork: boolean): void {
+  const to = stepTo(
+    shown.value.length,
+    openIndex.value,
+    step,
+    needingWork ? stillNeedsWork : undefined,
+  );
+  if (to !== null) {
+    void openAt(to);
+    return;
+  }
+  moveNote.value = t(
+    needingWork
+      ? step === 1
+        ? 'paperl10n-message-none-needing-work-after'
+        : 'paperl10n-message-none-needing-work-before'
+      : step === 1
+        ? 'paperl10n-message-last'
+        : 'paperl10n-message-first',
+  );
+}
+
+/** The keys, each isolated: "Alt+↓" in a Hebrew sentence must not read "↓+Alt". */
+const keysHint = computed(() =>
+  t('paperl10n-message-keys', ...['Alt+↓', 'Alt+↑', 'Shift', 'Esc'].map((key) => isolated(key))),
+);
+
+function onEdit(message: CatalogMessageDto, text: string): void {
+  editing.edit(message, text);
+  checking.refresh();
+}
+
+/** The tokens of the open editor's text, as main last found them (`[]`: not known yet). */
+const startTokens = (message: CatalogMessageDto) => {
+  const shownText = editing.shown(message);
+  return { text: shownText?.text ?? '', tokens: shownText?.tokens ?? [] };
+};
 
 const statusNames: Readonly<Record<MessageStatusDto, string>> = {
   missing: 'paperl10n-status-missing',
@@ -139,21 +264,124 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
               v-for="{ message, index } in rendered"
               :key="message.key"
               data-row
+              :data-key="message.key"
+              :data-open="message.key === editing.open.value ? '' : undefined"
               :aria-rowindex="index + 2"
               :data-status="message.status"
+              @click="message.key === editing.open.value || openAt(index)"
             >
               <th scope="row" class="catalog-key">
-                <bdi dir="ltr" class="catalog-clamp">{{ message.key }}</bdi>
+                <button
+                  type="button"
+                  class="catalog-row-button"
+                  :aria-expanded="message.key === editing.open.value"
+                  @click.stop="toggle(index, message.key)"
+                >
+                  <bdi dir="ltr" class="catalog-clamp">{{ message.key }}</bdi>
+                </button>
               </th>
               <td :lang="sourceLocale.id" :dir="sourceLocale.direction">
-                <span class="catalog-clamp">
+                <span :class="{ 'catalog-clamp': message.key !== editing.open.value }">
                   <MessageText :text="message.source" :tokens="message.sourceTokens" />
                 </span>
+                <!-- Documentation is about the source, in its direction; only its title and the
+                     note that there's none are interface text. -->
+                <section v-if="message.key === editing.open.value" class="catalog-documentation">
+                  <h3 :lang="uiLocale" :dir="uiDirection">
+                    {{ t('paperl10n-message-documentation') }}
+                  </h3>
+                  <p
+                    v-if="message.documentation !== null"
+                    class="catalog-documentation-text"
+                    dir="auto"
+                  >
+                    {{ message.documentation }}
+                  </p>
+                  <p v-else class="catalog-note" :lang="uiLocale" :dir="uiDirection">
+                    {{ t('paperl10n-message-no-documentation') }}
+                  </p>
+                </section>
               </td>
               <td :lang="targetLocale.id" :dir="targetLocale.direction">
-                <span v-if="message.translation !== null" class="catalog-clamp">
-                  <MessageText :text="message.translation" :tokens="message.translationTokens" />
-                </span>
+                <template v-if="message.key === editing.open.value">
+                  <MessageEditor
+                    :key="message.key"
+                    :ref="setEditor"
+                    :text="editing.textOf(message)"
+                    :tokens="startTokens(message)"
+                    :locale="targetLocale"
+                    :label="t('paperl10n-message-editor-label', message.key)"
+                    :placeholder="t('paperl10n-message-editor-placeholder')"
+                    @change="(text: string) => onEdit(message, text)"
+                    @next="move(1, false)"
+                    @previous="move(-1, false)"
+                    @next-needing-work="move(1, true)"
+                    @previous-needing-work="move(-1, true)"
+                    @close="close"
+                  />
+                  <div class="catalog-open-footer" :lang="uiLocale" :dir="uiDirection">
+                    <div v-if="warnings.length > 0" class="catalog-warnings">
+                      <p class="catalog-note">{{ t('paperl10n-message-warnings') }}</p>
+                      <ul>
+                        <li v-for="(warning, at) in warnings" :key="at">
+                          {{ warningMessage(warning, t) }}
+                        </li>
+                      </ul>
+                    </div>
+                    <div class="catalog-moves">
+                      <button
+                        type="button"
+                        class="pl-button"
+                        aria-keyshortcuts="Alt+ArrowUp"
+                        @click.stop="move(-1, false)"
+                      >
+                        {{ t('paperl10n-message-previous') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="pl-button"
+                        aria-keyshortcuts="Alt+ArrowDown"
+                        @click.stop="move(1, false)"
+                      >
+                        {{ t('paperl10n-message-next') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="pl-button"
+                        aria-keyshortcuts="Alt+Shift+ArrowDown"
+                        @click.stop="move(1, true)"
+                      >
+                        {{ t('paperl10n-message-next-needing-work') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="pl-button"
+                        aria-keyshortcuts="Escape"
+                        @click.stop="close"
+                      >
+                        {{ t('paperl10n-message-close') }}
+                      </button>
+                    </div>
+                    <p class="catalog-note" role="status">{{ moveNote ?? '' }}</p>
+                    <p class="catalog-note">{{ keysHint }}</p>
+                  </div>
+                </template>
+                <template v-else>
+                  <span v-if="editing.shown(message) !== null" class="catalog-clamp">
+                    <MessageText
+                      :text="editing.shown(message)?.text ?? ''"
+                      :tokens="editing.shown(message)?.tokens ?? []"
+                    />
+                  </span>
+                  <span
+                    v-if="editing.isEdited(message.key)"
+                    class="catalog-edited"
+                    :lang="uiLocale"
+                    :dir="uiDirection"
+                  >
+                    {{ t('paperl10n-message-edited') }}
+                  </span>
+                </template>
               </td>
               <td class="catalog-status">
                 <span class="pages-status" :data-status="message.status" aria-hidden="true"></span>
@@ -324,6 +552,89 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
 
 .catalog-messages tr[data-row] {
   block-size: var(--catalog-row-height);
+  cursor: pointer;
+}
+
+/* The open row: as tall as it needs, and not a button anymore. */
+.catalog-messages tr[data-open] {
+  block-size: auto;
+  background: var(--pl-color-bar);
+  cursor: auto;
+}
+
+.catalog-row-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.catalog-row-button:focus-visible {
+  outline: 2px solid var(--pl-color-focus);
+  outline-offset: 2px;
+}
+
+.catalog-documentation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  margin-block-start: var(--pl-space-3);
+  padding: var(--pl-space-3);
+  border-inline-start: 3px solid var(--pl-color-accent);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-color-code-surface);
+}
+
+.catalog-documentation h3 {
+  margin: 0;
+  color: var(--pl-color-muted);
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+  font-weight: 600;
+}
+
+.catalog-documentation-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.catalog-open-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  margin-block-start: var(--pl-space-2);
+  font-family: var(--pl-font-ui);
+}
+
+.catalog-warnings {
+  padding-inline-start: var(--pl-space-3);
+  border-inline-start: 3px solid var(--pl-color-warn);
+}
+
+.catalog-warnings ul {
+  margin: var(--pl-space-1) 0 0;
+  padding-inline-start: var(--pl-space-4);
+  color: var(--pl-color-ink);
+  font-size: var(--pl-text-sm);
+}
+
+.catalog-moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pl-space-2);
+}
+
+.catalog-edited {
+  display: block;
+  margin-block-start: var(--pl-space-1);
+  color: var(--pl-color-muted);
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+  font-style: italic;
 }
 
 .catalog-spacer td {
@@ -348,6 +659,12 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
 
 .catalog-status {
   inline-size: 1.5rem;
+}
+
+/* The status's shape (base.css) is sized: a block of its own here, not inline text. */
+.catalog-status .pages-status {
+  display: block;
+  margin-block-start: 0.4em;
 }
 
 .catalog-orphans {
