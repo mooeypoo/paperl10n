@@ -436,6 +436,115 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       },
     });
   },
+  saveCatalog: async () => {
+    const folder = await copyOfExtension();
+    const { api } = rendererApi(folder);
+    const opened = await api.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    const { projectId } = opened.value;
+    const save = await api.saveCatalog({
+      projectId,
+      catalog: 'i18n',
+      messages: [
+        {
+          key: 'example-count',
+          text: 'יש {{PLURAL:$1|דוגמה אחת|$1 דוגמאות}}.',
+          base: null,
+          source: 'There {{PLURAL:$1|is one example|are $1 examples}}.',
+        },
+        { key: 'example-removed', text: '', base: 'הודעה שכבר לא קיימת במקור', source: null },
+      ],
+    });
+    expect(save).toEqual({
+      ok: true,
+      value: {
+        path: 'i18n/he.json',
+        written: true,
+        messages: [
+          { key: 'example-count', status: 'translated' },
+          { key: 'example-removed', status: null },
+        ],
+        statusProblem: null,
+      },
+    });
+    // Patched in place: the new message after the one before it in the source, tabs kept, the
+    // removed one gone, every other byte as it was.
+    expect(await readFile(join(folder, 'i18n/he.json'), 'utf8')).toBe(
+      [
+        '{',
+        '\t"@metadata": {',
+        '\t\t"authors": [',
+        '\t\t\t"Moriel"',
+        '\t\t]',
+        '\t},',
+        '\t"example-desc": "מציג [[Special:Example|דוגמאות]] {{GENDER:$1|לו|לה|להם}}.",',
+        '\t"example-count": "יש {{PLURAL:$1|דוגמה אחת|$1 דוגמאות}}.",',
+        '\t"example-link": "ראו את [https://www.mediawiki.org/wiki/Extension:Example המדריך] ב{{SITENAME}}.",',
+        '\t"example-last": "הודעה אחרונה"',
+        '}',
+        '',
+      ].join('\n'),
+    );
+    const read = await api.readCatalog({ projectId, key: 'i18n' });
+    expect(read.ok && read.value.messages[1]?.status).toBe('translated');
+
+    // Saved again as it is now: nothing to write. With a status file it can't read: still saved.
+    await writeFile(join(folder, '.paperl10n/status/he.json'), 'not json');
+    const again = await api.saveCatalog({
+      projectId,
+      catalog: 'i18n',
+      messages: [
+        {
+          key: 'example-count',
+          text: 'יש {{PLURAL:$1|דוגמה אחת|$1 דוגמאות}}.',
+          base: 'יש {{PLURAL:$1|דוגמה אחת|$1 דוגמאות}}.',
+          source: 'There {{PLURAL:$1|is one example|are $1 examples}}.',
+        },
+      ],
+    });
+    expect(again.ok && again.value.written).toBe(false);
+    expect(again.ok && again.value.statusProblem?.code).toBe('workspace.status-invalid');
+
+    // The same message again, from the old base: it changed on disk since, so nothing is written.
+    expect(
+      await api.saveCatalog({
+        projectId,
+        catalog: 'i18n',
+        messages: [{ key: 'example-count', text: 'אחר', base: null, source: 'x' }],
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: 'workspace.catalog-changed',
+        params: { file: 'i18n/he.json' },
+        details: ['example-count'],
+      },
+    });
+  },
+  keepMessagesUpToDate: async () => {
+    const folder = await copyOfExtension();
+    const { api } = rendererApi(folder);
+    const opened = await api.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    const { projectId } = opened.value;
+    const kept = await api.keepMessagesUpToDate({
+      projectId,
+      catalog: 'i18n',
+      messages: [{ key: 'example-last', source: 'Last message' }],
+    });
+    expect(kept).toEqual({ ok: true, value: [{ key: 'example-last', status: 'translated' }] });
+    const status = JSON.parse(
+      await readFile(join(folder, '.paperl10n/status/he.json'), 'utf8'),
+    ) as { catalogs: Record<string, Record<string, string>> };
+    expect(status.catalogs.i18n?.['example-last']).toBe(messageFingerprint('Last message'));
+    expect(
+      await api.keepMessagesUpToDate({
+        projectId,
+        catalog: 'i18n',
+        messages: [{ key: 'example-last', source: 'Not what it says' }],
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'workspace.source-changed' } });
+  },
   markUpToDate: async () => {
     const folder = await copyOfBasic();
     const { api } = rendererApi(folder);

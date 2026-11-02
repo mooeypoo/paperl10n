@@ -5,6 +5,9 @@ import type { Locale } from '#domains/locale';
 import type { PreservationHint, Section, SectionPairing } from '#domains/translation';
 import type {
   CheckMessage,
+  KeepMessagesUpToDate,
+  SaveCatalog,
+  SavedMessage,
   CheckTranslation,
   ChooseTargetLocale,
   DiscardDraft,
@@ -33,6 +36,7 @@ import type {
   MessageWarningDto,
   PaperLionApi,
   PlaceholderTokenDto,
+  SavedMessageDto,
   SectionPairingDto,
 } from '#ipc-contract';
 import { err, ok } from '#kernel/result';
@@ -54,6 +58,8 @@ export interface UseCases {
   readonly markExistingUpToDate: MarkExistingUpToDate;
   readonly checkTranslation: CheckTranslation;
   readonly checkMessage: CheckMessage;
+  readonly saveCatalog: SaveCatalog;
+  readonly keepMessagesUpToDate: KeepMessagesUpToDate;
 }
 
 function toTokenDto(token: PlaceholderToken): PlaceholderTokenDto {
@@ -64,6 +70,10 @@ function toWarningDto(warning: MessageWarning): MessageWarningDto {
   return warning.kind === 'unbalanced'
     ? { kind: warning.kind, brackets: warning.brackets }
     : { kind: warning.kind, token: warning.token, value: warning.value };
+}
+
+function toSavedDto({ key, status }: SavedMessage): SavedMessageDto {
+  return { key, status };
 }
 
 function toFormatDto(format: FormatName | null): FormatDto | null {
@@ -320,6 +330,23 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         tokens: result.value.tokens.map(toTokenDto),
         warnings: result.value.warnings.map(toWarningDto),
       });
+    },
+
+    async saveCatalog({ projectId, catalog, messages }) {
+      const result = await useCases.saveCatalog(projectId, { catalog, messages });
+      if (!result.ok) return err(toErrorDto(result.error));
+      const saved = result.value;
+      return ok({
+        path: saved.path,
+        written: saved.written,
+        messages: saved.messages.map(toSavedDto),
+        statusProblem: saved.statusProblem === null ? null : toErrorDto(saved.statusProblem),
+      });
+    },
+
+    async keepMessagesUpToDate({ projectId, catalog, messages }) {
+      const result = await useCases.keepMessagesUpToDate(projectId, { catalog, messages });
+      return result.ok ? ok(result.value.map(toSavedDto)) : err(toErrorDto(result.error));
     },
 
     async chooseTargetLocale({ projectId, language }) {

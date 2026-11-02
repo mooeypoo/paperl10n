@@ -2,6 +2,8 @@
 import type {
   CatalogReadError,
   CheckMessageError,
+  KeepMessagesError,
+  SaveCatalogError,
   ChooseTargetLocaleError,
   DraftError,
   ListCatalogsError,
@@ -27,7 +29,9 @@ export type AppError =
   | SaveDocumentError
   | DraftError
   | MarkUpToDateError
-  | CheckMessageError;
+  | CheckMessageError
+  | SaveCatalogError
+  | KeepMessagesError;
 
 /** Turns a use-case error into the plain DTO the UI shows a message for. Exhaustive by lint. */
 export function toErrorDto(error: AppError): ErrorDto {
@@ -60,6 +64,10 @@ export function toErrorDto(error: AppError): ErrorDto {
       return dto({ key: error.key });
     case 'workspace.unknown-message':
       return dto({ catalog: error.catalog, key: error.key });
+    case 'workspace.catalog-changed':
+      return dto({ file: error.path }, error.keys);
+    case 'workspace.catalog-unwritable':
+      return dto({ file: error.cause.path, problem: error.cause.code });
     case 'workspace.document-unreadable':
     case 'workspace.document-unwritable':
       return dto({ file: error.cause.path, problem: error.cause.code });

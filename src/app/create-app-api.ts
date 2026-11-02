@@ -5,6 +5,8 @@ import type { MarkdownParser } from '#domains/document';
 import { createFormatRegistry, type PluginModule, type RegistryError } from '#domains/formats';
 import {
   createCheckMessage,
+  createKeepMessagesUpToDate,
+  createSaveCatalog,
   createCheckTranslation,
   createChooseTargetLocale,
   createDiscardDraft,
@@ -76,6 +78,11 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
     markExistingUpToDate: createMarkExistingUpToDate(marking),
     checkTranslation: createCheckTranslation({ sessions: deps.sessions, parser: deps.parser }),
     checkMessage: createCheckMessage({ sessions: deps.sessions }),
+    saveCatalog: createSaveCatalog({ sessions: deps.sessions, updates: statusUpdates }),
+    keepMessagesUpToDate: createKeepMessagesUpToDate({
+      sessions: deps.sessions,
+      updates: statusUpdates,
+    }),
   });
   return ok(guardApi(handlers, deps.onUnexpected));
 }

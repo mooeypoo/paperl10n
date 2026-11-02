@@ -135,6 +135,8 @@
   "paperl10n-error-workspace-catalog-unreadable": "אי אפשר לקרוא את קובץ הקטלוג $1 ($2).",
   "paperl10n-error-workspace-unknown-catalog": "הקטלוג \"$1\" כבר לא נמצא בפרויקט. פתחו את הפרויקט מחדש כדי לרענן את הרשימה.",
   "paperl10n-error-workspace-unknown-message": "ההודעה \"$2\" כבר לא נמצאת במקור של הקטלוג \"$1\". פתחו את הקטלוג מחדש כדי לרענן אותו.",
+  "paperl10n-error-workspace-catalog-changed": "לא נשמר: $1 השתנה בדיסק מאז שהתחלתם לערוך (חלק מההודעות שערכתם שונות שם עכשיו). פתחו את הקטלוג מחדש כדי לראות אותן.",
+  "paperl10n-error-workspace-catalog-unwritable": "אי אפשר לכתוב את קובץ הקטלוג $1 ($2).",
   "paperl10n-draft-restored": "שינויים שלא נשמרו מהפעם הקודמת שוחזרו.",
   "paperl10n-discard-draft": "למחוק אותם",
   "paperl10n-draft-restored-changed": "שינויים שלא נשמרו מהפעם הקודמת שוחזרו. הקובץ השתנה בדיסק מאז, ולכן בשמירה תתבקשו לבחור איזו גרסה לשמור.",

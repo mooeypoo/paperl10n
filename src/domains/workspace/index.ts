@@ -36,6 +36,20 @@ export {
   type ReadCatalogResult,
 } from './application/read-catalog.ts';
 export {
+  createSaveCatalog,
+  type MessageSave,
+  type SaveCatalog,
+  type SaveCatalogError,
+  type SaveCatalogResult,
+} from './application/save-catalog.ts';
+export {
+  createKeepMessagesUpToDate,
+  type KeepMessagesError,
+  type KeepMessagesUpToDate,
+  type MessageToKeep,
+} from './application/keep-messages-up-to-date.ts';
+export type { SavedMessage, StatusWriteError } from './application/catalog-records.ts';
+export {
   createCheckMessage,
   type CheckMessage,
   type CheckMessageError,

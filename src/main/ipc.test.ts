@@ -105,6 +105,16 @@ function setup() {
       calls.push(['checkMessage', request]);
       return Promise.resolve(ok({ tokens: [], warnings: [] }));
     },
+    saveCatalog: (request) => {
+      calls.push(['saveCatalog', request]);
+      return Promise.resolve(
+        ok({ path: 'i18n/he.json', written: true, messages: [], statusProblem: null }),
+      );
+    },
+    keepMessagesUpToDate: (request) => {
+      calls.push(['keepMessagesUpToDate', request]);
+      return Promise.resolve(ok([]));
+    },
     markUpToDate: (request) => {
       calls.push(['markUpToDate', request]);
       return Promise.resolve(
@@ -193,6 +203,17 @@ describe('registerApi', () => {
       ok: true,
       value: { tokens: [], warnings: [] },
     });
+    const saveMessages = {
+      projectId: 'p1',
+      catalog: 'i18n',
+      messages: [{ key: 'm', text: 'שלום $1', base: null, source: 'Hello $1' }],
+    };
+    expect(await send('saveCatalog', trusted, saveMessages)).toEqual({
+      ok: true,
+      value: { path: 'i18n/he.json', written: true, messages: [], statusProblem: null },
+    });
+    const keep = { projectId: 'p1', catalog: 'i18n', messages: [{ key: 'm', source: 'Hello $1' }] };
+    expect(await send('keepMessagesUpToDate', trusted, keep)).toEqual({ ok: true, value: [] });
     const check = { projectId: 'p1', key: 'k', text: 'שלום' };
     expect(await send('checkTranslation', trusted, check)).toEqual({
       ok: true,
@@ -213,6 +234,8 @@ describe('registerApi', () => {
       ['markUpToDate', mark],
       ['markExistingUpToDate', { projectId: 'p1' }],
       ['checkMessage', message],
+      ['saveCatalog', saveMessages],
+      ['keepMessagesUpToDate', keep],
       ['checkTranslation', check],
     ]);
   });
@@ -317,6 +340,58 @@ describe('argumentValidators', () => {
     ['an extra argument', [message, 'more'], false],
   ])('checkMessage: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.checkMessage(args)).toBe(valid);
+  });
+
+  const saved = { key: 'm', text: 'x', base: null, source: 'X' };
+  const saveOf = (messages: unknown, extra: object = {}) => [
+    { projectId: 'abc', catalog: 'i18n', messages, ...extra },
+  ];
+  const many = Array.from({ length: 100_001 }, (_, i) => ({ ...saved, key: `m${String(i)}` }));
+  it.each<[string, unknown[], boolean]>([
+    ['a message', saveOf([saved]), true],
+    ['a removal, with a base', saveOf([{ ...saved, text: '', base: 'old' }]), true],
+    ['a message not in the source', saveOf([{ ...saved, source: null }]), true],
+    ['two messages', saveOf([saved, { ...saved, key: 'n' }]), true],
+    ['no arguments', [], false],
+    ['no messages', saveOf([]), false],
+    ['messages not a list', saveOf({ m: saved }), false],
+    ['too many messages', saveOf(many), false],
+    ['a key twice', saveOf([saved, saved]), false],
+    ['an empty key', saveOf([{ ...saved, key: '' }]), false],
+    ['a numeric text', saveOf([{ ...saved, text: 1 }]), false],
+    ['a text too long', saveOf([{ ...saved, text: 'x'.repeat(100_001) }]), false],
+    ['a numeric base', saveOf([{ ...saved, base: 1 }]), false],
+    ['a base too long', saveOf([{ ...saved, base: 'x'.repeat(100_001) }]), false],
+    ['an undefined source', saveOf([{ ...saved, source: undefined }]), false],
+    ['a source too long', saveOf([{ ...saved, source: 'x'.repeat(100_001) }]), false],
+    ['a message with an extra field', saveOf([{ ...saved, path: '/etc' }]), false],
+    ['a message without its base', saveOf([{ key: 'm', text: 'x', source: 'X' }]), false],
+    ['an empty catalog', [{ projectId: 'abc', catalog: '', messages: [saved] }], false],
+    ['an empty project id', [{ projectId: '', catalog: 'i18n', messages: [saved] }], false],
+    ['an extra field', saveOf([saved], { path: '/etc' }), false],
+    ['an extra argument', [...saveOf([saved]), 'more'], false],
+  ])('saveCatalog: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.saveCatalog(args)).toBe(valid);
+  });
+
+  const kept = { key: 'm', source: 'X' };
+  const keep = (messages: unknown, extra: object = {}) => [
+    { projectId: 'abc', catalog: 'i18n', messages, ...extra },
+  ];
+  it.each<[string, unknown[], boolean]>([
+    ['a message', keep([kept]), true],
+    ['an empty source', keep([{ ...kept, source: '' }]), true],
+    ['no messages', keep([]), false],
+    ['a key twice', keep([kept, kept]), false],
+    ['a null source', keep([{ ...kept, source: null }]), false],
+    ['a source too long', keep([{ ...kept, source: 'x'.repeat(100_001) }]), false],
+    ['a message with a text', keep([{ ...kept, text: 'x' }]), false],
+    ['an empty catalog', [{ projectId: 'abc', catalog: '', messages: [kept] }], false],
+    ['an empty project id', [{ projectId: '', catalog: 'i18n', messages: [kept] }], false],
+    ['an extra field', keep([kept], { path: '/etc' }), false],
+    ['an extra argument', [...keep([kept]), 'more'], false],
+  ])('keepMessagesUpToDate: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.keepMessagesUpToDate(args)).toBe(valid);
   });
 
   it.each<[string, unknown[], boolean]>([
