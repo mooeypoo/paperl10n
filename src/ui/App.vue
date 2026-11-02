@@ -24,7 +24,7 @@ import { rememberRecentLanguage } from './preferences';
 const { t } = useI18n();
 const client = useClient();
 const project = useProject(client);
-const { summary, documents, statusFile, error, busy } = project;
+const { summary, documents, catalogs, statusFile, error, busy } = project;
 const projectId = computed(() => summary.value?.projectId ?? null);
 const { query, matches, selectedKey, selected } = usePages(documents, projectId);
 const reading = useDocumentPair(client, projectId, selectedKey);
@@ -247,7 +247,9 @@ async function chooseTarget(tag: string): Promise<void> {
       <PagesSidebar
         v-model:query="query"
         class="app-sidebar"
+        :show-pages="summary.documentFormat !== null"
         :documents="documents"
+        :catalogs="catalogs"
         :matches="matches"
         :selected-key="selectedKey"
         :unsaved-key="dirty ? selectedKey : null"
@@ -323,7 +325,10 @@ async function chooseTarget(tag: string): Promise<void> {
           @mark-section="(index) => translationStatus.markSection(index)"
           @reopen="guard(() => reading.reload())"
         />
-        <p v-else class="app-empty">{{ t('paperl10n-no-documents') }}</p>
+        <!-- A project with catalogs only lists them in the sidebar (opening one: M4 plan, C5). -->
+        <p v-else-if="summary.documentFormat !== null" class="app-empty">
+          {{ t('paperl10n-no-documents') }}
+        </p>
       </main>
     </div>
 

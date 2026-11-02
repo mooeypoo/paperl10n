@@ -397,6 +397,29 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         by detection anyway) and were removed.
   - **C4b, the sidebar (UI):** "Pages" and "Messages" groups, each catalog with its progress,
     and the project's progress line counting both.
+    - *Done-notes:* `PagesSidebar` gains a "Messages" group (each catalog by its key, isolated,
+      with "X of Y up to date", how many are outdated, or the problem reading it), shown when the
+      project has a catalog format; "Pages" shows only when it has a document format. The
+      sidebar's accessible name is now "What to translate". The progress line at the top counts
+      pages, messages, or "Up to date: 12 of 40 pages, 310 of 420 messages" for both.
+      - `useProject` lists catalogs only for a project with a catalog format (pages-only projects
+        make the same requests as before), after the pages when opening and choosing a target.
+        A listing that fails shows its error, as for pages.
+      - Catalog rows aren't buttons yet: opening a catalog is C5. A project with catalogs only
+        shows no "No source documents found." note.
+      - `catalog-banana/mediawiki-extension` has a `paperl10n.config.json` (Hebrew), like
+        `format-stub/basic`, so the UI harness opens it.
+      - New messages (en, he, qqq): the sidebar's name, "Messages", the catalog count, a catalog's
+        progress and outdated count, and the progress line for messages and for both.
+      - Tests: through the real entry point with a fake client (catalogs only, both kinds, an
+        unreadable catalog and an isolated key, no catalogs found, pages only never asking, a
+        listing error, catalogs listed once a target is chosen), and the UI harness opening the
+        MediaWiki fixture through the real plugin and use cases.
+      - Mutation checks, each failing tests: asking for catalogs without a catalog format, a
+        listing error ignored on opening, choosing a target without listing catalogs, either
+        group shown regardless, messages up to date uncounted, the combined line, the outdated
+        count always shown, a catalog's problem hidden, the sidebar's name, and the
+        no-documents note shown without pages.
 - **C5, the message list:** reading a catalog, the rows, search and filters, not-in-source keys.
 - **C6, the message editor:** the expanded row with CodeMirror, `qqq`, checks from main (question 6),
   and keyboard navigation.
