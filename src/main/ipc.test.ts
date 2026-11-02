@@ -37,6 +37,10 @@ function setup() {
       calls.push(['listSourceDocuments', request]);
       return Promise.resolve(ok({ documents: [], statusFile: { exists: false, problem: null } }));
     },
+    listCatalogs: (request) => {
+      calls.push(['listCatalogs', request]);
+      return Promise.resolve(ok({ catalogs: [], statusFile: { exists: false, problem: null } }));
+    },
     readDocumentPair: (request) => {
       calls.push(['readDocumentPair', request]);
       return Promise.resolve(
@@ -123,6 +127,10 @@ describe('registerApi', () => {
       ok: true,
       value: { documents: [], statusFile: { exists: false, problem: null } },
     });
+    expect(await send('listCatalogs', trusted, { projectId: 'p1' })).toEqual({
+      ok: true,
+      value: { catalogs: [], statusFile: { exists: false, problem: null } },
+    });
     expect(await send('readDocumentPair', trusted, { projectId: 'p1', key: 'k' })).toMatchObject({
       ok: true,
     });
@@ -164,6 +172,7 @@ describe('registerApi', () => {
     expect(calls).toEqual([
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
+      ['listCatalogs', { projectId: 'p1' }],
       ['readDocumentPair', { projectId: 'p1', key: 'k' }],
       ['suggestTargetLanguages', suggest],
       ['searchTargetLanguages', search],
@@ -230,6 +239,18 @@ describe('argumentValidators', () => {
     ['a very long id', [{ projectId: 'x'.repeat(201) }], false],
   ])('listSourceDocuments: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.listSourceDocuments(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a project id', [{ projectId: 'abc' }], true],
+    ['no arguments', [], false],
+    ['null', [null], false],
+    ['an empty id', [{ projectId: '' }], false],
+    ['a numeric id', [{ projectId: 1 }], false],
+    ['an extra field', [{ projectId: 'abc', path: '/etc' }], false],
+    ['an extra argument', [{ projectId: 'abc' }, 'more'], false],
+  ])('listCatalogs: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.listCatalogs(args)).toBe(valid);
   });
 
   it.each<[string, unknown[], boolean]>([

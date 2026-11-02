@@ -22,7 +22,7 @@ export const domainGraph: DomainGraph = {
   catalog: [],
   translation: ['document', 'catalog', 'locale'],
   formats: ['document', 'catalog'],
-  workspace: ['formats', 'locale', 'document', 'translation'],
+  workspace: ['formats', 'locale', 'document', 'translation', 'catalog'],
 };
 
 /** Returns one dependency cycle as a list of nodes (first = last), or `undefined` if there's none. */

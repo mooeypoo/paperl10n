@@ -18,12 +18,27 @@ export type {
   FolderUnavailable,
   ProjectFilesOpener,
 } from './application/ports/project-files-opener.ts';
-export type { OpenedProject, ProjectSessions } from './application/ports/project-sessions.ts';
+export {
+  createListCatalogs,
+  type CatalogEntry,
+  type CatalogList,
+  type CatalogProgress,
+  type ListCatalogs,
+  type ListCatalogsError,
+} from './application/list-catalogs.ts';
+export type { CatalogReadError } from './application/catalog-files.ts';
+export type {
+  OpenedProject,
+  ProjectCatalogs,
+  ProjectDocuments,
+  ProjectSessions,
+} from './application/ports/project-sessions.ts';
 export {
   createOpenProject,
   type OpenProject,
   type OpenProjectDependencies,
   type OpenProjectError,
+  type FormatName,
   type ProjectSummary,
 } from './application/open-project.ts';
 export {

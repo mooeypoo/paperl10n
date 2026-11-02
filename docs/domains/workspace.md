@@ -1,7 +1,7 @@
 # Domain: `workspace`
 
-Opening a project folder, reading its config, choosing its document format, and discovering what
-there is to translate. Code: `src/domains/workspace/`, public API `#domains/workspace`.
+Opening a project folder, reading its config, choosing its formats (pages, message catalogs, or
+both), and discovering what there is to translate. Code: `src/domains/workspace/`, public API `#domains/workspace`.
 
 ## Ubiquitous language
 
@@ -9,9 +9,10 @@ there is to translate. Code: `src/domains/workspace/`, public API `#domains/work
 |---|---|
 | Project | A folder the user opened, plus its `paperl10n.config.json`. |
 | Project config | `paperl10n.config.json` at the project root (format below). |
-| Opened project | A project open in this app session: its files, config, locales, document format, and layout. Lives in the main process only. |
+| Opened project | A project open in this app session: its files, config, locales, and its pages (a document format and layout), its catalogs (a catalog format and layout), or both. Lives in the main process only. |
 | Project id | An opaque, random handle for an opened project. The renderer holds this, never a file path. |
 | Source document entry | A source document plus where its translation lives (or will live) for the target locale. |
+| Catalog entry | A message catalog plus where its target file lives (or will live), and its progress: how many source messages have each status. |
 
 ## Config file, version 0
 
@@ -20,7 +21,8 @@ there is to translate. Code: `src/domains/workspace/`, public API `#domains/work
   "sourceLocale": "en",
   "targetLocale": "he",
   "documentFormat": "format-stub",
-  "formatOptions": { "format-stub": { "root": "docs" } },
+  "catalogFormat": "catalog-banana",
+  "formatOptions": { "format-stub": { "root": "docs" }, "catalog-banana": { "dirs": ["i18n"] } },
   "languages": { "rhg": { "dir": "ltr" }, "art-x-lantern": { "name": "Lanternese", "dir": "rtl" } }
 }
 ```
@@ -30,6 +32,7 @@ there is to translate. Code: `src/domains/workspace/`, public API `#domains/work
 | `sourceLocale` | no (default `en`) | Locale id of the source documents. |
 | `targetLocale` | no | Locale id to translate into. Must differ from the source. Without it the project opens with no target, and the app asks for one ([M1 languages](../plan/M1-languages.md)). |
 | `documentFormat` | no | Pins a document plugin by id instead of detecting one. |
+| `catalogFormat` | no | Pins a catalog plugin by id instead of detecting one (M4). |
 | `formatOptions` | no | Each plugin's own options, keyed by plugin id. The plugin validates its section. |
 | `languages` | no | Languages the project defines or adjusts, keyed by locale id: `name` and/or `dir` (`ltr`/`rtl`). Adds codes the language catalog doesn't know, or fixes a direction. Shared with the team, so nothing is guessed silently (M1). |
 | `$schema` | no | Ignored (editor support). |
@@ -47,16 +50,23 @@ problems are reported at once (`workspace.config-invalid`, with a list of `{ fie
 2. Open it with the `ProjectFilesOpener` → `workspace.folder-unavailable` if that fails.
 3. Read `paperl10n.config.json` → `workspace.config-missing`, `workspace.config-unreadable`, or
    `workspace.config-invalid`.
-4. Choose the document format: **a format pinned in the config wins**
-   (`workspace.unknown-document-format` if it isn't an installed document plugin); otherwise
-   **the best-ranked detection** (`workspace.no-document-format`, with any detection failures).
-5. Open the format's layout with the plugin's own options. A `FormatError` passes through as is.
+4. Choose the formats, **each kind on its own** (M4, question 1): the document format (pages) and
+   the catalog format (message catalogs). For each, **a format pinned in the config wins**
+   (`workspace.unknown-document-format` or `workspace.unknown-catalog-format` if it isn't an
+   installed plugin of that kind); otherwise **the best-ranked detection of that kind**, if any.
+   Detection runs once, and only when a kind isn't pinned. **A project has pages, catalogs, or
+   both**: with neither, `workspace.no-format` (with any detection failures).
+5. Open each chosen format's layout with the plugin's own options. A `FormatError` passes
+   through as is.
 6. Build the project's **language catalog**: the bundled catalog plus the config's `languages`
-   and any locale folder whose code the catalog doesn't know (so every language already in the
-   project can be shown and chosen).
+   and any of the project's locales (its pages' and its catalogs') whose code the catalog doesn't
+   know, so every language already in the project can be shown and chosen.
 7. Store the opened project in `ProjectSessions` and return a summary: project id, folder name,
    source and target `Locale`s (with direction; the target is `null` when the config has none),
-   format id and name, and config warnings.
+   each format's id and name (`null` for a kind the project doesn't have), and config warnings.
+
+A project without pages lists none, marks none, and answers any page request with
+`workspace.unknown-document`.
 
 ### `listSourceDocuments(projectId)`
 
@@ -68,6 +78,19 @@ their source read and parsed. Alongside the documents, `statusFile` says whether
 status file exists and, if it can't be read, why (`problem`): the pages then list as never
 recorded. Errors: `workspace.unknown-project`, `workspace.no-target-locale` (no target
 chosen yet), or a `FormatError` from the layout.
+
+### `listCatalogs(projectId)`
+
+`createListCatalogs({ sessions })` (M4). It returns each catalog with its key, source path, target
+path for the project's target locale, whether that file exists, and its **progress**: how many
+source messages are `missing`, `draft`, `translated`, and `outdated` ([translation](translation.md),
+message status), and how many messages the target has that the source doesn't (not in source).
+Status comes from the language's status file, as for pages; one that can't be read counts as
+empty, and `statusFile` says why. **A catalog whose source or target file can't be read still
+lists**, with `progress: null` and the `problem` (`workspace.catalog-unreadable`, or the plugin's
+`formats.invalid-catalog`), so one broken file doesn't hide the others. A project without catalogs
+lists none. Errors: `workspace.unknown-project`, `workspace.no-target-locale`, or a `FormatError`
+from the layout.
 
 ### `readDocumentPair(projectId, key)`
 

@@ -6,6 +6,7 @@ import { draftKey } from './drafts.ts';
 import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import type { FileWriteError } from './ports/project-writer.ts';
+import { findDocument } from './find-document.ts';
 
 export interface SaveDocumentRequest {
   /** The page's document key. */
@@ -51,11 +52,10 @@ export function createSaveDocument(deps: {
     const targetLocale = project.targetLocale;
     if (targetLocale === null) return err({ code: 'workspace.no-target-locale' });
 
-    const documents = await project.layout.listSourceDocuments();
-    if (!documents.ok) return documents;
-    const document = documents.value.find((candidate) => candidate.key === key);
-    if (document === undefined) return err({ code: 'workspace.unknown-document', key });
-    const path = project.layout.targetPathFor(document, targetLocale.id);
+    const found = await findDocument(project, key);
+    if (!found.ok) return found;
+    const { document, layout } = found.value;
+    const path = layout.targetPathFor(document, targetLocale.id);
     if (!path.ok) return path;
 
     const current = await project.files.readText(path.value);

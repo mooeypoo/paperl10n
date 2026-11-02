@@ -72,6 +72,7 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
         sourceLocale: { id: 'en', direction: 'ltr' },
         targetLocale: { id: 'he', direction: 'rtl' },
         documentFormat: { id: 'format-stub', displayName: 'Folder per locale (stub)' },
+        catalogFormat: null,
         warnings: [],
       },
     });

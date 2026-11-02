@@ -14,6 +14,8 @@ export interface ProjectConfig {
   readonly targetLocale?: LocaleId;
   /** Pins a document format plugin by id, instead of detecting one. */
   readonly documentFormat?: string;
+  /** Pins a catalog format plugin by id, instead of detecting one. */
+  readonly catalogFormat?: string;
   /** Each plugin's own options, keyed by plugin id. Plugins validate their section. */
   readonly formatOptions: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   /** Languages the project defines (codes the catalog doesn't know) or adjusts (a direction). */
@@ -48,6 +50,7 @@ const KNOWN_KEYS = [
   'sourceLocale',
   'targetLocale',
   'documentFormat',
+  'catalogFormat',
   'formatOptions',
   'languages',
 ];
@@ -98,16 +101,15 @@ export function parseProjectConfig(text: string): Result<ParsedConfig, InvalidCo
     problems.push({ field: 'targetLocale', problem: 'must differ from sourceLocale' });
   }
 
-  const documentFormat = input.documentFormat;
-  if (
-    documentFormat !== undefined &&
-    (typeof documentFormat !== 'string' || documentFormat === '')
-  ) {
-    problems.push({
-      field: 'documentFormat',
-      problem: 'must be a plugin id such as "format-vitepress"',
-    });
-  }
+  const pinnedFormat = (field: 'documentFormat' | 'catalogFormat', example: string) => {
+    const value = input[field];
+    if (value === undefined) return {};
+    if (typeof value === 'string' && value !== '') return { [field]: value };
+    problems.push({ field, problem: `must be a plugin id such as "${example}"` });
+    return {};
+  };
+  const documentFormat = pinnedFormat('documentFormat', 'format-vitepress');
+  const catalogFormat = pinnedFormat('catalogFormat', 'catalog-banana');
 
   const formatOptions: Record<string, Readonly<Record<string, unknown>>> = {};
   const rawOptions = input.formatOptions ?? {};
@@ -162,7 +164,8 @@ export function parseProjectConfig(text: string): Result<ParsedConfig, InvalidCo
     config: {
       sourceLocale,
       ...(targetLocale === undefined ? {} : { targetLocale }),
-      ...(typeof documentFormat === 'string' ? { documentFormat } : {}),
+      ...documentFormat,
+      ...catalogFormat,
       formatOptions,
       languages,
     },

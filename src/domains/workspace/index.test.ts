@@ -10,6 +10,7 @@ describe('#domains/workspace public API', () => {
       'createCheckTranslation',
       'createChooseTargetLocale',
       'createDiscardDraft',
+      'createListCatalogs',
       'createListSourceDocuments',
       'createMarkExistingUpToDate',
       'createMarkUpToDate',

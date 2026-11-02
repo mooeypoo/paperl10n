@@ -1,25 +1,36 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The languages a project has, and the catalog that knows all of them. Shared by opening a project
 // and by the target-language use cases.
-import type { DocumentLayout } from '#domains/formats';
 import type { Language, LanguageCatalog } from '#domains/locale';
 import type { LocaleId } from '#kernel/locale-id';
 import type { ProjectConfig } from '../domain/project-config.ts';
-import type { OpenedProject } from './ports/project-sessions.ts';
+import type { OpenedProject, ProjectCatalogs, ProjectDocuments } from './ports/project-sessions.ts';
+
+/** The locales the project already has: its pages' (each with a folder) and its catalogs', each
+ * once, pages first. */
+export function projectLocales(
+  documents: Pick<ProjectDocuments, 'layout'> | null,
+  catalogs: Pick<ProjectCatalogs, 'layout'> | null,
+): LocaleId[] {
+  const all = [
+    ...(documents?.layout.locales.map(({ locale }) => locale) ?? []),
+    ...(catalogs?.layout.locales ?? []),
+  ];
+  return all.filter((locale, index) => all.indexOf(locale) === index);
+}
 
 /**
  * The bundled catalog with the project's own languages: the config's `languages` (new codes, or
- * adjusted directions), and locale folders whose codes the catalog doesn't know, so every language
- * already in the project can be shown and chosen.
+ * adjusted directions), and the project's locales whose codes the catalog doesn't know, so every
+ * language already in the project can be shown and chosen.
  */
 export function projectCatalog(
   bundled: LanguageCatalog,
   config: ProjectConfig,
-  layout: Pick<DocumentLayout, 'locales'>,
+  locales: readonly LocaleId[],
 ): LanguageCatalog {
   const configured = new Set(config.languages.map((language) => language.tag.toLowerCase()));
-  const unknownFolders = layout.locales
-    .map(({ locale }) => locale)
+  const unknownFolders = locales
     .filter((tag) => bundled.find(tag) === undefined && !configured.has(tag.toLowerCase()))
     .map((tag) => ({ tag }));
   return bundled.withCustom([...unknownFolders, ...config.languages]);
@@ -31,7 +42,7 @@ export function projectCatalog(
  */
 export function projectTargetLocales(project: OpenedProject): LocaleId[] {
   const candidates = [
-    ...project.layout.locales.map(({ locale }) => locale),
+    ...projectLocales(project.documents, project.catalogs),
     ...project.config.languages.map(({ tag }) => tag),
     ...(project.targetLocale === null ? [] : [project.targetLocale.id]),
   ];

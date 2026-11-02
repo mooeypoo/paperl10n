@@ -23,6 +23,7 @@ import {
   type StatusReadError,
   type StatusUpdates,
 } from './translation-status.ts';
+import { findDocument } from './find-document.ts';
 
 export interface MarkUpToDateRequest {
   readonly key: string;
@@ -74,11 +75,10 @@ export function createMarkUpToDate(deps: Dependencies): MarkUpToDate {
     const locale = project.targetLocale;
     if (locale === null) return err({ code: 'workspace.no-target-locale' });
 
-    const documents = await project.layout.listSourceDocuments();
-    if (!documents.ok) return documents;
-    const document = documents.value.find((candidate) => candidate.key === key);
-    if (document === undefined) return err({ code: 'workspace.unknown-document', key });
-    const targetPath = project.layout.targetPathFor(document, locale.id);
+    const found = await findDocument(project, key);
+    if (!found.ok) return found;
+    const { document, layout } = found.value;
+    const targetPath = layout.targetPathFor(document, locale.id);
     if (!targetPath.ok) return targetPath;
 
     const path = statusFilePath(locale.id);
@@ -125,7 +125,10 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
     const locale = project.targetLocale;
     if (locale === null) return err({ code: 'workspace.no-target-locale' });
-    const documents = await project.layout.listSourceDocuments();
+    // Pages only: catalogs are recorded as their messages are saved.
+    if (project.documents === null) return ok({ marked: [] });
+    const { layout } = project.documents;
+    const documents = await layout.listSourceDocuments();
     if (!documents.ok) return documents;
 
     const path = statusFilePath(locale.id);
@@ -136,7 +139,7 @@ export function createMarkExistingUpToDate(deps: Dependencies): MarkExistingUpTo
       const marked: DocumentKey[] = [];
       for (const document of documents.value) {
         if (pages.has(document.key)) continue;
-        const targetPath = project.layout.targetPathFor(document, locale.id);
+        const targetPath = layout.targetPathFor(document, locale.id);
         if (!targetPath.ok) return targetPath;
         if (!(await project.files.exists(targetPath.value))) continue;
         const text = await project.files.readText(document.path);

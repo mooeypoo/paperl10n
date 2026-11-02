@@ -198,15 +198,20 @@ describe('saveDocument', () => {
   it('passes a listing error from the format through', async () => {
     const { projectId, save, sessions } = await opened();
     const project = sessions.get(projectId);
-    if (project === undefined) throw new Error('test setup');
+    if (project?.documents === undefined || project.documents === null)
+      throw new Error('test setup');
+    const { documents } = project;
     const failure = {
       code: 'formats.plugin-failed' as const,
-      formatId: project.documentFormat.manifest.id,
+      formatId: documents.format.manifest.id,
       reason: 'boom',
     };
     sessions.update(projectId, {
       ...project,
-      layout: { ...project.layout, listSourceDocuments: () => Promise.resolve(err(failure)) },
+      documents: {
+        ...documents,
+        layout: { ...documents.layout, listSourceDocuments: () => Promise.resolve(err(failure)) },
+      },
     });
     expect(await save(projectId, { key: 'index', text: 'x', base: null })).toEqual({
       ok: false,

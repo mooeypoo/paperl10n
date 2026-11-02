@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Shared fixtures for UI tests: a fake client with scripted answers.
 import type {
+  CatalogListDto,
   DocumentPairDto,
   DocumentStatusDto,
   TranslationCheckDto,
@@ -21,6 +22,7 @@ export const summary: ProjectSummaryDto = {
   sourceLocale: { id: 'en', direction: 'ltr' },
   targetLocale: { id: 'he', direction: 'rtl' },
   documentFormat: { id: 'format-stub', displayName: 'Folder per locale (stub)' },
+  catalogFormat: null,
   warnings: [],
 };
 
@@ -116,6 +118,8 @@ export function fakeClient(
   answers: {
     open?: OpenAnswer[];
     list?: ListAnswer[];
+    /** The answer to listing catalogs (default: none). */
+    catalogs?: Result<CatalogListDto, ErrorDto>;
     /** Answers by document key; a key without one gets a plain pair. */
     read?: Readonly<Record<string, ReadAnswer>>;
     /** The picker's sections before typing (default: Hebrew in the project, French suggested). */
@@ -156,6 +160,15 @@ export function fakeClient(
       return next === undefined
         ? Promise.reject(new Error('no scripted answer'))
         : Promise.resolve(asList(next));
+    },
+    listCatalogs: ({ projectId }) => {
+      calls.push(`listCatalogs:${projectId}`);
+      return Promise.resolve(
+        answers.catalogs ?? {
+          ok: true,
+          value: { catalogs: [], statusFile: { exists: false, problem: null } },
+        },
+      );
     },
     readDocumentPair: ({ projectId, key }) => {
       calls.push(`readDocumentPair:${projectId}:${key}`);

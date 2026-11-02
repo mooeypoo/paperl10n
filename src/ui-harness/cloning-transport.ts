@@ -16,6 +16,7 @@ export function cloningTransport(api: PaperLionApi): PaperLionApi {
     openProject: () => crossing(() => api.openProject()),
     listSourceDocuments: (request) =>
       crossing(() => api.listSourceDocuments(structuredClone(request))),
+    listCatalogs: (request) => crossing(() => api.listCatalogs(structuredClone(request))),
     readDocumentPair: (request) => crossing(() => api.readDocumentPair(structuredClone(request))),
     suggestTargetLanguages: (request) =>
       crossing(() => api.suggestTargetLanguages(structuredClone(request))),

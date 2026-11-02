@@ -2,7 +2,13 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createFormatRegistry, type FormatRegistry, type ProjectFiles } from '#domains/formats';
-import { detects, fakeDocumentPlugin, fakeManifest, type FileTree } from '#domain-testing/formats';
+import {
+  detects,
+  fakeCatalogPlugin,
+  fakeDocumentPlugin,
+  fakeManifest,
+  type FileTree,
+} from '#domain-testing/formats';
 import { err } from '#kernel/result';
 import type { PluginModule } from '#domains/formats';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
@@ -70,12 +76,14 @@ describe('openProject', () => {
       sourceLocale: { id: 'en', direction: 'ltr' },
       targetLocale: { id: 'he', direction: 'rtl' },
       documentFormat: { id: 'format-fake', displayName: 'Fake format-fake' },
+      catalogFormat: null,
       warnings: [],
     });
     const stored = sessions.get(result.value.projectId);
     expect(stored?.name).toBe('my-docs');
     expect(stored?.config.targetLocale).toBe('he');
-    expect(stored?.documentFormat.manifest.id).toBe('format-fake');
+    expect(stored?.documents?.format.manifest.id).toBe('format-fake');
+    expect(stored?.catalogs).toBeNull();
   });
 
   it('returns null and stores nothing when the user cancels', async () => {
@@ -163,7 +171,7 @@ describe('openProject', () => {
         ],
       });
       const result = await openProject();
-      expect(result.ok && result.value?.documentFormat.id).toBe('format-pinned');
+      expect(result.ok && result.value?.documentFormat?.id).toBe('format-pinned');
     });
 
     it('otherwise uses the best-ranked detection', async () => {
@@ -175,7 +183,7 @@ describe('openProject', () => {
         ],
       });
       const result = await openProject();
-      expect(result.ok && result.value?.documentFormat.id).toBe('format-certain');
+      expect(result.ok && result.value?.documentFormat?.id).toBe('format-certain');
     });
 
     it('passes the format its own options from the config', async () => {
@@ -202,6 +210,149 @@ describe('openProject', () => {
       });
       await openProject();
       expect(received).toEqual({ root: 'docs' });
+    });
+  });
+
+  describe('catalogs', () => {
+    const catalogDetected = detects('likely');
+    const messages: FileTree = {
+      'paperl10n.config.json': config({ sourceLocale: 'en', targetLocale: 'he' }),
+      'i18n/en.cat': 'hello=Hello\n',
+      'i18n/he.cat': 'hello=שלום\n',
+      'i18n/xx.cat': 'hello=Xx\n',
+    };
+
+    it('opens a project with catalogs only', async () => {
+      const { openProject, sessions } = setup({
+        tree: messages,
+        plugins: [
+          fakeDocumentPlugin('format-fake'),
+          fakeCatalogPlugin('catalog-fake', catalogDetected),
+        ],
+      });
+      const result = await openProject();
+      if (!result.ok || result.value === null) throw new Error(JSON.stringify(result));
+      expect(result.value.documentFormat).toBeNull();
+      expect(result.value.catalogFormat).toEqual({
+        id: 'catalog-fake',
+        displayName: 'Fake catalog-fake',
+      });
+      const stored = sessions.get(result.value.projectId);
+      expect(stored?.documents).toBeNull();
+      expect(stored?.catalogs?.layout.locales).toEqual(['en', 'he', 'xx']);
+      // The catalogs' locales are the project's languages too.
+      expect(stored?.catalog.find('xx')).toBeDefined();
+    });
+
+    it('opens a project with pages and catalogs', async () => {
+      const { openProject, sessions } = setup({
+        tree: { ...project, ...messages },
+        plugins: [
+          fakeDocumentPlugin('format-fake', detects('likely')),
+          fakeCatalogPlugin('catalog-fake', catalogDetected),
+        ],
+      });
+      const result = await openProject();
+      if (!result.ok || result.value === null) throw new Error(JSON.stringify(result));
+      expect([result.value.documentFormat?.id, result.value.catalogFormat?.id]).toEqual([
+        'format-fake',
+        'catalog-fake',
+      ]);
+      const stored = sessions.get(result.value.projectId);
+      expect(stored?.documents?.format.manifest.id).toBe('format-fake');
+      expect(stored?.catalogs?.format.manifest.id).toBe('catalog-fake');
+    });
+
+    it('uses a pinned catalog format over detection, and detects the document format', async () => {
+      const { openProject } = setup({
+        tree: {
+          ...project,
+          ...messages,
+          'paperl10n.config.json': config({ targetLocale: 'he', catalogFormat: 'catalog-pinned' }),
+        },
+        plugins: [
+          fakeDocumentPlugin('format-fake', detects('likely')),
+          fakeCatalogPlugin('catalog-pinned'),
+          fakeCatalogPlugin('catalog-certain', detects('certain')),
+        ],
+      });
+      const result = await openProject();
+      expect(
+        result.ok && [result.value?.documentFormat?.id, result.value?.catalogFormat?.id],
+      ).toEqual(['format-fake', 'catalog-pinned']);
+    });
+
+    it('uses the best-ranked catalog detection', async () => {
+      const { openProject } = setup({
+        tree: messages,
+        plugins: [
+          fakeCatalogPlugin('catalog-fallback', detects('fallback')),
+          fakeCatalogPlugin('catalog-certain', detects('certain')),
+          fakeCatalogPlugin('catalog-likely', detects('likely')),
+        ],
+      });
+      const result = await openProject();
+      expect(result.ok && result.value?.catalogFormat?.id).toBe('catalog-certain');
+    });
+
+    it('detects catalogs next to a pinned document format', async () => {
+      const { openProject } = setup({
+        tree: {
+          ...project,
+          ...messages,
+          'paperl10n.config.json': config({ targetLocale: 'he', documentFormat: 'format-fake' }),
+        },
+        plugins: [
+          fakeDocumentPlugin('format-fake'),
+          fakeCatalogPlugin('catalog-fake', catalogDetected),
+        ],
+      });
+      const result = await openProject();
+      expect(result.ok && result.value?.catalogFormat?.id).toBe('catalog-fake');
+    });
+
+    it('opens the catalog layout with its own options', async () => {
+      let received: unknown;
+      const { openProject } = setup({
+        tree: {
+          ...messages,
+          'paperl10n.config.json': config({
+            targetLocale: 'he',
+            formatOptions: { 'catalog-fake': { dirs: ['i18n'] } },
+          }),
+        },
+        plugins: [
+          fakeCatalogPlugin('catalog-fake', {
+            ...catalogDetected,
+            open: (context) => {
+              received = context.options;
+              return Promise.resolve(err({ code: 'formats.invalid-options', reason: 'stop here' }));
+            },
+          }),
+        ],
+      });
+      expect(await openProject()).toEqual({
+        ok: false,
+        error: { code: 'formats.invalid-options', reason: 'stop here', formatId: 'catalog-fake' },
+      });
+      expect(received).toEqual({ dirs: ['i18n'] });
+    });
+
+    it.each([
+      ['not installed', 'catalog-nope'],
+      ['a document format', 'format-fake'],
+    ])('reports a pinned catalog format that is %s', async (_name, pinned) => {
+      const { openProject } = setup({
+        tree: {
+          ...messages,
+          'paperl10n.config.json': config({ targetLocale: 'he', catalogFormat: pinned }),
+        },
+        plugins: [fakeDocumentPlugin('format-fake'), fakeCatalogPlugin('catalog-fake')],
+      });
+      expect(await openProject()).toEqual({
+        ok: false,
+        error: { code: 'workspace.unknown-catalog-format', formatId: pinned },
+      });
     });
   });
 
@@ -260,7 +411,7 @@ describe('openProject', () => {
       [
         'no format recognizing the project',
         { plugins: [fakeDocumentPlugin('format-none')] },
-        { code: 'workspace.no-document-format', failures: [] },
+        { code: 'workspace.no-format', failures: [] },
       ],
       [
         'the chosen format failing to open the project',
@@ -289,7 +440,7 @@ describe('openProject', () => {
       expect(await openProject()).toEqual({
         ok: false,
         error: {
-          code: 'workspace.no-document-format',
+          code: 'workspace.no-format',
           failures: [{ code: 'formats.plugin-failed', formatId: 'format-broken', reason: 'boom' }],
         },
       });

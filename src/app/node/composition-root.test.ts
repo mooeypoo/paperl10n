@@ -20,7 +20,7 @@ describe('createElectronAppApi', () => {
     if (!api.ok) throw new Error('test setup');
 
     const opened = await api.value.openProject();
-    expect(opened.ok && opened.value?.documentFormat.id).toBe('format-stub');
+    expect(opened.ok && opened.value?.documentFormat?.id).toBe('format-stub');
     if (!opened.ok || opened.value === null) return;
     expect(opened.value.projectId).toMatch(/^[0-9a-f-]{36}$/);
 

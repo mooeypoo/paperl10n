@@ -18,6 +18,7 @@ describe('parseProjectConfig', () => {
           sourceLocale: 'EN',
           targetLocale: 'he-il',
           documentFormat: 'format-stub',
+          catalogFormat: 'catalog-banana',
           formatOptions: { 'format-stub': { root: 'docs' } },
           languages: { rhg: { dir: 'ltr' }, 'ART-x-lantern': { name: ' Lanternese ', dir: 'rtl' } },
         }),
@@ -29,6 +30,7 @@ describe('parseProjectConfig', () => {
           sourceLocale: 'en',
           targetLocale: 'he-IL',
           documentFormat: 'format-stub',
+          catalogFormat: 'catalog-banana',
           formatOptions: { 'format-stub': { root: 'docs' } },
           languages: [
             { tag: 'rhg', direction: 'ltr' },
@@ -72,6 +74,8 @@ describe('parseProjectConfig', () => {
     ['the same source and target', { sourceLocale: 'he', targetLocale: 'HE' }, ['targetLocale']],
     ['an empty documentFormat', { targetLocale: 'he', documentFormat: '' }, ['documentFormat']],
     ['a non-string documentFormat', { targetLocale: 'he', documentFormat: 3 }, ['documentFormat']],
+    ['an empty catalogFormat', { targetLocale: 'he', catalogFormat: '' }, ['catalogFormat']],
+    ['a non-string catalogFormat', { targetLocale: 'he', catalogFormat: [] }, ['catalogFormat']],
     [
       'formatOptions that is not an object',
       { targetLocale: 'he', formatOptions: [] },
