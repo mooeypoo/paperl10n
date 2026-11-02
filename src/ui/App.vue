@@ -12,6 +12,7 @@ import PagesSidebar from './components/PagesSidebar.vue';
 import UnsavedChangesDialog from './components/UnsavedChangesDialog.vue';
 import WelcomeState from './components/WelcomeState.vue';
 import { useCatalog } from './composables/use-catalog';
+import { useCatalogDrafts } from './composables/use-catalog-drafts';
 import { useCatalogSaving } from './composables/use-catalog-saving';
 import { useDocumentPair } from './composables/use-document-pair';
 import { useMessageEdits } from './composables/use-message-edits';
@@ -52,6 +53,19 @@ const catalogSaving = useCatalogSaving(client, projectId, selectedCatalog, messa
     void project.refreshCatalogs();
   },
 });
+// Its edits are kept as its draft as they're made, and restored when it opens with one.
+const catalogDrafts = useCatalogDrafts(
+  client,
+  projectId,
+  selectedCatalog,
+  catalogReading.detail,
+  messageEdits,
+  {
+    onDraftChange: (key, hasDraft) => {
+      project.markCatalogDraft(key, hasDraft);
+    },
+  },
+);
 const catalogDirty = computed(() => selectedCatalog.value !== null && messageEdits.count.value > 0);
 const { pair, loading } = reading;
 const readError = reading.error;
@@ -125,7 +139,8 @@ async function resolveLeave(choice: 'save' | 'discard' | 'cancel'): Promise<void
   if (choice === 'cancel') return;
   // Leaving without saving drops the edits, and their draft. (A catalog's edits go with the
   // catalog: they belong to what was read, which leaving it clears.)
-  if (choice === 'discard') await saving.discardDraft();
+  if (choice === 'discard' && catalogDirty.value) await catalogDrafts.discard();
+  else if (choice === 'discard') await saving.discardDraft();
   leave();
 }
 
@@ -292,6 +307,7 @@ async function chooseTarget(tag: string): Promise<void> {
         :selected-key="selectedCatalog === null ? selectedKey : null"
         :selected-catalog="selectedCatalog"
         :unsaved-key="dirty ? selectedKey : null"
+        :unsaved-catalog="catalogDirty ? selectedCatalog : null"
         :offer-existing="offerExisting"
         :marking-existing="markingExisting"
         :mark-existing-error="markExistingError"
@@ -342,7 +358,11 @@ async function chooseTarget(tag: string): Promise<void> {
           :save-status="catalogSaving.status.value"
           :save-error="catalogSaving.error.value"
           :status-problem="catalogSaving.statusProblem.value"
+          :restored-notice="catalogDrafts.restoredNotice.value"
+          :restored-from-older="catalogDrafts.restoredFromOlder.value"
+          :draft-error="catalogDrafts.error.value"
           @save="saveCurrent"
+          @discard-restored="catalogDrafts.discardRestored()"
           @keep="(message) => catalogSaving.keep(message)"
         />
         <DocumentView

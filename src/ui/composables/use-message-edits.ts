@@ -16,8 +16,11 @@ export interface ShownTranslation {
 export interface MessageEdits {
   /** The open message's key (`null`: none open). */
   readonly open: Ref<string | null>;
-  /** How many messages have edits. */
+  /** How many messages have edits (removals included). */
   readonly count: ComputedRef<number>;
+  /** Counts the translator's own changes (editing, removing, keeping a removed message), not
+   * resets, saves, or restores: what a draft should follow. */
+  readonly changes: Ref<number>;
   /** A message's translation as it's being written: its edit, else the file's (`''`: none). */
   textOf(message: CatalogMessageDto): string;
   isEdited(key: string): boolean;
@@ -40,6 +43,12 @@ export interface MessageEdits {
   saved(messages: readonly MessageSaveDto[]): void;
   /** Forgets every edit (they were dropped). */
   discard(): void;
+  /** Takes a restored draft's edits as the catalog's (replacing any). */
+  restore(messages: readonly MessageSaveDto[]): void;
+  /** Removes a message the source no longer has (`text`: its translation in the file). */
+  remove(key: string, text: string): void;
+  /** Keeps a message `remove` marked for removal. */
+  unremove(key: string): void;
 }
 
 /**
@@ -51,6 +60,11 @@ export function useMessageEdits(detail: Readonly<Ref<CatalogDetailDto | null>>):
   const open = ref<string | null>(null);
   const edits = shallowRef<ReadonlyMap<string, MessageSaveDto>>(new Map());
   const tokens = shallowRef<ReadonlyMap<string, ShownTranslation>>(new Map());
+  const changes = ref(0);
+  const changed = (next: ReadonlyMap<string, MessageSaveDto>) => {
+    edits.value = next;
+    changes.value++;
+  };
 
   watch(
     () => detail.value?.key,
@@ -67,6 +81,7 @@ export function useMessageEdits(detail: Readonly<Ref<CatalogDetailDto | null>>):
   return {
     open,
     count: computed(() => edits.value.size),
+    changes,
     textOf,
     isEdited: (key) => edits.value.has(key),
     edit: (message, text) => {
@@ -81,7 +96,7 @@ export function useMessageEdits(detail: Readonly<Ref<CatalogDetailDto | null>>):
           source: started?.source ?? message.source,
         });
       }
-      edits.value = next;
+      changed(next);
     },
     remember: (key, text, found) => {
       tokens.value = new Map(tokens.value).set(key, { text, tokens: found });
@@ -110,6 +125,17 @@ export function useMessageEdits(detail: Readonly<Ref<CatalogDetailDto | null>>):
     },
     discard: () => {
       edits.value = new Map();
+    },
+    restore: (messages) => {
+      edits.value = new Map(messages.map((message) => [message.key, message]));
+    },
+    remove: (key, text) => {
+      changed(new Map(edits.value).set(key, { key, text: '', base: text, source: null }));
+    },
+    unremove: (key) => {
+      const next = new Map(edits.value);
+      next.delete(key);
+      changed(next);
     },
   };
 }

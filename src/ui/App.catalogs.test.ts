@@ -348,7 +348,7 @@ describe('the message list', () => {
     );
     expect(
       [...(orphans?.querySelector('li')?.children ?? [])].map((part) => part.textContent.trim()),
-    ).toEqual(['app-old', 'ישן']);
+    ).toEqual(['app-old', 'ישן', 'Remove']);
     expect(orphans?.querySelector('li [lang]')?.getAttribute('dir')).toBe('rtl');
   });
 
