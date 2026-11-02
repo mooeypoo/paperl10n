@@ -12,7 +12,8 @@ import { useClient } from '../client';
 import { filterMessages, needsWork, type StatusFilter } from '../catalog/message-filter';
 import { stepTo, type Step } from '../catalog/message-navigation';
 import { useMessageCheck } from '../composables/use-message-check';
-import { useMessageEdits } from '../composables/use-message-edits';
+import type { CatalogSaveStatus } from '../composables/use-catalog-saving';
+import type { MessageEdits } from '../composables/use-message-edits';
 import { errorMessage } from '../i18n/error-message';
 import { isolated, useI18n } from '../i18n/i18n';
 import { useVirtualRows } from '../composables/use-virtual-rows';
@@ -35,7 +36,15 @@ const props = defineProps<{
   error: ErrorDto | null;
   sourceLocale: LocaleDto;
   targetLocale: LocaleDto;
+  /** The catalog's edits: App keeps them, to save them and to ask before leaving them. */
+  editing: MessageEdits;
+  saveStatus: CatalogSaveStatus;
+  saveError: ErrorDto | null;
+  /** Saved, but not recorded as up to date: why. */
+  statusProblem: ErrorDto | null;
 }>();
+/** `save`: save every edit (also Ctrl/Cmd+S, App's). `keep`: keep an outdated message as up to date. */
+const emit = defineEmits<{ save: []; keep: [message: CatalogMessageDto] }>();
 const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 
 const query = ref('');
@@ -51,7 +60,7 @@ watch(
 const messages = computed(() => props.detail?.messages ?? []);
 const shown = computed(() => filterMessages(messages.value, query.value, status.value));
 
-const editing = useMessageEdits(toRef(props, 'detail'));
+const editing = props.editing;
 /** Where the open message is among those shown (`null`: none open, or filtered out). */
 const openIndex = computed(() => {
   const index = shown.value.findIndex((message) => message.key === editing.open.value);
@@ -86,11 +95,20 @@ const rendered = computed(() =>
     .slice(rows.window.value.start, rows.window.value.end)
     .map((message, offset) => ({ message, index: rows.window.value.start + offset })),
 );
-// Another search, filter, or catalog starts at the top.
-watch(shown, async () => {
+// Another search, filter, or catalog starts at the top (a catalog read again after a save keeps
+// its place).
+watch([query, status, () => props.detail?.key], async () => {
   if (scrollBox.value !== null) scrollBox.value.scrollTop = 0;
   await nextTick();
   rows.measure();
+});
+
+/** What the header says about saving: how many messages wait, or that they're saved. */
+const saveStatusText = computed(() => {
+  if (props.saveStatus === 'unsaved') {
+    return t('paperl10n-catalog-unsaved', editing.count.value);
+  }
+  return props.saveStatus === 'clean' ? '' : t(`paperl10n-save-status-${props.saveStatus}`);
 });
 
 /** The open message's editor, to focus it. */
@@ -215,7 +233,27 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
             · {{ t('paperl10n-catalog-no-translation-file') }}
           </template>
         </p>
+        <div class="catalog-save">
+          <span class="catalog-save-status" role="status">{{ saveStatusText }}</span>
+          <button
+            type="button"
+            class="pl-button"
+            data-variant="primary"
+            aria-keyshortcuts="Control+S Meta+S"
+            :disabled="saveStatus !== 'unsaved'"
+            @click="emit('save')"
+          >
+            {{ t('paperl10n-save') }}
+          </button>
+        </div>
       </header>
+      <p v-if="saveError !== null" class="catalog-warning" role="alert">
+        {{ errorMessage(saveError, t) }}
+      </p>
+      <p v-if="statusProblem !== null" class="catalog-warning" role="alert">
+        {{ t('paperl10n-catalog-saved-not-recorded') }}
+        {{ errorMessage(statusProblem, t) }}
+      </p>
       <p v-if="detail.documentationProblem !== null" class="catalog-warning" role="alert">
         {{ t('paperl10n-documentation-unreadable') }}
         {{ errorMessage(detail.documentationProblem, t) }}
@@ -327,6 +365,15 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
                           {{ warningMessage(warning, t) }}
                         </li>
                       </ul>
+                    </div>
+                    <div
+                      v-if="message.status === 'outdated' && !editing.isEdited(message.key)"
+                      class="catalog-keep"
+                    >
+                      <p class="catalog-note">{{ t('paperl10n-keep-up-to-date-note') }}</p>
+                      <button type="button" class="pl-button" @click.stop="emit('keep', message)">
+                        {{ t('paperl10n-keep-up-to-date') }}
+                      </button>
                     </div>
                     <div class="catalog-moves">
                       <button
@@ -441,9 +488,34 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
 }
 
 .catalog-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--pl-space-1) var(--pl-space-3);
+  align-items: start;
+}
+
+.catalog-header > :not(.catalog-save) {
+  grid-column: 1;
+}
+
+.catalog-save {
   display: flex;
-  flex-direction: column;
-  gap: var(--pl-space-1);
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-items: center;
+  gap: var(--pl-space-3);
+}
+
+.catalog-save-status {
+  color: var(--pl-color-muted);
+  font-size: var(--pl-text-sm);
+}
+
+.catalog-keep {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2) var(--pl-space-3);
 }
 
 .catalog-title {

@@ -37,6 +37,8 @@ export interface ProjectState {
    * pages again. Returns the keys it marked, or the error.
    */
   markExisting(): Promise<{ readonly marked: readonly string[] } | { readonly error: ErrorDto }>;
+  /** Lists the catalogs again (after one was saved), for their progress. Failing changes nothing. */
+  refreshCatalogs(): Promise<void>;
 }
 
 const noStatusFile: SourceDocumentListDto['statusFile'] = { exists: false, problem: null };
@@ -181,6 +183,22 @@ export function useProject(client: PaperLionApi): ProjectState {
     }
   }
 
+  /** Counts refreshes, so only the newest one's answer is kept. */
+  let refreshed = 0;
+  async function refreshCatalogs(): Promise<void> {
+    const current = summary.value;
+    if (current === null || current.catalogFormat === null) return;
+    const request = ++refreshed;
+    try {
+      const listed = await client.listCatalogs({ projectId: current.projectId });
+      if (request === refreshed && listed.ok && summary.value === current) {
+        catalogs.value = listed.value.catalogs;
+      }
+    } catch {
+      // The list keeps showing what it had; the next refresh tries again.
+    }
+  }
+
   return {
     summary,
     documents,
@@ -206,5 +224,6 @@ export function useProject(client: PaperLionApi): ProjectState {
       if (!statusFile.value.exists) statusFile.value = { ...statusFile.value, exists: true };
     },
     markExisting,
+    refreshCatalogs,
   };
 }

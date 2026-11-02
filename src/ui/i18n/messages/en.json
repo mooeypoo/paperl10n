@@ -190,5 +190,9 @@
   "paperl10n-message-last": "This is the last message.",
   "paperl10n-message-none-needing-work-after": "No message after this one needs work.",
   "paperl10n-message-none-needing-work-before": "No message before this one needs work.",
-  "paperl10n-message-keys": "$1 and $2 move between messages; with $3, between those needing work. $4 closes."
+  "paperl10n-message-keys": "$1 and $2 move between messages; with $3, between those needing work. $4 closes.",
+  "paperl10n-catalog-unsaved": "{{PLURAL:$1|One message|$1 messages}} not saved yet",
+  "paperl10n-catalog-saved-not-recorded": "Saved, but not recorded as up to date.",
+  "paperl10n-keep-up-to-date": "Keep as up to date",
+  "paperl10n-keep-up-to-date-note": "The source changed since this translation was saved. If the translation still fits, keep it as up to date."
 }

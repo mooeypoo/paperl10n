@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C6, C7a, and C7b done, C7c next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C6 and C7a–C7c done, C7d next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -641,8 +641,53 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         untested (no edits forgetting the listed draft, saving forgetting before the next read,
         a draft error over IPC): each got a test.
   - **C7c, saving in the UI:** Ctrl/Cmd+S, the unsaved-changes question, "Keep as up to date",
-    removing messages the source no longer has, and the rows' status after a save.
-- **C7d, existing translations:** the one-time "Mark all existing translations up to date" offer
+    and the rows' status after a save.
+    - *Done-notes:*
+      - **App keeps a catalog's edits** (`useMessageEdits`, moved up from `CatalogView`), as it
+        keeps a page's: saving them and asking before leaving them are the app's. Each edit
+        keeps the translation and source it started from (its first edit's), which is what
+        `saveCatalog` checks and records.
+      - **Saving** (`useCatalogSaving`): the catalog's Save button (with how many messages wait)
+        and Ctrl/Cmd+S, wherever the focus is, save every edit at once. Then the catalog is read
+        again (`useCatalog.reload`, keeping its place: only a search, a filter, or another
+        catalog scrolls to the top now) and the sidebar's progress too (`refreshCatalogs`). A
+        refusal (`workspace.catalog-changed`) or a failure shows, and the edits stay. Saved but
+        not recorded (`statusProblem`) says so. A message typed into during the save stays an
+        edit, starting from the text just saved, so its next save isn't a false conflict.
+      - **"Keep as up to date"** shows in an outdated message's open row while it isn't edited,
+        with what it's for; it reads the catalog again after.
+      - **Leaving a catalog with edits asks first** (another catalog, a page, another project or
+        language, closing the window): the page's question, naming the catalog. Saving that
+        fails stays.
+      - Checked in Chromium (the harness, the MediaWiki fixture): typing, Ctrl+S, "Saved", the
+        row up to date, the sidebar's and the progress line's counts, the question before
+        another catalog, and no console errors.
+      - New messages (en, he, qqq): the count waiting, saved but not recorded, and "Keep as up
+        to date" with its note.
+      - Tests: the edits (pending with what they started from, saved, typed into during a save,
+        an emptied one saved, discarded), `useCatalog.reload`, `refreshCatalogs` (the newest
+        answer, failures, no catalog format), `useCatalogSaving` (nothing to save, one at a time,
+        no project, the catalog changed during the save, a broken transport, keeping), and
+        through the real entry point: saving by button with what each edit started from, the
+        catalog and sidebar read again, Ctrl+S and Cmd+S, a refusal, saved but not recorded,
+        typing during a save, keeping (offered, not when edited or up to date, its error), and
+        the question (stay, save then go, a failed save stays, before a page, before closing).
+      - Mutation checks, each failing tests (35): what each edit started from, saved edits
+        forgotten (and rebased when typed into, or emptied), discarding, saving (nothing to
+        save, one at a time, the catalog changed, the status problem, reading again, what's left,
+        errors cleared on success, reset for another catalog), keeping, `reload`,
+        `refreshCatalogs` (the newest answer, no catalog format), the place kept, Keep hidden
+        while edited, the disabled Save button, Ctrl+S for a catalog, each place the question is
+        asked, and the dialog naming the catalog. Survivors at first: two lines dropping a
+        catalog's edits on "Don't save" turned out redundant (leaving a catalog drops them) and
+        were removed; the rest (what `save` says is left, errors cleared, the place kept) got
+        tests.
+      - One full `pnpm check` run failed one test early on, and 11 runs since (and CI) passed;
+        it wasn't reproduced, so it's noted rather than fixed.
+  - **C7d, drafts and removals in the UI:** edits kept as the catalog's draft as they're typed,
+    restored (with a notice and "Discard") when it opens again, and removing messages the source
+    no longer has (each, and all).
+- **C7e, existing translations:** the one-time "Mark all existing translations up to date" offer
   (question 3) covering catalogs too; today it covers pages only.
 - **C8, previews:** plural and gender (question 7).
 - **C9, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
