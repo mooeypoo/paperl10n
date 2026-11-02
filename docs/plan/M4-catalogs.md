@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C5 done, C6a done, C6b next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C6 done, C7 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -516,6 +516,59 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         `[]` imbalance never crossed IPC) and got a case in the end-to-end test.
   - **C6b, the editor (UI):** the expanded row, its `qqq`, the marks and warnings from C6a, and
     moving between messages from the keyboard.
+    - *Done-notes:*
+      - **Opening a message:** a click on its row, or its key (now a button, `aria-expanded`),
+        opens it in place, taller: the whole source (no longer clamped), its documentation
+        (`qqq`) under it, and a CodeMirror editor for the translation, with the caret in it. One
+        message at a time. The documentation follows the source's direction (`dir="auto"`);
+        only its title is interface text. A message without documentation says so.
+      - **The editor** (`editor/message-editor.ts`, in a shadow root like the Markdown editor):
+        plain text in the target's language and direction, undo, and a placeholder. The tokens
+        main found are marked by kind, the top-level ones isolated left to right as in the rows
+        (`message-tokens.ts`); edits move the marks along until main's next answer, which is
+        taken only for the text the editor still has.
+      - **Checks in main** (question 6, `useMessageCheck`): as soon as a message opens, then
+        0.2 s after typing pauses; only the newest answer counts. The warnings show under the
+        editor, worded like the page hints ("A parameter only in the source: $1"), each value
+        isolated; a tag shows with its angle brackets, a gender choice without a parameter as the
+        current user's.
+      - **Moving without the mouse:** Alt+↓ and Alt+↑ open the next and previous message;
+        with Shift, the next and previous one needing work (missing or outdated, and not
+        edited since). Esc closes and gives the focus back to the row. Buttons do the same
+        (`aria-keyshortcuts`), with a reminder of the keys, each isolated so "Alt+↓" stays whole
+        in Hebrew. Moving never wraps: at either end a note says there's nothing further.
+      - **Edits stay while the catalog is open** (`useMessageEdits`): a closed row shows its
+        edited text, with main's tokens for that text when known, and "Edited, not saved yet".
+        Text equal to the file's is no edit; an emptied translation shows none. Another catalog
+        starts with none. Saving them, drafts, and asking before leaving with unsaved edits are
+        C7's.
+      - **The virtual list allows one taller row** (`visibleRows`, `rowTop`, `scrollToShow`):
+        the open row's height is measured and followed (`ResizeObserver`), and a message moved
+        to is scrolled into view whole. The other rows stay a fixed height.
+      - Fixed from C5b: the status shapes in the list were inline in their cell, so their size
+        was ignored (they showed as thin bars); they're blocks now.
+      - Checked in Chromium (the harness, the MediaWiki fixture, English and Hebrew interface,
+        light and dark): the caret in the editor on opening, the plural isolated and checked,
+        warnings, moving and closing from the keyboard, the focus back on the row, and no console
+        errors. "Alt+↓" was measured to read left to right in the Hebrew hint.
+      - Tests: the list's arithmetic with an open row (table-driven: above, across, inside, after,
+        past either end; where rows start; where to scroll), `stepTo`, the warnings' wording (each
+        kind, both sides, English and Hebrew), the editor (language, marks and isolation, marks
+        following edits, stale answers, the keys, undo, the placeholder, edits but not caret
+        moves), `useMessageCheck` (on opening, the pause, the newest answer, another message,
+        failures, another catalog, stopping), `useMessageEdits`, and through the real entry point:
+        opening a row (documentation, editor, focus, tokens before main answers), no
+        documentation, checks and warnings as typed, edits kept and shown, the file's text as no
+        edit, moving by key and by button, needing work past edited messages, another catalog,
+        and scrolling a long catalog to a message with its open height (layout stubbed: happy-dom
+        lays nothing out).
+      - Mutation checks, each failing tests (43). Survivors at first, each resolved: two guards
+        that only repeated another (the check's key and catalog filter, already dropped by its
+        reset; the editor's tokens, given both by main's answer and the remembered tokens):
+        each kept once; an open row past the list's end, which can't change a result (the
+        condition removed); and some untested: the editor reporting caret moves, a reopened
+        message's old check, an emptied row, stale tokens on a row, the open row's measured
+        height, the second scroll, and the tokens before main answers. Each got a test.
 - **C7, saving:** patching, new files, drafts, the conflict check, and recording status.
 - **C8, previews:** plural and gender (question 7).
 - **C9, docs and the PRD:** the decisions into the PRD (its own PR, for approval).

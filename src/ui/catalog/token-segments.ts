@@ -7,16 +7,32 @@ export type TextSegment =
   | { readonly kind: 'token'; readonly text: string; readonly token: PlaceholderTokenDto['kind'] };
 
 /**
- * Splits a message at its top-level tokens (a token inside another is part of it), so each token
- * can be shown isolated: `$1` or `{{PLURAL:…}}` in a Hebrew sentence keeps its place instead of
- * reordering the text around it. Tokens come from main in order (by start, the enclosing first).
+ * A message's top-level tokens (a token inside another is part of it), each within the text, in
+ * order. Tokens come from main in order (by start, the enclosing first).
+ */
+export function topLevelTokens(
+  text: string,
+  tokens: readonly PlaceholderTokenDto[],
+): PlaceholderTokenDto[] {
+  const topLevel: PlaceholderTokenDto[] = [];
+  let at = 0;
+  for (const token of tokens) {
+    // Inside the previous top-level token, or outside the text: not one of its own.
+    if (token.start < at || token.end > text.length || token.start >= token.end) continue;
+    topLevel.push(token);
+    at = token.end;
+  }
+  return topLevel;
+}
+
+/**
+ * Splits a message at its top-level tokens, so each token can be shown isolated: `$1` or
+ * `{{PLURAL:…}}` in a Hebrew sentence keeps its place instead of reordering the text around it.
  */
 export function tokenSegments(text: string, tokens: readonly PlaceholderTokenDto[]): TextSegment[] {
   const segments: TextSegment[] = [];
   let at = 0;
-  for (const token of tokens) {
-    // Inside the previous top-level token, or outside the text: not a segment of its own.
-    if (token.start < at || token.end > text.length || token.start >= token.end) continue;
+  for (const token of topLevelTokens(text, tokens)) {
     if (token.start > at) segments.push({ kind: 'text', text: text.slice(at, token.start) });
     segments.push({ kind: 'token', text: text.slice(token.start, token.end), token: token.kind });
     at = token.end;
