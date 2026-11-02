@@ -135,6 +135,8 @@
   "paperl10n-error-workspace-catalog-unreadable": "Error when a file of interface messages (a catalog) can't be read. $1: the file's path; $2: a technical problem code, e.g. files.not-utf8.",
   "paperl10n-error-workspace-unknown-catalog": "Error when the chosen message catalog is no longer among the project's catalogs. $1: the catalog's key, e.g. \"i18n\".",
   "paperl10n-error-workspace-unknown-message": "Error when a message being translated is no longer in its catalog's source file (it changed on disk). $1: the catalog's key, e.g. \"i18n\". $2: the message's key, e.g. \"myext-desc\".",
+  "paperl10n-error-workspace-catalog-changed": "Error when saving a catalog's translations is refused because some of the edited messages changed in the file on disk (by git or another editor) since editing started; nothing was written. $1: the translation file's path, e.g. \"i18n/he.json\".",
+  "paperl10n-error-workspace-catalog-unwritable": "Error when a catalog's translation file can't be written. $1: the file's path; $2: the problem's code (e.g. \"files.unwritable\").",
   "paperl10n-draft-restored": "Note above the translation editor when a page opens with a draft: unsaved edits Paper Lion kept from an earlier session (or before a crash). Shown until they're saved or discarded.",
   "paperl10n-discard-draft": "Button next to the restored-changes note: drops the restored unsaved changes, so the editor shows the file as it is.",
   "paperl10n-draft-restored-changed": "Note above the translation editor when a page opens with a draft (see paperl10n-draft-restored) and the file changed on disk after the draft was started. Saving will then show the conflict dialog.",

@@ -70,6 +70,23 @@ export function createApi(invoke: Invoke): PaperLionApi {
         key: request.key,
         text: request.text,
       }) as ReturnType<PaperLionApi['checkMessage']>,
+    saveCatalog: (request) =>
+      invoke(channelFor('saveCatalog'), {
+        projectId: request.projectId,
+        catalog: request.catalog,
+        messages: request.messages.map((message) => ({
+          key: message.key,
+          text: message.text,
+          base: message.base,
+          source: message.source,
+        })),
+      }) as ReturnType<PaperLionApi['saveCatalog']>,
+    keepMessagesUpToDate: (request) =>
+      invoke(channelFor('keepMessagesUpToDate'), {
+        projectId: request.projectId,
+        catalog: request.catalog,
+        messages: request.messages.map((message) => ({ key: message.key, source: message.source })),
+      }) as ReturnType<PaperLionApi['keepMessagesUpToDate']>,
     discardDraft: (request) =>
       invoke(channelFor('discardDraft'), {
         projectId: request.projectId,

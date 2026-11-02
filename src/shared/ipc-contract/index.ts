@@ -154,6 +154,33 @@ export interface MessageCheckDto {
   readonly warnings: readonly MessageWarningDto[];
 }
 
+/** One edited message to save. */
+export interface MessageSaveDto {
+  readonly key: string;
+  /** The translation to write; empty removes the message from the file. */
+  readonly text: string;
+  /** Its translation as read when editing started (`null`: none). */
+  readonly base: string | null;
+  /** The source text the translator saw (`null`: the source doesn't have it). */
+  readonly source: string | null;
+}
+
+/** A message's status after saving or keeping it (`null`: not in the source). */
+export interface SavedMessageDto {
+  readonly key: string;
+  readonly status: MessageStatusDto | null;
+}
+
+export interface CatalogSaveDto {
+  /** The translation file, project-relative. */
+  readonly path: string;
+  /** `false`: the file already said all that, and wasn't touched. */
+  readonly written: boolean;
+  readonly messages: readonly SavedMessageDto[];
+  /** Why the saved messages couldn't be recorded as up to date (they're saved). */
+  readonly statusProblem: ErrorDto | null;
+}
+
 /** A catalog for the target language, read: its messages, and the translation's extra keys. */
 export interface CatalogDetailDto {
   readonly key: string;
@@ -359,6 +386,8 @@ export const errorCodes = [
   'workspace.catalog-unreadable',
   'workspace.unknown-catalog',
   'workspace.unknown-message',
+  'workspace.catalog-changed',
+  'workspace.catalog-unwritable',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.invalid-catalog',
@@ -457,6 +486,27 @@ export interface PaperLionApi {
     readonly key: string;
     readonly text: string;
   }): Promise<Result<MessageCheckDto, ErrorDto>>;
+  /**
+   * Saves a catalog's edited messages: the translation file is patched (or created), changing
+   * only those. Refused, writing nothing, when one of them changed on disk since editing started
+   * (`workspace.catalog-changed`). Each saved translation is recorded as up to date, unless its
+   * source changed since the translator saw it.
+   */
+  saveCatalog(request: {
+    readonly projectId: string;
+    readonly catalog: string;
+    readonly messages: readonly MessageSaveDto[];
+  }): Promise<Result<CatalogSaveDto, ErrorDto>>;
+  /**
+   * Keeps messages' translations as up to date with their source as it is now ("Keep as up to
+   * date", for an outdated message whose change doesn't need one). Refused when a source isn't
+   * the one shown (`workspace.source-changed`).
+   */
+  keepMessagesUpToDate(request: {
+    readonly projectId: string;
+    readonly catalog: string;
+    readonly messages: readonly { readonly key: string; readonly source: string }[];
+  }): Promise<Result<readonly SavedMessageDto[], ErrorDto>>;
   /** Forgets a page's draft (its edits were dropped). */
   discardDraft(request: {
     readonly projectId: string;
@@ -505,6 +555,8 @@ export const apiMethods = [
   'markExistingUpToDate',
   'checkTranslation',
   'checkMessage',
+  'saveCatalog',
+  'keepMessagesUpToDate',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

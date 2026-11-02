@@ -92,6 +92,10 @@ describe('guardApi', () => {
         checkTranslation: () =>
           Promise.resolve(ok({ page: [], sections: null, length: { source: 3, translation: 2 } })),
         checkMessage: () => Promise.resolve(ok({ tokens: [], warnings: [] })),
+        saveCatalog: () =>
+          Promise.resolve(ok({ path: 'p', written: true, messages: [], statusProblem: null })),
+        keepMessagesUpToDate: () =>
+          Promise.resolve(ok([{ key: 'k', status: 'translated' as const }])),
         markUpToDate: () =>
           Promise.resolve(
             ok({
@@ -201,6 +205,12 @@ describe('guardApi', () => {
     expect(await api.checkMessage({ projectId: 'p', catalog: 'c', key: 'k', text: 'x' })).toEqual(
       ok({ tokens: [], warnings: [] }),
     );
+    expect(await api.saveCatalog({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
+      ok({ path: 'p', written: true, messages: [], statusProblem: null }),
+    );
+    expect(await api.keepMessagesUpToDate({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
+      ok([{ key: 'k', status: 'translated' }]),
+    );
     expect(calls).toEqual([]);
   });
 
@@ -253,6 +263,12 @@ describe('guardApi', () => {
         checkMessage: () => {
           throw new Error('sync boom');
         },
+        saveCatalog: () => {
+          throw new Error('sync boom');
+        },
+        keepMessagesUpToDate: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -273,6 +289,8 @@ describe('guardApi', () => {
         markExistingUpToDate: () => Promise.reject(new Error('async boom')),
         checkTranslation: () => Promise.reject(new Error('async boom')),
         checkMessage: () => Promise.reject(new Error('async boom')),
+        saveCatalog: () => Promise.reject(new Error('async boom')),
+        keepMessagesUpToDate: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -314,6 +332,12 @@ describe('guardApi', () => {
     expect(await api.checkMessage({ projectId: 'p', catalog: 'c', key: 'k', text: 'x' })).toEqual(
       unexpected,
     );
+    expect(await api.saveCatalog({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
+      unexpected,
+    );
+    expect(await api.keepMessagesUpToDate({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
+      unexpected,
+    );
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
@@ -330,6 +354,8 @@ describe('guardApi', () => {
       'markExistingUpToDate',
       'checkTranslation',
       'checkMessage',
+      'saveCatalog',
+      'keepMessagesUpToDate',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });

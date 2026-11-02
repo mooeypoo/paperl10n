@@ -74,6 +74,25 @@ const cases: [AppError, ErrorDto][] = [
     { code: 'workspace.unknown-catalog', params: { key: 'i18n' }, details: [] },
   ],
   [
+    { code: 'workspace.catalog-changed', path: 'i18n/he.json' as ProjectPath, keys: ['a', 'b'] },
+    {
+      code: 'workspace.catalog-changed',
+      params: { file: 'i18n/he.json' },
+      details: ['a', 'b'],
+    },
+  ],
+  [
+    {
+      code: 'workspace.catalog-unwritable',
+      cause: { code: 'files.unwritable', path: 'i18n/he.json' as ProjectPath },
+    },
+    {
+      code: 'workspace.catalog-unwritable',
+      params: { file: 'i18n/he.json', problem: 'files.unwritable' },
+      details: [],
+    },
+  ],
+  [
     { code: 'workspace.unknown-message', catalog: 'i18n', key: 'gone' },
     {
       code: 'workspace.unknown-message',

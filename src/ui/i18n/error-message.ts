@@ -33,6 +33,8 @@ export const errorMessageParams: Readonly<Record<ErrorCode, readonly string[]>> 
   'workspace.catalog-unreadable': ['file', 'problem'],
   'workspace.unknown-catalog': ['key'],
   'workspace.unknown-message': ['catalog', 'key'],
+  'workspace.catalog-changed': ['file'],
+  'workspace.catalog-unwritable': ['file', 'problem'],
   'formats.invalid-options': ['formatId', 'reason'],
   'formats.unsupported-project': ['formatId', 'reason'],
   'formats.invalid-catalog': ['formatId', 'reason'],

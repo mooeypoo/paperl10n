@@ -70,6 +70,25 @@ export const argumentValidators: Readonly<
     isKey(request.catalog) &&
     isKey(request.key) &&
     isMessageText(request.text),
+  saveCatalog: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'catalog', 'messages']) &&
+    isProjectId(request.projectId) &&
+    isKey(request.catalog) &&
+    isMessageList(
+      request.messages,
+      ['key', 'text', 'base', 'source'],
+      (message) =>
+        isMessageText(message.text) &&
+        (message.base === null || isMessageText(message.base)) &&
+        (message.source === null || isMessageText(message.source)),
+    ),
+  keepMessagesUpToDate: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'catalog', 'messages']) &&
+    isProjectId(request.projectId) &&
+    isKey(request.catalog) &&
+    isMessageList(request.messages, ['key', 'source'], (message) => isMessageText(message.source)),
   discardDraft: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'key']) &&
@@ -119,6 +138,24 @@ function isDocumentText(value: unknown): value is string {
 /** A message's text: far more than any message needs (100,000 UTF-16 code units). */
 function isMessageText(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 100_000;
+}
+
+/**
+ * Messages of one catalog, each with exactly `fields` (a `key` among them) and passing `valid`:
+ * at least one, not absurdly many, and no key twice.
+ */
+function isMessageList<K extends string>(
+  value: unknown,
+  fields: readonly ('key' | K)[],
+  valid: (message: Record<'key' | K, unknown>) => boolean,
+): boolean {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 100_000) return false;
+  const keys = new Set<unknown>();
+  return value.every((message: unknown) => {
+    if (!hasExactly(message, fields) || !isKey(message.key) || keys.has(message.key)) return false;
+    keys.add(message.key);
+    return valid(message);
+  });
 }
 
 /** Section indices: whole numbers, in order, none twice, and not absurdly many. */
@@ -245,6 +282,37 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
         catalog: request.catalog,
         key: request.key,
         text: request.text,
+      });
+    }
+    case 'saveCatalog': {
+      // checked by argumentValidators
+      const [request] = args as [
+        {
+          projectId: string;
+          catalog: string;
+          messages: { key: string; text: string; base: string | null; source: string | null }[];
+        },
+      ];
+      return api.saveCatalog({
+        projectId: request.projectId,
+        catalog: request.catalog,
+        messages: request.messages.map(({ key, text, base, source }) => ({
+          key,
+          text,
+          base,
+          source,
+        })),
+      });
+    }
+    case 'keepMessagesUpToDate': {
+      // checked by argumentValidators
+      const [request] = args as [
+        { projectId: string; catalog: string; messages: { key: string; source: string }[] },
+      ];
+      return api.keepMessagesUpToDate({
+        projectId: request.projectId,
+        catalog: request.catalog,
+        messages: request.messages.map(({ key, source }) => ({ key, source })),
       });
     }
     case 'discardDraft': {

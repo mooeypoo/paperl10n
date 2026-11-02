@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Reading a catalog's files through its format plugin.
 import type { Message, PlaceholderToken } from '#domains/catalog';
-import type { FileAccessError, FormatError, RegisteredCatalogFormat } from '#domains/formats';
+import type {
+  FileAccessError,
+  FormatError,
+  ParsedCatalog,
+  RegisteredCatalogFormat,
+} from '#domains/formats';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import type { OpenedProject } from './ports/project-sessions.ts';
@@ -11,20 +16,29 @@ export type CatalogReadError =
   /** The plugin can't read the file as its format (`formats.invalid-catalog`), or failed. */
   | FormatError;
 
-/** A catalog file's messages; `null` when the file doesn't exist. */
-export async function readCatalogFile(
+/** A catalog file as its format reads it (its text and messages); `null` when it doesn't exist. */
+export async function readParsedCatalog(
   project: OpenedProject,
   format: RegisteredCatalogFormat,
   path: ProjectPath,
-): Promise<Result<readonly Message[] | null, CatalogReadError>> {
+): Promise<Result<ParsedCatalog | null, CatalogReadError>> {
   const text = await project.files.readText(path);
   if (!text.ok) {
     return text.error.code === 'files.not-found'
       ? ok(null)
       : err({ code: 'workspace.catalog-unreadable', cause: text.error });
   }
-  const parsed = format.parse(text.value);
-  return parsed.ok ? ok(parsed.value.messages) : parsed;
+  return format.parse(text.value);
+}
+
+/** A catalog file's messages; `null` when the file doesn't exist. */
+export async function readCatalogFile(
+  project: OpenedProject,
+  format: RegisteredCatalogFormat,
+  path: ProjectPath,
+): Promise<Result<readonly Message[] | null, CatalogReadError>> {
+  const parsed = await readParsedCatalog(project, format, path);
+  return parsed.ok ? ok(parsed.value?.messages ?? null) : parsed;
 }
 
 /** The tokens the format finds; none when its scanner fails (they help, and aren't worth an error). */

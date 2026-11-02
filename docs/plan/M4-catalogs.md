@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C6 done, C7 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C6 and C7a done, C7b next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -569,7 +569,51 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         condition removed); and some untested: the editor reporting caret moves, a reopened
         message's old check, an emptied row, stale tokens on a row, the open row's measured
         height, the second scroll, and the tokens before main answers. Each got a test.
-- **C7, saving:** patching, new files, drafts, the conflict check, and recording status.
+- **C7, saving:** patching, new files, drafts, the conflict check, and recording status. In
+  three PRs:
+  - **C7a, saving and keeping in main:** `saveCatalog` and `keepMessagesUpToDate` over IPC.
+    - *Done-notes:* the rules are in [the workspace doc](../domains/workspace.md) ("Saving messages").
+      - **The conflict check is per message, not per file** (a change from pages, where the
+        whole file is the base): each saved message carries its translation as read, and only a
+        message changed on disk since blocks the save (`workspace.catalog-changed`, naming them).
+        A catalog is shared by many messages, and a `git pull` adding keys shouldn't stop
+        anyone; the patch keeps them.
+      - **Recorded against what the translator saw:** each saved message carries its source text
+        as shown. When the source changed since, the translation is saved and not recorded, so
+        its status says so. A message the source doesn't have isn't recorded (the first version
+        recorded it against an empty source: caught by a test).
+      - **The status file never costs the work:** saving still writes the translation when the
+        status file can't be read or written, and says why (`statusProblem`). Keeping, whose only
+        work is the record, fails instead. The status file is written only when the record
+        changes.
+      - New errors `workspace.catalog-changed` (the file, with the keys as details) and
+        `workspace.catalog-unwritable`, with messages in en, he, qqq. `readParsedCatalog` reads a
+        file as its format parses it (`serialize` needs the text too); the recording helpers
+        are shared (`catalog-records.ts`).
+      - Tests: patching (source order, other messages kept), a new file, text the file has
+        (not written, still recorded, the status file not rewritten), removals (and no file for
+        removals alone), a source changed since, a message not in the source, the conflict
+        (nothing written; then saving the rest keeps the changes on disk), the status file
+        unreadable and unwritable, the file unwritable, each error; keeping (recorded, the file
+        untouched, a message without a translation, each refusal writing nothing); validation of
+        each argument; and both end to end over IPC on a copy of the MediaWiki fixture, checking
+        the patched file byte for byte (and, saved again, nothing written and the status
+        file's problem reported).
+      - Mutation checks, each failing tests (47): each error passed through or dropped, the
+        conflict, removals, unchanged text written, the folder created, the source the translator
+        saw, a removal's record, the status problem and the statuses after, the unchanged record
+        not rewritten, an empty translation in the file, keeping (the source check, the
+        translation, each error), validation (duplicates, empty and long lists, each field), the
+        preload, main, and the handler passing fields, and the error's details. Survivors at
+        first, each resolved: two guards that repeated the status rules (an emptied text read as
+        none, keep's filter for messages without a translation): removed; and untested ones (the
+        new folder, an empty translation in the file, `written` and `statusProblem` over IPC):
+        each got a test.
+  - **C7b, drafts (main):** a catalog's unsaved edits kept in app data, as a page's are.
+  - **C7c, saving in the UI:** Ctrl/Cmd+S, the unsaved-changes question, "Keep as up to date",
+    removing messages the source no longer has, and the rows' status after a save.
+- **C7d, existing translations:** the one-time "Mark all existing translations up to date" offer
+  (question 3) covering catalogs too; today it covers pages only.
 - **C8, previews:** plural and gender (question 7).
 - **C9, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

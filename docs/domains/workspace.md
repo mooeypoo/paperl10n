@@ -120,6 +120,49 @@ no such key, as when it changed on disk), the source's read error
 (`workspace.catalog-unreadable`, or the plugin's `formats.invalid-catalog`), or a `FormatError`
 from the layout.
 
+### Saving messages: `saveCatalog(projectId, { catalog, messages })`
+
+`createSaveCatalog({ sessions, updates })` (M4). Saves a catalog's edited messages for the target
+language. Each message comes with its new text (empty removes it from the file), its `base` (the
+translation as read when editing started, `null` for none), and the `source` text the translator
+saw (`null`: the source doesn't have it).
+
+- **The file is patched, not rewritten:** the format's `serialize` changes only those messages
+  (a new one after the nearest earlier source message, a new file shaped like the source), so
+  every other byte stays. Nothing is written when the file already says it all
+  (`written: false`), and no file is created for removals alone.
+- **The conflict check is per message:** a message whose translation on disk isn't its `base`
+  anymore is never overwritten: `workspace.catalog-changed` names them, and nothing is written.
+  Other changes on disk (a `git pull` adding keys) don't block the save, and are kept.
+- **Recording (M4 question 3):** each saved translation is recorded as up to date with the source
+  now, but only when that's the `source` the translator saw; otherwise the translation is saved
+  and its status shows the change (outdated, or still a draft). A removed message loses its
+  record; one the source doesn't have gets none. The status file is written only when the record
+  changes.
+- **The status file is the record of the work, not the work:** when it can't be read (it's
+  never overwritten then) or written, the translation is still saved, and `statusProblem` says
+  why.
+
+It returns the file, whether it was written, and each message's status after (`null`: not in
+the source). Saves of one file run one at a time (`updates`), each reading what the last wrote.
+Errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-catalog`,
+`workspace.unknown-message` (an empty key), the source's or translation's read error,
+`workspace.catalog-changed`, `workspace.catalog-unwritable`, or a `FormatError` (the layout's,
+or `serialize`'s).
+
+### Keeping messages: `keepMessagesUpToDate(projectId, { catalog, messages })`
+
+`createKeepMessagesUpToDate({ sessions, updates })` (M4). "Keep as up to date" for outdated
+messages whose source change doesn't need a new translation: records each one's translation
+against its source now, without touching the catalog. Each message comes with the `source` text
+the translator saw; when the source isn't that anymore (or is gone), nothing is kept
+(`workspace.source-changed`), so a version they haven't read is never kept. A message without a
+translation has nothing to keep and stays missing. Unlike saving, a status file that can't be read
+or written is the error (nothing else happens). Returns each message's status after. Errors:
+`workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-catalog`, the
+source's or translation's read error, `workspace.source-changed`, a status file read error,
+`workspace.status-unwritable`, or a `FormatError` from the layout.
+
 ### `readDocumentPair(projectId, key)`
 
 `createReadDocumentPair({ sessions, parser, drafts })`. It finds the page by key among the layout's source

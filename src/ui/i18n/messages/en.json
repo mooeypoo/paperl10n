@@ -135,6 +135,8 @@
   "paperl10n-error-workspace-catalog-unreadable": "The catalog file $1 can't be read ($2).",
   "paperl10n-error-workspace-unknown-catalog": "The catalog \"$1\" isn't in this project anymore. Open the project again to refresh the list.",
   "paperl10n-error-workspace-unknown-message": "The message \"$2\" isn't in the source of the catalog \"$1\" anymore. Open the catalog again to refresh it.",
+  "paperl10n-error-workspace-catalog-changed": "Not saved: $1 changed on disk since you started editing (some of the messages you edited are different there now). Open the catalog again to see them.",
+  "paperl10n-error-workspace-catalog-unwritable": "The catalog file $1 can't be written ($2).",
   "paperl10n-draft-restored": "Unsaved changes from your last session were restored.",
   "paperl10n-discard-draft": "Discard them",
   "paperl10n-draft-restored-changed": "Unsaved changes from your last session were restored. The file has changed on disk since, so saving will ask which version to keep.",

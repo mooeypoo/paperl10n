@@ -5,7 +5,9 @@ import type {
   CatalogListDto,
   DocumentPairDto,
   DocumentStatusDto,
+  CatalogSaveDto,
   MessageCheckDto,
+  SavedMessageDto,
   TranslationCheckDto,
   ErrorDto,
   LanguageDto,
@@ -145,6 +147,10 @@ export function fakeClient(
     check?: Result<TranslationCheckDto, ErrorDto>;
     /** The answer to checking a message (default: no tokens, no warnings). */
     checkMessage?: Result<MessageCheckDto, ErrorDto>;
+    /** The answer to saving a catalog (default: written, each message up to date). */
+    saveCatalog?: Result<CatalogSaveDto, ErrorDto>;
+    /** The answer to keeping messages up to date (default: each up to date). */
+    keepMessages?: Result<readonly SavedMessageDto[], ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -244,6 +250,36 @@ export function fakeClient(
       calls.push(`checkMessage:${projectId}:${catalog}:${key}:${JSON.stringify(text)}`);
       return Promise.resolve(
         structuredClone(answers.checkMessage ?? { ok: true, value: { tokens: [], warnings: [] } }),
+      );
+    },
+    saveCatalog: ({ projectId, catalog, messages }) => {
+      calls.push(`saveCatalog:${projectId}:${catalog}:${JSON.stringify(messages)}`);
+      return Promise.resolve(
+        structuredClone(
+          answers.saveCatalog ?? {
+            ok: true,
+            value: {
+              path: `${catalog}/he.json`,
+              written: true,
+              messages: messages.map(({ key, text }) => ({
+                key,
+                status: text === '' ? ('missing' as const) : ('translated' as const),
+              })),
+              statusProblem: null,
+            },
+          },
+        ),
+      );
+    },
+    keepMessagesUpToDate: ({ projectId, catalog, messages }) => {
+      calls.push(`keepMessagesUpToDate:${projectId}:${catalog}:${JSON.stringify(messages)}`);
+      return Promise.resolve(
+        structuredClone(
+          answers.keepMessages ?? {
+            ok: true,
+            value: messages.map(({ key }) => ({ key, status: 'translated' as const })),
+          },
+        ),
       );
     },
     markUpToDate: ({ projectId, key, sourceFingerprint, sections }) => {
