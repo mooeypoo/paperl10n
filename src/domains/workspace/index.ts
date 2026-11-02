@@ -35,6 +35,12 @@ export {
   type ReadCatalogError,
   type ReadCatalogResult,
 } from './application/read-catalog.ts';
+export {
+  createCheckMessage,
+  type CheckMessage,
+  type CheckMessageError,
+  type MessageCheck,
+} from './application/check-message.ts';
 export type {
   OpenedProject,
   ProjectCatalogs,

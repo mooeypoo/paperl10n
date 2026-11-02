@@ -27,6 +27,7 @@ export function cloningTransport(api: PaperLionApi): PaperLionApi {
     saveDraft: (request) => crossing(() => api.saveDraft(structuredClone(request))),
     discardDraft: (request) => crossing(() => api.discardDraft(structuredClone(request))),
     checkTranslation: (request) => crossing(() => api.checkTranslation(structuredClone(request))),
+    checkMessage: (request) => crossing(() => api.checkMessage(structuredClone(request))),
     markUpToDate: (request) => crossing(() => api.markUpToDate(structuredClone(request))),
     markExistingUpToDate: (request) =>
       crossing(() => api.markExistingUpToDate(structuredClone(request))),

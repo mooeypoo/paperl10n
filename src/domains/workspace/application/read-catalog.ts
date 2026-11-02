@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { pairCatalog, type Message, type PlaceholderToken } from '#domains/catalog';
-import type { FormatError, RegisteredCatalogFormat, SourceCatalog } from '#domains/formats';
+import type { FormatError } from '#domains/formats';
 import { emptyStatusFile, messageStatus, type MessageStatus } from '#domains/translation';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
-import { readCatalogFile, type CatalogReadError } from './catalog-files.ts';
+import { readCatalogFile, scanText, type CatalogReadError } from './catalog-files.ts';
+import { findCatalog } from './find-catalog.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import { readStatusFile, type StatusReadError } from './translation-status.ts';
 
@@ -58,12 +59,6 @@ export type ReadCatalog = (
   key: string,
 ) => Promise<Result<ReadCatalogResult, ReadCatalogError>>;
 
-/** The tokens the format finds; none when its scanner fails (they help, and aren't worth an error). */
-function scan(format: RegisteredCatalogFormat, text: string): readonly PlaceholderToken[] {
-  const tokens = format.scanPlaceholders(text);
-  return tokens.ok ? tokens.value : [];
-}
-
 /**
  * A catalog for the target language: each source message with its documentation, translation,
  * status, and tokens, and the translation's messages the source no longer has. The source and
@@ -75,13 +70,9 @@ export function createReadCatalog(deps: { readonly sessions: ProjectSessions }):
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
     const target = project.targetLocale;
     if (target === null) return err({ code: 'workspace.no-target-locale' });
-    if (project.catalogs === null) return err({ code: 'workspace.unknown-catalog', key });
-    const { format, layout } = project.catalogs;
-
-    const catalogs = await layout.listCatalogs();
-    if (!catalogs.ok) return catalogs;
-    const catalog: SourceCatalog | undefined = catalogs.value.find((c) => c.key === key);
-    if (catalog === undefined) return err({ code: 'workspace.unknown-catalog', key });
+    const found = await findCatalog(project, key);
+    if (!found.ok) return found;
+    const { catalog, format, layout } = found.value;
     const targetPath = layout.targetPathFor(catalog, target.id);
     if (!targetPath.ok) return targetPath;
 
@@ -112,13 +103,14 @@ export function createReadCatalog(deps: { readonly sessions: ProjectSessions }):
         documentation: message.documentation,
         translation: message.translation,
         status: messageStatus(message.source, message.translation, record?.get(message.key)),
-        sourceTokens: scan(format, message.source),
-        translationTokens: message.translation === null ? [] : scan(format, message.translation),
+        sourceTokens: scanText(format, message.source),
+        translationTokens:
+          message.translation === null ? [] : scanText(format, message.translation),
       })),
       notInSource: paired.notInSource.map((message) => ({
         key: message.key,
         text: message.text,
-        tokens: scan(format, message.text),
+        tokens: scanText(format, message.text),
       })),
       documentationProblem,
       statusFile: {

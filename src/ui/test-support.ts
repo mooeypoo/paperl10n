@@ -5,6 +5,7 @@ import type {
   CatalogListDto,
   DocumentPairDto,
   DocumentStatusDto,
+  MessageCheckDto,
   TranslationCheckDto,
   ErrorDto,
   LanguageDto,
@@ -142,6 +143,8 @@ export function fakeClient(
     markExisting?: Result<{ marked: readonly string[] }, ErrorDto>;
     /** The answer to checking a translation (default: no hints, the same length). */
     check?: Result<TranslationCheckDto, ErrorDto>;
+    /** The answer to checking a message (default: no tokens, no warnings). */
+    checkMessage?: Result<MessageCheckDto, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -235,6 +238,12 @@ export function fakeClient(
           ok: true,
           value: { page: [], sections: null, length: { source: 10, translation: 10 } },
         },
+      );
+    },
+    checkMessage: ({ projectId, catalog, key, text }) => {
+      calls.push(`checkMessage:${projectId}:${catalog}:${key}:${JSON.stringify(text)}`);
+      return Promise.resolve(
+        structuredClone(answers.checkMessage ?? { ok: true, value: { tokens: [], warnings: [] } }),
       );
     },
     markUpToDate: ({ projectId, key, sourceFingerprint, sections }) => {

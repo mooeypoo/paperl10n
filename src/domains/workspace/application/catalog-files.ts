@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Reading a catalog's files through its format plugin.
-import type { Message } from '#domains/catalog';
+import type { Message, PlaceholderToken } from '#domains/catalog';
 import type { FileAccessError, FormatError, RegisteredCatalogFormat } from '#domains/formats';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
@@ -25,4 +25,13 @@ export async function readCatalogFile(
   }
   const parsed = format.parse(text.value);
   return parsed.ok ? ok(parsed.value.messages) : parsed;
+}
+
+/** The tokens the format finds; none when its scanner fails (they help, and aren't worth an error). */
+export function scanText(
+  format: RegisteredCatalogFormat,
+  text: string,
+): readonly PlaceholderToken[] {
+  const tokens = format.scanPlaceholders(text);
+  return tokens.ok ? tokens.value : [];
 }

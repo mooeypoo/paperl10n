@@ -134,6 +134,7 @@
   "paperl10n-error-workspace-status-unwritable": "אי אפשר לשמור את קובץ הסטטוס $1 ($2), ולכן שום דבר לא סומן כמעודכן.",
   "paperl10n-error-workspace-catalog-unreadable": "אי אפשר לקרוא את קובץ הקטלוג $1 ($2).",
   "paperl10n-error-workspace-unknown-catalog": "הקטלוג \"$1\" כבר לא נמצא בפרויקט. פתחו את הפרויקט מחדש כדי לרענן את הרשימה.",
+  "paperl10n-error-workspace-unknown-message": "ההודעה \"$2\" כבר לא נמצאת במקור של הקטלוג \"$1\". פתחו את הקטלוג מחדש כדי לרענן אותו.",
   "paperl10n-draft-restored": "שינויים שלא נשמרו מהפעם הקודמת שוחזרו.",
   "paperl10n-discard-draft": "למחוק אותם",
   "paperl10n-draft-restored-changed": "שינויים שלא נשמרו מהפעם הקודמת שוחזרו. הקובץ השתנה בדיסק מאז, ולכן בשמירה תתבקשו לבחור איזו גרסה לשמור.",

@@ -106,6 +106,20 @@ tokens rather than an error. The status file reads as for pages. Errors:
 catalog, or a project without catalogs), a read error as above, or a `FormatError` from the
 layout.
 
+### Checking a message: `checkMessage(projectId, { catalog, key, text })`
+
+`createCheckMessage({ sessions })` (M4). Checks `text`, a message's translation as it's written
+now (saved or not), against the source message with that key, read from the catalog's source file
+on disk each time: the tokens the plugin's scanner finds in the text (for the editor to mark), and
+the [catalog](catalog.md) domain's warnings (`checkMessage`: missing, unexpected, unbalanced).
+The editor calls it after typing pauses (PRD question 6 of M4: the syntax is the plugin's, so it's
+found in main). Reads only, and needs no target language. A scanner that fails gives no tokens
+(and so no token warnings) rather than an error. Errors: `workspace.unknown-project`,
+`workspace.unknown-catalog` (as for `readCatalog`), `workspace.unknown-message` (the source has
+no such key, as when it changed on disk), the source's read error
+(`workspace.catalog-unreadable`, or the plugin's `formats.invalid-catalog`), or a `FormatError`
+from the layout.
+
 ### `readDocumentPair(projectId, key)`
 
 `createReadDocumentPair({ sessions, parser, drafts })`. It finds the page by key among the layout's source

@@ -74,6 +74,14 @@ const cases: [AppError, ErrorDto][] = [
     { code: 'workspace.unknown-catalog', params: { key: 'i18n' }, details: [] },
   ],
   [
+    { code: 'workspace.unknown-message', catalog: 'i18n', key: 'gone' },
+    {
+      code: 'workspace.unknown-message',
+      params: { catalog: 'i18n', key: 'gone' },
+      details: [],
+    },
+  ],
+  [
     { code: 'workspace.unknown-project' },
     { code: 'workspace.unknown-project', params: {}, details: [] },
   ],

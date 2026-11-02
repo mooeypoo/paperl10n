@@ -395,6 +395,47 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       error: { code: 'workspace.unknown-document' },
     });
   },
+  checkMessage: async () => {
+    const { api } = rendererApi(await copyOfExtension());
+    const opened = await api.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    const { projectId } = opened.value;
+    // The source: "There {{PLURAL:$1|is one example|are $1 examples}}." The translation, unsaved,
+    // keeps the plural (and so its `$1`), and adds a link.
+    const text = 'יש {{PLURAL:$1|דוגמה אחת|הרבה דוגמאות}} ב[[Help:Example]].';
+    expect(
+      await api.checkMessage({ projectId, catalog: 'i18n', key: 'example-count', text }),
+    ).toEqual({
+      ok: true,
+      value: {
+        tokens: [
+          { kind: 'plural', start: 3, end: 39 },
+          { kind: 'parameter', start: 12, end: 14 },
+          { kind: 'link', start: 41, end: 57 },
+        ],
+        warnings: [{ kind: 'unexpected', token: 'link', value: 'Help:Example' }],
+      },
+    });
+    expect(
+      await api.checkMessage({
+        projectId,
+        catalog: 'i18n',
+        key: 'example-last',
+        text: 'הודעה [אחרונה',
+      }),
+    ).toEqual({
+      ok: true,
+      value: { tokens: [], warnings: [{ kind: 'unbalanced', brackets: '[]' }] },
+    });
+    expect(await api.checkMessage({ projectId, catalog: 'i18n', key: 'nope', text })).toEqual({
+      ok: false,
+      error: {
+        code: 'workspace.unknown-message',
+        params: { catalog: 'i18n', key: 'nope' },
+        details: [],
+      },
+    });
+  },
   markUpToDate: async () => {
     const folder = await copyOfBasic();
     const { api } = rendererApi(folder);

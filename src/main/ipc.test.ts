@@ -101,6 +101,10 @@ function setup() {
         ok({ page: [], sections: null, length: { source: 3, translation: 2 } }),
       );
     },
+    checkMessage: (request) => {
+      calls.push(['checkMessage', request]);
+      return Promise.resolve(ok({ tokens: [], warnings: [] }));
+    },
     markUpToDate: (request) => {
       calls.push(['markUpToDate', request]);
       return Promise.resolve(
@@ -184,6 +188,11 @@ describe('registerApi', () => {
       ok: true,
       value: { marked: ['index', 'about'] },
     });
+    const message = { projectId: 'p1', catalog: 'i18n', key: 'm', text: 'שלום $1' };
+    expect(await send('checkMessage', trusted, message)).toEqual({
+      ok: true,
+      value: { tokens: [], warnings: [] },
+    });
     const check = { projectId: 'p1', key: 'k', text: 'שלום' };
     expect(await send('checkTranslation', trusted, check)).toEqual({
       ok: true,
@@ -203,6 +212,7 @@ describe('registerApi', () => {
       ['discardDraft', { projectId: 'p1', key: 'k' }],
       ['markUpToDate', mark],
       ['markExistingUpToDate', { projectId: 'p1' }],
+      ['checkMessage', message],
       ['checkTranslation', check],
     ]);
   });
@@ -285,6 +295,28 @@ describe('argumentValidators', () => {
     ['an extra argument', [{ projectId: 'abc', key: 'i18n' }, 'more'], false],
   ])('readCatalog: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.readCatalog(args)).toBe(valid);
+  });
+
+  const message = { projectId: 'abc', catalog: 'i18n', key: 'm', text: 'x' };
+  it.each<[string, unknown[], boolean]>([
+    ['a catalog, a key, and a text', [message], true],
+    ['an empty text', [{ ...message, text: '' }], true],
+    ['the longest text', [{ ...message, text: 'x'.repeat(100_000) }], true],
+    ['no arguments', [], false],
+    ['null', [null], false],
+    ['an empty project id', [{ ...message, projectId: '' }], false],
+    ['no catalog', [{ projectId: 'abc', key: 'm', text: 'x' }], false],
+    ['an empty catalog', [{ ...message, catalog: '' }], false],
+    ['a very long catalog', [{ ...message, catalog: 'x'.repeat(1001) }], false],
+    ['an empty key', [{ ...message, key: '' }], false],
+    ['a numeric key', [{ ...message, key: 1 }], false],
+    ['a very long key', [{ ...message, key: 'x'.repeat(1001) }], false],
+    ['a numeric text', [{ ...message, text: 1 }], false],
+    ['a text too long', [{ ...message, text: 'x'.repeat(100_001) }], false],
+    ['an extra field', [{ ...message, path: '/etc' }], false],
+    ['an extra argument', [message, 'more'], false],
+  ])('checkMessage: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.checkMessage(args)).toBe(valid);
   });
 
   it.each<[string, unknown[], boolean]>([
