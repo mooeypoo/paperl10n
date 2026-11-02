@@ -34,6 +34,7 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
         ok: true,
         value: { catalogs: [], statusFile: { exists: false, problem: null } },
       }),
+    readCatalog: () => Promise.reject(new Error('not used')),
     readDocumentPair: ({ key }) =>
       Promise.resolve({
         ok: true,

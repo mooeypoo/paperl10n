@@ -223,6 +223,41 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       },
     });
   },
+  readCatalog: async () => {
+    const { api } = rendererApi(await copyOfExtension());
+    const opened = await api.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    const { projectId } = opened.value;
+    const read = await api.readCatalog({ projectId, key: 'i18n' });
+    if (!read.ok) throw new Error(JSON.stringify(read));
+    expect(read.value).toMatchObject({
+      key: 'i18n',
+      sourcePath: 'i18n/en.json',
+      targetPath: 'i18n/he.json',
+      targetExists: true,
+      documentationPath: 'i18n/qqq.json',
+      documentationProblem: null,
+      statusFile: { exists: true, problem: null },
+    });
+    expect(read.value.messages.map((m) => [m.key, m.status])).toEqual([
+      ['example-desc', 'translated'],
+      ['example-count', 'missing'],
+      ['example-link', 'draft'],
+      ['example-bold', 'missing'],
+      ['example-last', 'outdated'],
+    ]);
+    const count = read.value.messages[1];
+    expect(count?.documentation).toBe('Parameters:\n* $1 - the number of examples');
+    expect(count?.translation).toBeNull();
+    expect(count?.sourceTokens.map((t) => t.kind)).toEqual(['plural', 'parameter', 'parameter']);
+    expect(count?.sourceTokens[0]).toEqual({ kind: 'plural', start: 6, end: 50 });
+    expect(read.value.notInSource.map((m) => m.key)).toEqual(['example-removed']);
+
+    expect(await api.readCatalog({ projectId, key: 'nope' })).toEqual({
+      ok: false,
+      error: { code: 'workspace.unknown-catalog', params: { key: 'nope' }, details: [] },
+    });
+  },
   readDocumentPair: async () => {
     const { api } = rendererApi();
     const projectId = await openBasic(api);

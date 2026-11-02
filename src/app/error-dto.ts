@@ -5,6 +5,7 @@ import type {
   DraftError,
   ListCatalogsError,
   ListSourceDocumentsError,
+  ReadCatalogError,
   MarkUpToDateError,
   OpenProjectError,
   ReadDocumentPairError,
@@ -17,6 +18,7 @@ export type AppError =
   | OpenProjectError
   | ListSourceDocumentsError
   | ListCatalogsError
+  | ReadCatalogError
   | CatalogReadError
   | ReadDocumentPairError
   | TargetLanguagesError
@@ -51,6 +53,7 @@ export function toErrorDto(error: AppError): ErrorDto {
         {},
         error.problems.map((p) => `${p.field}: ${p.problem}`),
       );
+    case 'workspace.unknown-catalog':
     case 'workspace.unknown-document':
       return dto({ key: error.key });
     case 'workspace.document-unreadable':

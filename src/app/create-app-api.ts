@@ -8,6 +8,7 @@ import {
   createChooseTargetLocale,
   createDiscardDraft,
   createListCatalogs,
+  createReadCatalog,
   createListSourceDocuments,
   createMarkExistingUpToDate,
   createMarkUpToDate,
@@ -58,6 +59,7 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
       parser: deps.parser,
     }),
     listCatalogs: createListCatalogs({ sessions: deps.sessions }),
+    readCatalog: createReadCatalog({ sessions: deps.sessions }),
     readDocumentPair: createReadDocumentPair({
       sessions: deps.sessions,
       parser: deps.parser,

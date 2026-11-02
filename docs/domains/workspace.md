@@ -92,6 +92,20 @@ lists**, with `progress: null` and the `problem` (`workspace.catalog-unreadable`
 lists none. Errors: `workspace.unknown-project`, `workspace.no-target-locale`, or a `FormatError`
 from the layout.
 
+### `readCatalog(projectId, key)`
+
+`createReadCatalog({ sessions })` (M4). A catalog for the target language: each source message, in
+source order, with its documentation (`qqq`), its translation (`null` when absent or empty), its
+status, and the tokens the plugin's scanner finds in the source and the translation; and the
+translation's messages the source no longer has (not in source), in the translation's order,
+with their tokens. The source and target files must read (`workspace.catalog-unreadable`, or the
+plugin's `formats.invalid-catalog`); **the documentation may not**: the messages then show none,
+and `documentationProblem` says why (it's help, not the work). A scanner that fails gives no
+tokens rather than an error. The status file reads as for pages. Errors:
+`workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-catalog` (no such
+catalog, or a project without catalogs), a read error as above, or a `FormatError` from the
+layout.
+
 ### `readDocumentPair(projectId, key)`
 
 `createReadDocumentPair({ sessions, parser, drafts })`. It finds the page by key among the layout's source

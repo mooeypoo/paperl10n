@@ -119,6 +119,7 @@
   "paperl10n-error-workspace-status-unsupported": "קובץ הסטטוס $1 נכתב בגרסה חדשה יותר של Paper Lion (גרסה $2). עדכנו את Paper Lion כדי לקרוא אותו; עד אז הוא לא ישתנה.",
   "paperl10n-error-workspace-status-unwritable": "אי אפשר לשמור את קובץ הסטטוס $1 ($2), ולכן שום דבר לא סומן כמעודכן.",
   "paperl10n-error-workspace-catalog-unreadable": "אי אפשר לקרוא את קובץ הקטלוג $1 ($2).",
+  "paperl10n-error-workspace-unknown-catalog": "הקטלוג \"$1\" כבר לא נמצא בפרויקט. פתחו את הפרויקט מחדש כדי לרענן את הרשימה.",
   "paperl10n-draft-restored": "שינויים שלא נשמרו מהפעם הקודמת שוחזרו.",
   "paperl10n-discard-draft": "למחוק אותם",
   "paperl10n-draft-restored-changed": "שינויים שלא נשמרו מהפעם הקודמת שוחזרו. הקובץ השתנה בדיסק מאז, ולכן בשמירה תתבקשו לבחור איזו גרסה לשמור.",

@@ -15,6 +15,7 @@ describe('#domains/workspace public API', () => {
       'createMarkExistingUpToDate',
       'createMarkUpToDate',
       'createOpenProject',
+      'createReadCatalog',
       'createReadDocumentPair',
       'createSaveDocument',
       'createSaveDraft',

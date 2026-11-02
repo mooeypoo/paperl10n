@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import type { PlaceholderToken } from '#domains/catalog';
 import type { ParsedDocument } from '#domains/document';
 import type { Locale } from '#domains/locale';
 import type { PreservationHint, Section, SectionPairing } from '#domains/translation';
@@ -14,6 +15,7 @@ import type {
   MarkExistingUpToDate,
   MarkUpToDate,
   OpenProject,
+  ReadCatalog,
   ReadDocument,
   ReadDocumentPair,
   SaveDocument,
@@ -28,6 +30,7 @@ import type {
   LanguageDto,
   LocaleDto,
   PaperLionApi,
+  PlaceholderTokenDto,
   SectionPairingDto,
 } from '#ipc-contract';
 import { err, ok } from '#kernel/result';
@@ -37,6 +40,7 @@ export interface UseCases {
   readonly openProject: OpenProject;
   readonly listSourceDocuments: ListSourceDocuments;
   readonly listCatalogs: ListCatalogs;
+  readonly readCatalog: ReadCatalog;
   readonly readDocumentPair: ReadDocumentPair;
   readonly suggestTargetLanguages: SuggestTargetLanguages;
   readonly searchTargetLanguages: SearchTargetLanguages;
@@ -47,6 +51,10 @@ export interface UseCases {
   readonly markUpToDate: MarkUpToDate;
   readonly markExistingUpToDate: MarkExistingUpToDate;
   readonly checkTranslation: CheckTranslation;
+}
+
+function toTokenDto(token: PlaceholderToken): PlaceholderTokenDto {
+  return { kind: token.kind, start: token.start, end: token.end };
 }
 
 function toFormatDto(format: FormatName | null): FormatDto | null {
@@ -174,6 +182,39 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         statusFile: {
           exists: statusFile.exists,
           problem: statusFile.problem === null ? null : toErrorDto(statusFile.problem),
+        },
+      });
+    },
+
+    async readCatalog({ projectId, key }) {
+      const result = await useCases.readCatalog(projectId, key);
+      if (!result.ok) return err(toErrorDto(result.error));
+      const read = result.value;
+      return ok({
+        key: read.key,
+        sourcePath: read.sourcePath,
+        targetPath: read.targetPath,
+        targetExists: read.targetExists,
+        documentationPath: read.documentationPath,
+        messages: read.messages.map((message) => ({
+          key: message.key,
+          source: message.source,
+          documentation: message.documentation,
+          translation: message.translation,
+          status: message.status,
+          sourceTokens: message.sourceTokens.map(toTokenDto),
+          translationTokens: message.translationTokens.map(toTokenDto),
+        })),
+        notInSource: read.notInSource.map((message) => ({
+          key: message.key,
+          text: message.text,
+          tokens: message.tokens.map(toTokenDto),
+        })),
+        documentationProblem:
+          read.documentationProblem === null ? null : toErrorDto(read.documentationProblem),
+        statusFile: {
+          exists: read.statusFile.exists,
+          problem: read.statusFile.problem === null ? null : toErrorDto(read.statusFile.problem),
         },
       });
     },

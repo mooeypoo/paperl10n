@@ -109,6 +109,48 @@ export interface CatalogDto {
   readonly problem: ErrorDto | null;
 }
 
+/** A piece of a message its translation must keep, by kind and UTF-16 range. */
+export interface PlaceholderTokenDto {
+  readonly kind: 'parameter' | 'plural' | 'gender' | 'link' | 'tag' | 'other';
+  readonly start: number;
+  readonly end: number;
+}
+
+export interface CatalogMessageDto {
+  readonly key: string;
+  readonly source: string;
+  /** What the documentation (`qqq`) says about it; `null`: nothing. */
+  readonly documentation: string | null;
+  /** `null`: not translated (or translated empty). */
+  readonly translation: string | null;
+  readonly status: MessageStatusDto;
+  readonly sourceTokens: readonly PlaceholderTokenDto[];
+  readonly translationTokens: readonly PlaceholderTokenDto[];
+}
+
+/** A catalog for the target language, read: its messages, and the translation's extra keys. */
+export interface CatalogDetailDto {
+  readonly key: string;
+  readonly sourcePath: string;
+  readonly targetPath: string;
+  readonly targetExists: boolean;
+  readonly documentationPath: string | null;
+  /** In source order. */
+  readonly messages: readonly CatalogMessageDto[];
+  /** Messages the translation has and the source no longer does, in the translation's order. */
+  readonly notInSource: readonly {
+    readonly key: string;
+    readonly text: string;
+    readonly tokens: readonly PlaceholderTokenDto[];
+  }[];
+  /** Why the documentation can't be read; the messages then show none. */
+  readonly documentationProblem: ErrorDto | null;
+  readonly statusFile: {
+    readonly exists: boolean;
+    readonly problem: ErrorDto | null;
+  };
+}
+
 export interface CatalogListDto {
   readonly catalogs: readonly CatalogDto[];
   /** The target language's status file, as for pages. */
@@ -289,6 +331,7 @@ export const errorCodes = [
   'workspace.status-unsupported',
   'workspace.status-unwritable',
   'workspace.catalog-unreadable',
+  'workspace.unknown-catalog',
   'formats.invalid-options',
   'formats.unsupported-project',
   'formats.invalid-catalog',
@@ -321,6 +364,11 @@ export interface PaperLionApi {
   /** The project's message catalogs, each with its progress in the target language. A project
    * without catalogs lists none. */
   listCatalogs(request: { readonly projectId: string }): Promise<Result<CatalogListDto, ErrorDto>>;
+  /** A catalog's messages for the target language, with their status and tokens. */
+  readCatalog(request: {
+    readonly projectId: string;
+    readonly key: string;
+  }): Promise<Result<CatalogDetailDto, ErrorDto>>;
   /** A page's source and its translation, read and parsed. */
   readDocumentPair(request: {
     readonly projectId: string;
@@ -408,6 +456,7 @@ export const apiMethods = [
   'openProject',
   'listSourceDocuments',
   'listCatalogs',
+  'readCatalog',
   'readDocumentPair',
   'suggestTargetLanguages',
   'searchTargetLanguages',
