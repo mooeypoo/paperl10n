@@ -53,6 +53,7 @@ function setup() {
           messages: [],
           notInSource: [],
           documentationProblem: null,
+          draft: null,
           statusFile: { exists: false, problem: null },
         }),
       );
@@ -114,6 +115,14 @@ function setup() {
     keepMessagesUpToDate: (request) => {
       calls.push(['keepMessagesUpToDate', request]);
       return Promise.resolve(ok([]));
+    },
+    saveCatalogDraft: (request) => {
+      calls.push(['saveCatalogDraft', request]);
+      return Promise.resolve(ok(null));
+    },
+    discardCatalogDraft: (request) => {
+      calls.push(['discardCatalogDraft', request]);
+      return Promise.resolve(ok(null));
     },
     markUpToDate: (request) => {
       calls.push(['markUpToDate', request]);
@@ -214,6 +223,13 @@ describe('registerApi', () => {
     });
     const keep = { projectId: 'p1', catalog: 'i18n', messages: [{ key: 'm', source: 'Hello $1' }] };
     expect(await send('keepMessagesUpToDate', trusted, keep)).toEqual({ ok: true, value: [] });
+    const catalogDraft = { ...saveMessages, messages: [] };
+    expect(await send('saveCatalogDraft', trusted, catalogDraft)).toEqual({
+      ok: true,
+      value: null,
+    });
+    const discard = { projectId: 'p1', catalog: 'i18n' };
+    expect(await send('discardCatalogDraft', trusted, discard)).toEqual({ ok: true, value: null });
     const check = { projectId: 'p1', key: 'k', text: 'שלום' };
     expect(await send('checkTranslation', trusted, check)).toEqual({
       ok: true,
@@ -236,6 +252,8 @@ describe('registerApi', () => {
       ['checkMessage', message],
       ['saveCatalog', saveMessages],
       ['keepMessagesUpToDate', keep],
+      ['saveCatalogDraft', catalogDraft],
+      ['discardCatalogDraft', discard],
       ['checkTranslation', check],
     ]);
   });
@@ -372,6 +390,29 @@ describe('argumentValidators', () => {
     ['an extra argument', [...saveOf([saved]), 'more'], false],
   ])('saveCatalog: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.saveCatalog(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a message', saveOf([saved]), true],
+    ['no messages (forgets the draft)', saveOf([]), true],
+    ['a key twice', saveOf([saved, saved]), false],
+    ['a numeric base', saveOf([{ ...saved, base: 1 }]), false],
+    ['messages not a list', saveOf({ m: saved }), false],
+    ['an extra field', saveOf([saved], { path: '/etc' }), false],
+    ['an extra argument', [...saveOf([saved]), 'more'], false],
+  ])('saveCatalogDraft: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.saveCatalogDraft(args)).toBe(valid);
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['a catalog', [{ projectId: 'abc', catalog: 'i18n' }], true],
+    ['no arguments', [], false],
+    ['an empty catalog', [{ projectId: 'abc', catalog: '' }], false],
+    ['an empty project id', [{ projectId: '', catalog: 'i18n' }], false],
+    ['an extra field', [{ projectId: 'abc', catalog: 'i18n', key: 'k' }], false],
+    ['an extra argument', [{ projectId: 'abc', catalog: 'i18n' }, 'more'], false],
+  ])('discardCatalogDraft: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.discardCatalogDraft(args)).toBe(valid);
   });
 
   const kept = { key: 'm', source: 'X' };

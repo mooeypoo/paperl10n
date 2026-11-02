@@ -11,6 +11,7 @@ import {
   type FileTree,
 } from '#domain-testing/formats';
 import { err } from '#kernel/result';
+import { InMemoryDraftStore } from '../adapters/in-memory-draft-store.ts';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
 import { catalogProgress, createListCatalogs } from './list-catalogs.ts';
@@ -48,7 +49,9 @@ async function listWith(
     sessions,
   })();
   if (!opened.ok || opened.value === null) throw new Error(`test setup: ${JSON.stringify(opened)}`);
-  return createListCatalogs({ sessions })(opened.value.projectId);
+  return createListCatalogs({ sessions, catalogDrafts: new InMemoryDraftStore() })(
+    opened.value.projectId,
+  );
 }
 
 describe('listCatalogs', () => {
@@ -68,6 +71,7 @@ describe('listCatalogs', () => {
             sourcePath: 'api/en.cat',
             targetPath: 'api/he.cat',
             targetExists: false,
+            hasDraft: false,
             progress: {
               total: 1,
               byStatus: { missing: 1, draft: 0, translated: 0, outdated: 0 },
@@ -80,6 +84,7 @@ describe('listCatalogs', () => {
             sourcePath: 'i18n/en.cat',
             targetPath: 'i18n/he.cat',
             targetExists: true,
+            hasDraft: false,
             progress: {
               total: 4,
               byStatus: { missing: 1, draft: 1, translated: 1, outdated: 1 },
@@ -107,7 +112,11 @@ describe('listCatalogs', () => {
       sessions,
     })();
     if (!opened.ok || opened.value === null) throw new Error('test setup');
-    expect(await createListCatalogs({ sessions })(opened.value.projectId)).toEqual({
+    expect(
+      await createListCatalogs({ sessions, catalogDrafts: new InMemoryDraftStore() })(
+        opened.value.projectId,
+      ),
+    ).toEqual({
       ok: true,
       value: { catalogs: [], statusFile: { exists: false, problem: null } },
     });
@@ -137,6 +146,7 @@ describe('listCatalogs', () => {
       sourcePath: 'api/en.cat',
       targetPath: 'api/he.cat',
       targetExists: false,
+      hasDraft: false,
       progress: null,
       problem: {
         code: 'workspace.catalog-unreadable',
@@ -189,7 +199,9 @@ describe('listCatalogs', () => {
 
   it('reports an unknown project and a project without a target language', async () => {
     const sessions = new InMemoryProjectSessions(randomUUID);
-    expect(await createListCatalogs({ sessions })('nope')).toEqual({
+    expect(
+      await createListCatalogs({ sessions, catalogDrafts: new InMemoryDraftStore() })('nope'),
+    ).toEqual({
       ok: false,
       error: { code: 'workspace.unknown-project' },
     });

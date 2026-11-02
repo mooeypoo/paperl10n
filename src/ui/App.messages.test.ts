@@ -77,6 +77,7 @@ function detail(key: string, list: CatalogMessageDto[] = messages): CatalogDetai
     messages: list,
     notInSource: [],
     documentationProblem: null,
+    draft: null,
     statusFile: { exists: true, problem: null },
   };
 }
@@ -111,6 +112,7 @@ async function opened(
           sourcePath: `${key}/en.json`,
           targetPath: `${key}/he.json`,
           targetExists: true,
+          hasDraft: false,
           progress: null,
           problem: null,
         })),

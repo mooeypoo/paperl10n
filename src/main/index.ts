@@ -57,6 +57,7 @@ async function start(): Promise<void> {
         : dialog.showOpenDialog(mainWindow, options);
     },
     draftsFolder: join(app.getPath('userData'), 'drafts'),
+    catalogDraftsFolder: join(app.getPath('userData'), 'catalog-drafts'),
     onUnexpected: (method, thrown) => {
       console.error(`[paperl10n] unexpected error in ${method}:`, thrown);
     },

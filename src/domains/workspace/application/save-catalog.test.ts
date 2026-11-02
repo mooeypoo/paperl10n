@@ -6,6 +6,7 @@ import { messageFingerprint } from '#domains/translation';
 import { detects, fakeCatalogPlugin, type FileTree } from '#domain-testing/formats';
 import type { ProjectPath } from '#kernel/project-path';
 import { err } from '#kernel/result';
+import { InMemoryDraftStore } from '../adapters/in-memory-draft-store.ts';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
 import { createKeepMessagesUpToDate } from './keep-messages-up-to-date.ts';
@@ -49,7 +50,8 @@ async function open(files: FileTree, overrides: Partial<CatalogFormat> = {}) {
   if (disk === undefined) throw new Error('test setup');
   const updates = createStatusUpdates();
   const projectId = opened.value.projectId;
-  const save = createSaveCatalog({ sessions, updates });
+  const catalogDrafts = new InMemoryDraftStore();
+  const save = createSaveCatalog({ sessions, catalogDrafts, updates });
   const keep = createKeepMessagesUpToDate({ sessions, updates });
   const text = async (path: ProjectPath) => {
     const read = await disk.readText(path);
@@ -377,6 +379,7 @@ describe('saveCatalog', () => {
   it('reports an unknown project', async () => {
     const save = createSaveCatalog({
       sessions: new InMemoryProjectSessions(randomUUID),
+      catalogDrafts: new InMemoryDraftStore(),
       updates: createStatusUpdates(),
     });
     expect(await save('x', { catalog: 'i18n', messages: [] })).toEqual({

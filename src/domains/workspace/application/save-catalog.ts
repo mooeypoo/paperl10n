@@ -16,7 +16,9 @@ import {
   type StatusWriteError,
 } from './catalog-records.ts';
 import { readParsedCatalog, type CatalogReadError } from './catalog-files.ts';
+import { catalogDraftKey, keepDraftMessages, readCatalogDraft } from './catalog-drafts.ts';
 import { findCatalog, type FindCatalogError } from './find-catalog.ts';
+import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import type { FileWriteError } from './ports/project-writer.ts';
 import type { StatusReadError, StatusUpdates } from './translation-status.ts';
@@ -71,10 +73,11 @@ export type SaveCatalog = (
  * Each saved translation is recorded as up to date, unless the source changed since the
  * translator saw it (then its status shows that); a removed one loses its record. The status file
  * is the record of the work, not the work: when it can't be read or written, the translation is
- * still saved, and `statusProblem` says why.
+ * still saved, and `statusProblem` says why. The saved messages leave the catalog's draft.
  */
 export function createSaveCatalog(deps: {
   readonly sessions: ProjectSessions;
+  readonly catalogDrafts: DraftStore;
   readonly updates: StatusUpdates;
 }): SaveCatalog {
   return async (projectId, { catalog: catalogKey, messages }) => {
@@ -133,6 +136,20 @@ export function createSaveCatalog(deps: {
       return ok({ source: source.value.messages, written: true });
     });
     if (!saved.ok) return saved;
+
+    // The file holds the saved messages now: their draft edits are done. (One that can't be
+    // forgotten matches the file, and reading the catalog drops it.)
+    const draftKey = catalogDraftKey(project, catalog.key);
+    const draft = await readCatalogDraft(deps.catalogDrafts, draftKey);
+    if (draft !== null) {
+      const savedNow = new Map(messages.map((message) => [message.key, message.text]));
+      await keepDraftMessages(
+        deps.catalogDrafts,
+        draftKey,
+        draft,
+        (message) => savedNow.get(message.key) !== message.text,
+      );
+    }
 
     // A removed message loses its record; a saved one is recorded against the source now, only
     // where that's what the translator saw.

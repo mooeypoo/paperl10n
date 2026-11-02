@@ -50,6 +50,14 @@ export {
 } from './application/keep-messages-up-to-date.ts';
 export type { SavedMessage, StatusWriteError } from './application/catalog-records.ts';
 export {
+  createDiscardCatalogDraft,
+  createSaveCatalogDraft,
+  type CatalogDraft,
+  type CatalogDraftError,
+  type DiscardCatalogDraft,
+  type SaveCatalogDraft,
+} from './application/catalog-drafts.ts';
+export {
   createCheckMessage,
   type CheckMessage,
   type CheckMessageError,

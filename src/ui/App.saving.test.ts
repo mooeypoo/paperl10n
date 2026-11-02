@@ -200,6 +200,7 @@ describe('leaving a page with unsaved changes', () => {
             sourcePath: 'i18n/en.json',
             targetPath: 'i18n/he.json',
             targetExists: true,
+            hasDraft: false,
             progress: null,
             problem: null,
           },
@@ -216,6 +217,7 @@ describe('leaving a page with unsaved changes', () => {
       messages: [],
       notInSource: [],
       documentationProblem: null,
+      draft: null,
       statusFile: { exists: false, problem: null },
     };
     const { element, calls } = await dirtyIndex({

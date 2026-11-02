@@ -104,6 +104,8 @@ export interface CatalogDto {
   /** Project-relative; the file may not exist yet. */
   readonly targetPath: string;
   readonly targetExists: boolean;
+  /** It has unsaved edits kept as a draft. */
+  readonly hasDraft: boolean;
   /** `null` when its files can't be read; `problem` says why. */
   readonly progress: CatalogProgressDto | null;
   readonly problem: ErrorDto | null;
@@ -198,6 +200,9 @@ export interface CatalogDetailDto {
   }[];
   /** Why the documentation can't be read; the messages then show none. */
   readonly documentationProblem: ErrorDto | null;
+  /** Unsaved edits kept from an earlier session (`null`: none): each edited message, as it would
+   * be saved. Only messages whose draft differs from the file. */
+  readonly draft: { readonly messages: readonly MessageSaveDto[] } | null;
   readonly statusFile: {
     readonly exists: boolean;
     readonly problem: ErrorDto | null;
@@ -507,6 +512,20 @@ export interface PaperLionApi {
     readonly catalog: string;
     readonly messages: readonly { readonly key: string; readonly source: string }[];
   }): Promise<Result<readonly SavedMessageDto[], ErrorDto>>;
+  /**
+   * Keeps a catalog's unsaved edits as its draft in the app's data (never in the project),
+   * replacing the last one; no messages forget it. Saving messages forgets theirs.
+   */
+  saveCatalogDraft(request: {
+    readonly projectId: string;
+    readonly catalog: string;
+    readonly messages: readonly MessageSaveDto[];
+  }): Promise<Result<null, ErrorDto>>;
+  /** Forgets a catalog's draft (its edits were dropped). */
+  discardCatalogDraft(request: {
+    readonly projectId: string;
+    readonly catalog: string;
+  }): Promise<Result<null, ErrorDto>>;
   /** Forgets a page's draft (its edits were dropped). */
   discardDraft(request: {
     readonly projectId: string;
@@ -557,6 +576,8 @@ export const apiMethods = [
   'checkMessage',
   'saveCatalog',
   'keepMessagesUpToDate',
+  'saveCatalogDraft',
+  'discardCatalogDraft',
 ] as const satisfies readonly ApiMethod[];
 
 // A compile error here means a method was added to PaperLionApi but not to apiMethods.

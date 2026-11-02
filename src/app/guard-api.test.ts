@@ -43,6 +43,7 @@ describe('guardApi', () => {
                   sourcePath: 'a',
                   targetPath: 'b',
                   targetExists: false,
+                  hasDraft: false,
                   progress: null,
                   problem: null,
                 },
@@ -61,6 +62,7 @@ describe('guardApi', () => {
               messages: [],
               notInSource: [],
               documentationProblem: null,
+              draft: null,
               statusFile: { exists: false, problem: null },
             }),
           ),
@@ -94,6 +96,8 @@ describe('guardApi', () => {
         checkMessage: () => Promise.resolve(ok({ tokens: [], warnings: [] })),
         saveCatalog: () =>
           Promise.resolve(ok({ path: 'p', written: true, messages: [], statusProblem: null })),
+        saveCatalogDraft: () => Promise.resolve(ok(null)),
+        discardCatalogDraft: () => Promise.resolve(ok(null)),
         keepMessagesUpToDate: () =>
           Promise.resolve(ok([{ key: 'k', status: 'translated' as const }])),
         markUpToDate: () =>
@@ -134,6 +138,7 @@ describe('guardApi', () => {
             sourcePath: 'a',
             targetPath: 'b',
             targetExists: false,
+            hasDraft: false,
             progress: null,
             problem: null,
           },
@@ -151,6 +156,7 @@ describe('guardApi', () => {
         messages: [],
         notInSource: [],
         documentationProblem: null,
+        draft: null,
         statusFile: { exists: false, problem: null },
       }),
     );
@@ -211,6 +217,10 @@ describe('guardApi', () => {
     expect(await api.keepMessagesUpToDate({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
       ok([{ key: 'k', status: 'translated' }]),
     );
+    expect(await api.saveCatalogDraft({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
+      ok(null),
+    );
+    expect(await api.discardCatalogDraft({ projectId: 'p', catalog: 'c' })).toEqual(ok(null));
     expect(calls).toEqual([]);
   });
 
@@ -269,6 +279,12 @@ describe('guardApi', () => {
         keepMessagesUpToDate: () => {
           throw new Error('sync boom');
         },
+        saveCatalogDraft: () => {
+          throw new Error('sync boom');
+        },
+        discardCatalogDraft: () => {
+          throw new Error('sync boom');
+        },
       },
     ],
     [
@@ -291,6 +307,8 @@ describe('guardApi', () => {
         checkMessage: () => Promise.reject(new Error('async boom')),
         saveCatalog: () => Promise.reject(new Error('async boom')),
         keepMessagesUpToDate: () => Promise.reject(new Error('async boom')),
+        saveCatalogDraft: () => Promise.reject(new Error('async boom')),
+        discardCatalogDraft: () => Promise.reject(new Error('async boom')),
       },
     ],
   ])('turns a method that %s into internal.unexpected, and reports it', async (_how, broken) => {
@@ -338,6 +356,10 @@ describe('guardApi', () => {
     expect(await api.keepMessagesUpToDate({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
       unexpected,
     );
+    expect(await api.saveCatalogDraft({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
+      unexpected,
+    );
+    expect(await api.discardCatalogDraft({ projectId: 'p', catalog: 'c' })).toEqual(unexpected);
     expect(calls.map(([method]) => method)).toEqual([
       'openProject',
       'listSourceDocuments',
@@ -356,6 +378,8 @@ describe('guardApi', () => {
       'checkMessage',
       'saveCatalog',
       'keepMessagesUpToDate',
+      'saveCatalogDraft',
+      'discardCatalogDraft',
     ]);
     expect(calls[0]?.[1]).toBeInstanceOf(Error);
   });

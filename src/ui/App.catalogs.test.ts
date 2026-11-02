@@ -29,6 +29,7 @@ function catalog(key: string, translated: number, total: number, outdated = 0): 
     sourcePath: `${key}/en.json`,
     targetPath: `${key}/he.json`,
     targetExists: true,
+    hasDraft: false,
     progress: {
       total,
       byStatus: { missing: total - translated - outdated, draft: 0, translated, outdated },
@@ -220,6 +221,7 @@ function detail(key: string, overrides: Partial<CatalogDetailDto> = {}): Catalog
     ],
     notInSource: [],
     documentationProblem: null,
+    draft: null,
     statusFile: { exists: true, problem: null },
     ...overrides,
   };
