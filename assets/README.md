@@ -23,7 +23,7 @@ packaging, and a simplified mark for 16–32 px may come later.
 ## License and trademark
 
 The Paper Lion mark (`paperl10n-mark.svg`) is **not** covered by the project's GPL. It is
-© 2026 [Moriel](https://moriel.tech), licensed under
+© 2026 [Moriel Schottlender](https://moriel.tech), licensed under
 [Creative Commons Attribution-NoDerivatives 4.0 International](https://creativecommons.org/licenses/by-nd/4.0/)
 (`CC-BY-ND-4.0`):
 
