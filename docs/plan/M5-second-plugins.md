@@ -1,7 +1,7 @@
 # M5 discussion: second plugins (VitePress and gettext)
 
-Status: **open for discussion.** Nothing is decided yet. Each question has a recommendation; the
-maintainer's answers go into a "Decided" table, as in M4.
+Status: **decided (2026-11-03): every question as recommended.** See [Decided](#decided). The
+discussion follows, for context.
 
 PRD M5: "VitePress + gettext `.po`, to prove the plugin contracts hold." Each contract has one
 real plugin today: `DocumentFormat` has Starlight, and `CatalogFormat` has banana-i18n. A second
@@ -12,6 +12,27 @@ contract has to change, that's the finding. The change is made deliberately, in 
 The two plugins are independent. **VitePress is small**, because Starlight already exercised
 nearly everything it needs. **gettext is large**, because its messages aren't shaped like
 banana-i18n's. Two parts, in that order.
+
+## Decided
+
+The maintainer took every recommendation (2026-11-03):
+
+| Topic | Decision |
+|---|---|
+| Config reader (V1) | **A static object-literal reader in `#plugin-api`**, moved from Starlight and used by both plugins. |
+| VitePress layout (V2) | `srcDir` from the config, overridable by an option. `.md` pages. Starlight's order for locale folders. `rewrites`, `srcExclude`, and a config's `dir` are left for later. |
+| VitePress Markdown (V3) | No dialect change. The fixtures cover each row of the table. |
+| Links and detection (V4, V5) | Starlight's rule plus `.md` and `.html` suffixes. `.vitepress` at the root or one level down. |
+| Source and key (G1) | The key is `msgctxt` + `msgid`. The source is the template, else the source locale's `.po`, else the target's own `msgid`s. `parse` takes a role. |
+| Plurals (G2) | `Message` gains `forms`, with one editor field per form, labeled from the target's `Plural-Forms` (an evaluator in the plugin). A new file's `Plural-Forms` comes from a table generated from CLDR, as `locale`'s data is. Its source and license are checked when it's built. |
+| Documentation (G3) | `Message` gains `documentation` (from `#.`). A documentation file still wins when there is one. |
+| Fuzzy (G4) | Reads as `outdated`. Saving or keeping clears it. The old source from `#|` is shown when known. |
+| Placeholders (G5) | `scan` gets the message, and scans by the entry's flags. |
+| Layouts and encoding (G6) | Side by side and folder per locale. gettext locale names are mapped to BCP 47 in the plugin. Non-UTF-8 files are refused. |
+| Writing (G7) | `msgmerge`'s style. New entries take the template's comments. A new file gets a fresh header. An existing header stays as it is. An emptied translation becomes `msgstr ""`. A removed entry becomes obsolete (`#~`). |
+| UI (G8) | Forms in the editor, "Needs review" with the old source, and context with the key. The banana-i18n preview stays banana-i18n's. |
+| Real projects | Fixtures shaped like VitePress's own docs, a Django app, and a GNOME app. |
+| `msgmerge`-like updates | Not in M5. |
 
 ## Where M4 left us
 
