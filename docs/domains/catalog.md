@@ -32,6 +32,13 @@ domain's.
 3. The translation's messages whose keys the source doesn't have are **not in source**, in the
    translation's order. Documentation for keys the source doesn't have is ignored.
 4. A missing target or documentation file pairs as having no messages.
+5. **Documentation** is the documentation file's (banana-i18n's `qqq.json`) when it says
+   something, else the source message's own (gettext's `#.` comments).
+6. **Plural forms** come along: the source's (`msgid` and `msgid_plural`) and the translation's
+   (each `msgstr[N]`). A translation with every form empty is none; one with a later form filled
+   in is a translation whose first form may be empty.
+7. **A translation's review mark** comes along (gettext's `fuzzy`), with the source it was made
+   for (`#|`) only when it's marked.
 
 ### Checking a translation (`checkMessage`)
 
@@ -51,6 +58,19 @@ domain's.
    then brackets (`{}` before `[]`). Each difference is reported once.
 8. **Warnings never block a save.** The translator may be right (ADR 0009: a Hebrew plural form
    can drop `$1`).
+
+### Checking plural forms (`checkForms`)
+
+For a message with plural forms kept apart (gettext), each translation form is checked against the
+source's forms, and the warnings come per form. A form for one number may drop the count (Hebrew
+"מנורה אחת", one lamp, has no `%d`), so:
+
+1. **Unexpected:** a token no source form has, on the form that has it (plural and gender may be
+   added, as above).
+2. **Missing:** a token the source's last form (its general plural, `msgid_plural`) has and no
+   translation form does, reported on the translation's last form that isn't empty.
+3. **Unbalanced:** each form's brackets against the source's last form's.
+4. **An empty form has nothing to check.**
 
 ## Invariants
 

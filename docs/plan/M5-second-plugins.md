@@ -448,6 +448,33 @@ VitePress first: it's small, and it shows quickly whether the document contract 
       directive two flags both mark): each got a test.
 - **G3, the domain and main:** documentation per message, forms in pairing, checks and saving,
   needing review as outdated, and the DTOs.
+  In two PRs, as C3 and C5 were:
+  - **G3a, the domain:** pairing, checking plural forms, and needing review as outdated.
+    - *Done-notes:* the rules are in [the catalog doc](../domains/catalog.md) and
+      [the translation doc](../domains/translation.md).
+      - **Pairing** (`pairCatalog`) carries each message's source and translation forms, its
+        translation's review mark, and the source it was made for (only with the mark).
+        Documentation is the documentation file's when it says something, else the source
+        message's own. A translation with every form empty is none.
+      - **`checkForms`** checks a translation's plural forms against the source's, one list of
+        warnings per form: unexpected tokens on the form that has them (against every source
+        form), missing ones (from the source's general plural) only when no form has them, on
+        the last form that isn't empty, and brackets per form. A form for one number may drop the
+        count, as Hebrew's "one lamp" does.
+      - **`messageStatus`** takes the review mark: a marked translation is `outdated` whatever
+        its record says. `listCatalogs` and `readCatalog` pass it, so a gettext project's fuzzy
+        entries already count as outdated. Nothing else in main or the UI changes yet: that's
+        G3b.
+      - Tests: pairing (documentation from either place, plural forms, every form empty, a later
+        form filled in, review marks and their previous source), `checkForms` (forms keeping
+        what the plural has, a token dropped by one form, missing on the last form that isn't
+        empty, unexpected against every source form, brackets, plural and gender added, an
+        unbalanced source, empty forms, no source forms), the status with a review mark, and the
+        listing and reading counting a marked translation as outdated.
+      - Mutation checks (16), each failing tests in the end. Three survived at first: one was a
+        real gap, fixed (a token missing from every form went unreported when the last form was
+        empty: now it's on the last form that isn't); two were untested (plural and gender added
+        to a form, an unbalanced source): each got a test.
 - **G4, the UI:** forms in the editor, "Needs review" with the old source, and context.
 - **G5, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

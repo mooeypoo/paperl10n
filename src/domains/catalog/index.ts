@@ -19,6 +19,7 @@ export {
   type CatalogMessages,
 } from './domain/catalog-messages.ts';
 export {
+  checkForms,
   checkMessage,
   type Brackets,
   type MessageWarning,

@@ -117,7 +117,8 @@ describe('the UI harness', () => {
     const catalogs = [...element.querySelectorAll('nav .catalogs-item')].map((item) =>
       [...item.children].map((part) => part.textContent.trim()),
     );
-    expect(catalogs).toEqual([['lantern', '0 of 5 up to date']]);
+    // The fuzzy entry needs review: outdated.
+    expect(catalogs).toEqual([['lantern', '0 of 5 up to date  · 1 outdated']]);
     const rows = [...element.querySelectorAll('.catalog-messages tr[data-row]')];
     expect(rows.map((row) => row.querySelector('bdi')?.textContent)).toEqual([
       'Lantern',

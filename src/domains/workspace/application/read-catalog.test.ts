@@ -264,6 +264,16 @@ describe('readCatalog', () => {
     expect(scanned).toContainEqual(['ישן $1', 'ישן $1']);
   });
 
+  it('reads a translation its file marks as needing review as outdated', async () => {
+    const read = await open({ ...tree, 'i18n/he.cat': '?a=שלום $1\n' });
+    const result = await read();
+    expect(result.ok && result.value.messages.map((m) => [m.key, m.status])).toEqual([
+      ['a', 'outdated'],
+      ['b', 'missing'],
+      ['c', 'missing'],
+    ]);
+  });
+
   it('reports an unknown project and a project without a target language', async () => {
     expect(
       await createReadCatalog({

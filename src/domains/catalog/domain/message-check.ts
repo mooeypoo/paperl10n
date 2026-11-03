@@ -76,3 +76,47 @@ export function checkMessage(source: ScannedText, translation: ScannedText): Mes
   }
   return warnings;
 }
+
+/**
+ * What each plural form of a translation lost or gained against its source's forms (gettext's
+ * `msgid` and `msgid_plural`), one list per translation form. A form for one number may drop the
+ * count (Hebrew "מנורה אחת", one lamp, has no `%d`), so:
+ *
+ * - **unexpected:** a token no source form has, on the form that has it;
+ * - **missing:** a token the source's last form (its general plural) has and no translation form
+ *   does, on the translation's last form that isn't empty;
+ * - **unbalanced:** each form against the source's last form.
+ *
+ * An empty form has nothing to check.
+ */
+export function checkForms(
+  source: readonly ScannedText[],
+  translation: readonly ScannedText[],
+): MessageWarning[][] {
+  const plural = source[source.length - 1] ?? { text: '', tokens: [] };
+  const inSource = distinct(source.flatMap((form) => form.tokens));
+  const inTranslation = distinct(translation.flatMap((form) => form.tokens));
+  const last = translation.findLastIndex((form) => form.text !== '');
+  return translation.map((form, index) => {
+    if (form.text === '') return [];
+    const warnings: MessageWarning[] = [];
+    if (index === last) {
+      for (const [key, token] of distinct(plural.tokens)) {
+        if (!inTranslation.has(key)) {
+          warnings.push({ kind: 'missing', token: token.kind, value: comparedValue(token) });
+        }
+      }
+    }
+    for (const [key, token] of distinct(form.tokens)) {
+      if (!inSource.has(key) && !MAY_ADD.has(token.kind)) {
+        warnings.push({ kind: 'unexpected', token: token.kind, value: comparedValue(token) });
+      }
+    }
+    for (const brackets of BRACKETS) {
+      if (imbalance(form.text, brackets) !== imbalance(plural.text, brackets)) {
+        warnings.push({ kind: 'unbalanced', brackets });
+      }
+    }
+    return warnings;
+  });
+}

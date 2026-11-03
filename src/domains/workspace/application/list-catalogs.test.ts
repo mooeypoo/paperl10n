@@ -99,6 +99,17 @@ describe('listCatalogs', () => {
     });
   });
 
+  it('counts a translation its file marks as needing review as outdated, recorded or not', async () => {
+    const tree = {
+      ...messagesTree,
+      'i18n/he.cat': '# role: target\n?a=א\n?(Old B)b=ב\nc=ג\n',
+      [STATUS]: status({ i18n: { a: messageFingerprint('A') } }),
+    };
+    const listed = await listWith(tree);
+    const i18n = listed.ok ? listed.value.catalogs.find((c) => c.key === 'i18n') : undefined;
+    expect(i18n?.progress?.byStatus).toEqual({ missing: 1, draft: 1, translated: 0, outdated: 2 });
+  });
+
   it('lists nothing for a project without catalogs', async () => {
     const tree = { 'paperl10n.config.json': config(), 'en/index.md': '# Home\n' };
     const registry = createFormatRegistry([fakeDocumentPlugin('format-fake', detects('likely'))], {

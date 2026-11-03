@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { checkMessage, type MessageWarning, type ScannedText } from './message-check.ts';
+import {
+  checkForms,
+  checkMessage,
+  type MessageWarning,
+  type ScannedText,
+} from './message-check.ts';
 import type { PlaceholderToken } from './placeholder.ts';
 
 // Offsets don't matter to the check; tokens are written by hand, as a plugin would find them.
@@ -169,6 +174,82 @@ describe('checkMessage', () => {
   it('reports each missing token once', () => {
     expect(checkMessage(scanned('x', parameter('$1'), parameter('$1')), scanned('y'))).toEqual([
       { kind: 'missing', token: 'parameter', value: '$1' },
+    ]);
+  });
+});
+
+describe('checkForms', () => {
+  const d = parameter('%d');
+  const s = parameter('%s');
+  const source = [scanned('%d lamp in %s', d, s), scanned('%d lamps in %s', d, s)];
+
+  it('finds nothing to warn about when the forms keep what the plural has', () => {
+    expect(
+      checkForms(source, [
+        scanned('מנורה אחת ב-%s', s),
+        scanned('שתי מנורות ב-%s', s),
+        scanned('%d מנורות ב-%s', d, s),
+      ]),
+    ).toEqual([[], [], []]);
+  });
+
+  it('lets a form drop a token another form keeps, and says so on the last form when none does', () => {
+    expect(checkForms(source, [scanned('מנורה אחת', s), scanned('%d מנורות', d)])).toEqual([
+      [],
+      [],
+    ]);
+    expect(checkForms(source, [scanned('מנורה'), scanned('מנורות', s)])).toEqual([
+      [],
+      [{ kind: 'missing', token: 'parameter', value: '%d' }],
+    ]);
+  });
+
+  it('warns about a token no source form has, on the form that has it', () => {
+    expect(
+      checkForms(source, [scanned('%u', parameter('%u'), d, s), scanned('%d %s', d, s)]),
+    ).toEqual([[{ kind: 'unexpected', token: 'parameter', value: '%u' }], []]);
+    // A token only the singular has isn't unexpected in a translation form.
+    const singularOnly = [scanned('<b>one</b>', tag('b')), scanned('%d', d)];
+    expect(checkForms(singularOnly, [scanned('<b>א</b>', tag('b')), scanned('%d', d)])).toEqual([
+      [],
+      [],
+    ]);
+  });
+
+  it('checks each form’s brackets against the plural’s', () => {
+    expect(checkForms(source, [scanned('{ %d %s', d, s), scanned('%d %s', d, s)])).toEqual([
+      [{ kind: 'unbalanced', brackets: '{}' }],
+      [],
+    ]);
+  });
+
+  it('has nothing to check in an empty form, and says what’s missing on the last that isn’t', () => {
+    expect(checkForms(source, [scanned('%d %s', d, s), scanned('')])).toEqual([[], []]);
+    expect(checkForms(source, [scanned('מנורה'), scanned('')])).toEqual([
+      [
+        { kind: 'missing', token: 'parameter', value: '%d' },
+        { kind: 'missing', token: 'parameter', value: '%s' },
+      ],
+      [],
+    ]);
+    const open = [scanned('{one'), scanned('{many')];
+    expect(checkForms(open, [scanned('{אחת'), scanned('')])).toEqual([[], []]);
+  });
+
+  it('lets a form add a plural or a gender, and compares brackets with the source’s, not zero', () => {
+    const p = plural('$1');
+    expect(
+      checkForms([scanned('$1', parameter('$1'))], [scanned('x $1', parameter('$1'), p)]),
+    ).toEqual([[]]);
+    expect(checkForms([scanned('{a'), scanned('{b')], [scanned('{א'), scanned('{ב')])).toEqual([
+      [],
+      [],
+    ]);
+  });
+
+  it('checks against nothing when the source has no forms', () => {
+    expect(checkForms([], [scanned('%d', d)])).toEqual([
+      [{ kind: 'unexpected', token: 'parameter', value: '%d' }],
     ]);
   });
 });

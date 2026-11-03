@@ -24,13 +24,20 @@ export function messageFingerprint(source: string): string {
   return blockFingerprint(source);
 }
 
-/** A source message's status, from its translation (`null`: none) and its recorded fingerprint. */
+/**
+ * A source message's status, from its translation (`null`: none), its recorded fingerprint, and
+ * whether the translation's file marks it as needing review (gettext's `fuzzy`): such a
+ * translation is outdated whatever the record says, since every tool that reads the file sees it
+ * that way.
+ */
 export function messageStatus(
   source: string,
   translation: string | null,
   recorded: string | undefined,
+  needsReview = false,
 ): MessageStatus {
   if (translation === null || translation === '') return 'missing';
+  if (needsReview) return 'outdated';
   if (recorded === undefined) return 'draft';
   return recorded === messageFingerprint(source) ? 'translated' : 'outdated';
 }

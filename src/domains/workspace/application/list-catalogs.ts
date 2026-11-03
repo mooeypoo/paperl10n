@@ -59,7 +59,8 @@ export function catalogProgress(
     outdated: 0,
   };
   for (const message of paired.messages) {
-    byStatus[messageStatus(message.source, message.translation, record?.get(message.key))]++;
+    const recorded = record?.get(message.key);
+    byStatus[messageStatus(message.source, message.translation, recorded, message.needsReview)]++;
   }
   return { total: paired.messages.length, byStatus, notInSource: paired.notInSource.length };
 }

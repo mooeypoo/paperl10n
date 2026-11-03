@@ -135,7 +135,12 @@ export function createReadCatalog(deps: {
         source: message.source,
         documentation: message.documentation,
         translation: message.translation,
-        status: messageStatus(message.source, message.translation, record?.get(message.key)),
+        status: messageStatus(
+          message.source,
+          message.translation,
+          record?.get(message.key),
+          message.needsReview,
+        ),
         sourceTokens: scanText(format, message.source, sourceMessages.get(message.key)),
         translationTokens:
           message.translation === null

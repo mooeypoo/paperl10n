@@ -82,13 +82,16 @@ Decided in [the M4 plan](../plan/M4-catalogs.md), question 3.
 2. **`draft`:** the target has it, and it was never recorded (an existing translation, until it's
    saved, kept as up to date, or marked with every existing translation).
 3. **`translated`:** recorded, and the source text's fingerprint is the recorded one.
-4. **`outdated`:** recorded, and the source text changed since.
+4. **`outdated`:** recorded, and the source text changed since; or, whatever the record says,
+   **the translation's file marks it as needing review** (gettext's `fuzzy`), since every tool that
+   reads the file sees it that way ([the M5 plan](../plan/M5-second-plugins.md), question G4).
 5. **Saving a message's translation records it** against its source as it is now; **keeping an
    outdated message as up to date** does the same without changing the translation. Unlike a
    page's sections, a save is enough: a message is short, and saving it usually means it's done.
 6. **Removing or emptying a translation drops its record.** Other messages keep theirs.
 7. **A message's fingerprint is a block's** (`blockFingerprint`): line endings and trailing
-   whitespace don't count; any other change, a typo fix included, does.
+   whitespace don't count; any other change, a typo fix included, does. For a message with plural
+   forms, it's the first form's (gettext's `msgid`, which is also its key).
 8. Messages the target has and the source doesn't ("not in source", [catalog](catalog.md)) have
    no status.
 

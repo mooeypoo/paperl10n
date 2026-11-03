@@ -22,6 +22,13 @@ describe('messageStatus', () => {
     expect(messageStatus('Hello $1', translation, record)).toBe(expected);
   });
 
+  it('reads a translation needing review as outdated, whatever its record, unless missing', () => {
+    expect(messageStatus('Hello $1', 'שלום $1', recorded, true)).toBe('outdated');
+    expect(messageStatus('Hello $1', 'שלום $1', undefined, true)).toBe('outdated');
+    expect(messageStatus('Hello $1', '', recorded, true)).toBe('missing');
+    expect(messageStatus('Hello $1', 'שלום $1', recorded, false)).toBe('translated');
+  });
+
   it('ignores line endings and trailing spaces in the source, like block fingerprints', () => {
     expect(messageFingerprint('a  \r\nb')).toBe(messageFingerprint('a\nb'));
     expect(messageFingerprint('a\nb')).toBe(blockFingerprint('a\nb'));
