@@ -6,6 +6,8 @@ export interface CatalogState {
   readonly detail: ShallowRef<CatalogDetailDto | null>;
   readonly error: ShallowRef<ErrorDto | null>;
   readonly loading: Ref<boolean>;
+  /** Reads the catalog again (after a save), keeping what shows until the answer comes. */
+  reload(): void;
 }
 
 const transportFailed: ErrorDto = { code: 'internal.unexpected', params: {}, details: [] };
@@ -52,5 +54,10 @@ export function useCatalog(
   watch([projectId, key], ([project, catalog]) => void load(project, catalog), {
     immediate: true,
   });
-  return { detail, error, loading };
+  return {
+    detail,
+    error,
+    loading,
+    reload: () => void load(projectId.value, key.value),
+  };
 }

@@ -190,5 +190,9 @@
   "paperl10n-message-last": "זו ההודעה האחרונה.",
   "paperl10n-message-none-needing-work-after": "אין אחרי ההודעה הזאת הודעה שצריכה עבודה.",
   "paperl10n-message-none-needing-work-before": "אין לפני ההודעה הזאת הודעה שצריכה עבודה.",
-  "paperl10n-message-keys": "$1 ו־$2 עוברים בין ההודעות; עם $3, בין אלה שצריכות עבודה. $4 סוגר."
+  "paperl10n-message-keys": "$1 ו־$2 עוברים בין ההודעות; עם $3, בין אלה שצריכות עבודה. $4 סוגר.",
+  "paperl10n-catalog-unsaved": "{{PLURAL:$1|הודעה אחת עוד לא נשמרה|$1 הודעות עוד לא נשמרו}}",
+  "paperl10n-catalog-saved-not-recorded": "נשמר, אבל לא נרשם כמעודכן.",
+  "paperl10n-keep-up-to-date": "להשאיר כמעודכן",
+  "paperl10n-keep-up-to-date-note": "המקור השתנה מאז שהתרגום הזה נשמר. אם התרגום עדיין מתאים, אפשר להשאיר אותו כמעודכן."
 }

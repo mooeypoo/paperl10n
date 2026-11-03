@@ -190,5 +190,9 @@
   "paperl10n-message-last": "Shown after trying to go to the next message from the last one.",
   "paperl10n-message-none-needing-work-after": "Shown after trying to go to the next message needing work when there's none further down the list.",
   "paperl10n-message-none-needing-work-before": "Shown after trying to go to the previous message needing work when there's none further up the list.",
-  "paperl10n-message-keys": "A reminder of the keyboard shortcuts under the message being translated. $1: the keys for the next message (\"Alt+↓\"); $2: for the previous one (\"Alt+↑\"); $3: the key added to move between messages needing work (\"Shift\"); $4: the key that closes the message (\"Esc\"). The keys' names aren't translated."
+  "paperl10n-message-keys": "A reminder of the keyboard shortcuts under the message being translated. $1: the keys for the next message (\"Alt+↓\"); $2: for the previous one (\"Alt+↑\"); $3: the key added to move between messages needing work (\"Shift\"); $4: the key that closes the message (\"Esc\"). The keys' names aren't translated.",
+  "paperl10n-catalog-unsaved": "Next to a catalog's Save button: how many of its messages were edited and not saved yet. $1: the number.",
+  "paperl10n-catalog-saved-not-recorded": "Shown after saving a catalog when its messages were saved but the language's status file couldn't record them as up to date; followed by the reason (an error message).",
+  "paperl10n-keep-up-to-date": "Button on an outdated message (its source changed since its translation was saved): record the translation as up to date without changing it.",
+  "paperl10n-keep-up-to-date-note": "Next to the paperl10n-keep-up-to-date button: what it's for."
 }

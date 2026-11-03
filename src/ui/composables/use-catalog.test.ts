@@ -90,6 +90,18 @@ describe('useCatalog', () => {
     expect(state.error.value?.code).toBe('internal.unexpected');
   });
 
+  it('reads the catalog again, keeping it showing until the answer comes', async () => {
+    const { client, answers } = pending();
+    const { state } = start(client);
+    answers[0]?.answer({ ok: true, value: detail('i18n') });
+    await flushPromises();
+    state.reload();
+    expect([state.loading.value, state.detail.value?.key]).toEqual([true, 'i18n']);
+    answers[1]?.answer({ ok: true, value: { ...detail('i18n'), targetExists: false } });
+    await flushPromises();
+    expect([state.loading.value, state.detail.value?.targetExists]).toEqual([false, false]);
+  });
+
   it('reads nothing without a catalog', async () => {
     const { client, answers } = pending();
     const { state, catalog } = start(client);

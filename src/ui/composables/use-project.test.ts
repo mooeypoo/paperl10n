@@ -140,6 +140,72 @@ describe('useProject', () => {
     expect(project.summary.value?.name).toBe('newer');
   });
 
+  describe('refreshCatalogs', () => {
+    const banana = { id: 'catalog-banana', displayName: 'banana-i18n' };
+    const listed = (keys: string[]) => ({
+      ok: true as const,
+      value: {
+        catalogs: keys.map((key) => ({
+          key,
+          sourcePath: `${key}/en.json`,
+          targetPath: `${key}/he.json`,
+          targetExists: true,
+          hasDraft: false,
+          progress: null,
+          problem: null,
+        })),
+        statusFile: { exists: true, problem: null },
+      },
+    });
+
+    it('lists the catalogs again, keeping only the newest answer', async () => {
+      const answers: ((value: ReturnType<typeof listed>) => void)[] = [];
+      const base = fakeClient({
+        open: [{ ok: true, value: { ...summary, catalogFormat: banana } }],
+        list: [{ ok: true, value: documents }],
+        catalogs: listed(['i18n']),
+      });
+      const project = useProject(base.client);
+      await project.open();
+      const client = base.client;
+      client.listCatalogs = () => new Promise((resolve) => answers.push(resolve));
+      const first = project.refreshCatalogs();
+      const second = project.refreshCatalogs();
+      answers[1]?.(listed(['i18n', 'api']));
+      await second;
+      answers[0]?.(listed(['old']));
+      await first;
+      expect(project.catalogs.value?.map((catalog) => catalog.key)).toEqual(['i18n', 'api']);
+    });
+
+    it('keeps the list when listing fails, and asks nothing without catalogs', async () => {
+      const { client, calls } = fakeClient({
+        open: [{ ok: true, value: { ...summary, catalogFormat: banana } }],
+        list: [{ ok: true, value: documents }],
+        catalogs: listed(['i18n']),
+      });
+      const project = useProject(client);
+      await project.open();
+      client.listCatalogs = () =>
+        Promise.resolve({ ok: false, error: error('formats.plugin-failed') });
+      await project.refreshCatalogs();
+      client.listCatalogs = () => Promise.reject(new Error('transport'));
+      await project.refreshCatalogs();
+      expect(project.catalogs.value?.map((catalog) => catalog.key)).toEqual(['i18n']);
+
+      const pagesOnly = fakeClient({
+        open: [{ ok: true, value: summary }],
+        list: [{ ok: true, value: documents }],
+      });
+      const other = useProject(pagesOnly.client);
+      await other.refreshCatalogs();
+      await other.open();
+      await other.refreshCatalogs();
+      expect(pagesOnly.calls.filter((call) => call.startsWith('listCatalogs'))).toEqual([]);
+      expect(calls.filter((call) => call.startsWith('listCatalogs'))).toHaveLength(1);
+    });
+  });
+
   describe('chooseTarget', () => {
     const noTarget = { ...summary, targetLocale: null };
 

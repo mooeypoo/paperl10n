@@ -12,7 +12,9 @@ import PagesSidebar from './components/PagesSidebar.vue';
 import UnsavedChangesDialog from './components/UnsavedChangesDialog.vue';
 import WelcomeState from './components/WelcomeState.vue';
 import { useCatalog } from './composables/use-catalog';
+import { useCatalogSaving } from './composables/use-catalog-saving';
 import { useDocumentPair } from './composables/use-document-pair';
+import { useMessageEdits } from './composables/use-message-edits';
 import { usePages } from './composables/use-pages';
 import { useProject } from './composables/use-project';
 import { useTranslationCheck } from './composables/use-translation-check';
@@ -40,6 +42,17 @@ watch([catalogs, projectId], ([list, id], [, previousId]) => {
   selectedCatalog.value = summary.value?.documentFormat === null ? (list?.[0]?.key ?? null) : null;
 });
 const catalogReading = useCatalog(client, projectId, selectedCatalog);
+// The open catalog's edits live here, not in its view: saving them and asking before leaving them
+// are the app's, as for a page.
+const messageEdits = useMessageEdits(catalogReading.detail);
+const catalogSaving = useCatalogSaving(client, projectId, selectedCatalog, messageEdits, {
+  // Saved or kept: the rows' statuses and the sidebar's progress change.
+  onChanged: () => {
+    catalogReading.reload();
+    void project.refreshCatalogs();
+  },
+});
+const catalogDirty = computed(() => selectedCatalog.value !== null && messageEdits.count.value > 0);
 const { pair, loading } = reading;
 const readError = reading.error;
 const errorText = computed(() => (error.value === null ? '' : errorMessage(error.value, t)));
@@ -76,8 +89,9 @@ async function discardRestored(): Promise<void> {
   checking.refresh();
 }
 
-/** Saves the open page's translation; true when there's nothing left unsaved. */
+/** Saves the open catalog's edits or page's translation; true when there's nothing left unsaved. */
 async function saveCurrent(): Promise<boolean> {
+  if (selectedCatalog.value !== null) return catalogSaving.save();
   if (!dirty.value) return true;
   const snapshot = documentView.value?.snapshot() ?? null;
   return snapshot === null ? false : saving.save(snapshot);
@@ -91,11 +105,11 @@ const leavingKey = ref('');
 function guard(leave: () => void): void {
   // While the conflict question is open, it's answered first; leaving waits.
   if (conflict.value) return;
-  if (!dirty.value) {
+  if (!dirty.value && !catalogDirty.value) {
     leave();
     return;
   }
-  leavingKey.value = selectedKey.value ?? '';
+  leavingKey.value = selectedCatalog.value ?? selectedKey.value ?? '';
   pendingLeave.value = leave;
 }
 
@@ -109,7 +123,8 @@ async function resolveLeave(choice: 'save' | 'discard' | 'cancel'): Promise<void
   }
   pendingLeave.value = null;
   if (choice === 'cancel') return;
-  // Leaving without saving drops the edits, and their draft.
+  // Leaving without saving drops the edits, and their draft. (A catalog's edits go with the
+  // catalog: they belong to what was read, which leaving it clears.)
   if (choice === 'discard') await saving.discardDraft();
   leave();
 }
@@ -136,8 +151,10 @@ function open(): void {
 
 function selectPage(key: string): void {
   if (selectedCatalog.value !== null) {
-    selectedCatalog.value = null;
-    selectedKey.value = key;
+    guard(() => {
+      selectedCatalog.value = null;
+      selectedKey.value = key;
+    });
     return;
   }
   if (key !== selectedKey.value) guard(() => (selectedKey.value = key));
@@ -159,7 +176,7 @@ function onKeydown(event: KeyboardEvent): void {
 // Closing the window: cancel it, ask, and close for real once the user decides.
 let closing = false;
 function onBeforeUnload(event: BeforeUnloadEvent): void {
-  if (closing || !dirty.value) return;
+  if (closing || (!dirty.value && !catalogDirty.value)) return;
   event.preventDefault();
   guard(() => {
     closing = true;
@@ -241,7 +258,7 @@ async function chooseTarget(tag: string): Promise<void> {
     <UnsavedChangesDialog
       :open="pendingLeave !== null"
       :page-key="leavingKey"
-      :busy="saveStatus === 'saving'"
+      :busy="saveStatus === 'saving' || catalogSaving.status.value === 'saving'"
       @save="resolveLeave('save')"
       @discard="resolveLeave('discard')"
       @cancel="resolveLeave('cancel')"
@@ -321,6 +338,12 @@ async function chooseTarget(tag: string): Promise<void> {
           :error="catalogReading.error.value"
           :source-locale="summary.sourceLocale"
           :target-locale="summary.targetLocale"
+          :editing="messageEdits"
+          :save-status="catalogSaving.status.value"
+          :save-error="catalogSaving.error.value"
+          :status-problem="catalogSaving.statusProblem.value"
+          @save="saveCurrent"
+          @keep="(message) => catalogSaving.keep(message)"
         />
         <DocumentView
           v-else-if="selected !== null"

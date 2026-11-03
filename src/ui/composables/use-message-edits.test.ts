@@ -80,4 +80,42 @@ describe('useMessageEdits', () => {
     expect([edits.open.value, edits.count.value]).toEqual([null, 0]);
     expect(edits.shown(translated)).toEqual({ text: 'שלום $1', tokens: [token(5, 7)] });
   });
+
+  it('lists the edits as saving takes them, each from the translation and source it started with', () => {
+    const detail = shallowRef<CatalogDetailDto | null>(catalog('i18n'));
+    const edits = useMessageEdits(detail);
+    edits.edit(missing, 'ביי');
+    edits.edit(translated, 'היי $1');
+    // The catalog read again (after another message's save): the edit keeps where it started.
+    edits.edit({ ...translated, translation: 'שלום רב $1', source: 'Hi $1' }, 'היי $1!');
+    expect(edits.pending()).toEqual([
+      { key: 'farewell', text: 'ביי', base: null, source: 'Hello $1' },
+      { key: 'greeting', text: 'היי $1!', base: 'שלום $1', source: 'Hello $1' },
+    ]);
+  });
+
+  it('forgets saved edits; one typed into since starts from the saved text', () => {
+    const edits = useMessageEdits(shallowRef(catalog('i18n')));
+    edits.edit(missing, 'ביי');
+    edits.edit(translated, 'היי');
+    const saving = edits.pending();
+    edits.edit(translated, 'היי!');
+    edits.saved([...saving, { key: 'other', text: 'x', base: null, source: null }]);
+    expect(edits.pending()).toEqual([
+      { key: 'greeting', text: 'היי!', base: 'היי', source: 'Hello $1' },
+    ]);
+    // Emptied, saved (so removed), then written again: it starts from no translation.
+    edits.edit(translated, '');
+    const removing = edits.pending();
+    edits.edit(translated, 'חדש');
+    edits.saved(removing);
+    expect(edits.pending()[0]?.base).toBeNull();
+  });
+
+  it('drops every edit when they’re discarded', () => {
+    const edits = useMessageEdits(shallowRef(catalog('i18n')));
+    edits.edit(missing, 'ביי');
+    edits.discard();
+    expect([edits.count.value, edits.pending()]).toEqual([0, []]);
+  });
 });

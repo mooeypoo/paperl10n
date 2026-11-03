@@ -400,7 +400,7 @@ describe('the message editor', () => {
     expect(openKey(element)).toBeNull();
   });
 
-  it('starts another catalog with no message open and no edits', async () => {
+  it('starts another catalog, once the edits are dropped, with no message open and no edits', async () => {
     const { element } = await opened({
       catalogs: { i18n: detail('i18n'), api: detail('api') },
     });
@@ -413,6 +413,9 @@ describe('the message editor', () => {
     );
     if (!(api instanceof HTMLButtonElement)) throw new Error('no api catalog');
     api.click();
+    await settle();
+    // Asked first (App.catalog-saving.test.ts has the rest): not saving drops the edits.
+    button(element, "Don't save").click();
     await settle();
     expect(element.querySelector('.catalog-title')?.textContent).toBe('api');
     expect(openKey(element)).toBeNull();
