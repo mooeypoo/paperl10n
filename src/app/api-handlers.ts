@@ -319,7 +319,9 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
 
     async markExistingUpToDate({ projectId }) {
       const result = await useCases.markExistingUpToDate(projectId);
-      return result.ok ? ok({ marked: [...result.value.marked] }) : err(toErrorDto(result.error));
+      if (!result.ok) return err(toErrorDto(result.error));
+      const { marked, markedMessages } = result.value;
+      return ok({ marked: [...marked], markedMessages });
     },
 
     async checkTranslation({ projectId, key, text }) {

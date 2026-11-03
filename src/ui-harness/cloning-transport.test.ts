@@ -77,7 +77,8 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
         ok: true,
         value: { page: 'translated', sections: [], changes: { blocks: [], removals: [] } },
       }),
-    markExistingUpToDate: () => Promise.resolve({ ok: true, value: { marked: [] } }),
+    markExistingUpToDate: () =>
+      Promise.resolve({ ok: true, value: { marked: [], markedMessages: 0 } }),
     chooseTargetLocale: ({ language }) =>
       Promise.resolve({ ok: true, value: { id: language, direction: 'rtl' } }),
     ...overrides,

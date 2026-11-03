@@ -22,6 +22,7 @@ import { useTranslationCheck } from './composables/use-translation-check';
 import { useTranslationSaving } from './composables/use-translation-saving';
 import { useTranslationStatus } from './composables/use-translation-status';
 import { useEnvironment } from './environment';
+import type { ExistingCount } from './catalog/existing-count';
 import { errorMessage } from './i18n/error-message';
 import { useI18n } from './i18n/i18n';
 import { rememberRecentLanguage } from './preferences';
@@ -208,12 +209,12 @@ onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', onBeforeUnload);
 });
 
-// Marking every existing translation up to date: offered once, while the language has no status
-// file (nothing was ever marked), until it's done or put off for this project.
+// Marking every existing translation up to date, pages and messages: offered once, while the
+// language has no status file (nothing was ever marked), until it's done or put off for this project.
 const existingPutOff = ref(false);
 const markingExisting = ref(false);
 const markExistingError = shallowRef<ErrorDto | null>(null);
-const markedExisting = ref<number | null>(null);
+const markedExisting = shallowRef<ExistingCount | null>(null);
 watch(projectId, () => {
   existingPutOff.value = false;
   markExistingError.value = null;
@@ -231,8 +232,10 @@ async function markExisting(): Promise<void> {
     markExistingError.value = result.error;
     return;
   }
-  markedExisting.value = result.marked.length;
+  markedExisting.value = { pages: result.marked.length, messages: result.markedMessages };
   translationStatus.noteMarked(result.marked);
+  // An open catalog's rows show their statuses: read it again (its edits stay).
+  catalogReading.reload();
 }
 const statusProblemText = computed(() => {
   const problem = statusFile.value.problem;

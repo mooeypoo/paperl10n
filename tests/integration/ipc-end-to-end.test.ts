@@ -664,7 +664,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
     const projectId = await openBasic(api);
     expect(await api.markExistingUpToDate({ projectId })).toEqual({
       ok: true,
-      value: { marked: ['index'] },
+      value: { marked: ['index'], markedMessages: 0 },
     });
     const listed = await api.listSourceDocuments({ projectId });
     expect(listed.ok && listed.value.documents.map((entry) => entry.status)).toEqual([
@@ -686,6 +686,25 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       error: { code: 'workspace.status-invalid', params: { file: '.paperl10n/status/he.json' } },
     });
     expect(await readFile(join(folder, '.paperl10n/status/he.json'), 'utf8')).toBe(conflicted);
+
+    // A catalog's translated messages are recorded too (in a copy never recorded).
+    const copy = await copyOfExtension();
+    await rm(join(copy, '.paperl10n'), { recursive: true });
+    const extension = rendererApi(copy).api;
+    const opened = await extension.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    const { projectId: catalogProject } = opened.value;
+    /** Each catalog's messages with the status. */
+    const counted = async (status: 'draft' | 'translated') => {
+      const result = await extension.listCatalogs({ projectId: catalogProject });
+      return result.ok ? result.value.catalogs.map((c) => c.progress?.byStatus[status]) : result;
+    };
+    expect(await counted('draft')).toEqual([3, 0]);
+    expect(await extension.markExistingUpToDate({ projectId: catalogProject })).toEqual({
+      ok: true,
+      value: { marked: [], markedMessages: 3 },
+    });
+    expect(await counted('translated')).toEqual([3, 0]);
   },
   chooseTargetLocale: async () => {
     const folder = await copyOfBasic();

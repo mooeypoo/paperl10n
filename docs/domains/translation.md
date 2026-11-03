@@ -80,7 +80,7 @@ Decided in [the M4 plan](../plan/M4-catalogs.md), question 3.
 
 1. **`missing`:** the target doesn't have the message, or has it empty.
 2. **`draft`:** the target has it, and it was never recorded (an existing translation, until it's
-   saved or kept as up to date).
+   saved, kept as up to date, or marked with every existing translation).
 3. **`translated`:** recorded, and the source text's fingerprint is the recorded one.
 4. **`outdated`:** recorded, and the source text changed since.
 5. **Saving a message's translation records it** against its source as it is now; **keeping an

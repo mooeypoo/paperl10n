@@ -132,7 +132,7 @@ function setup() {
     },
     markExistingUpToDate: (request) => {
       calls.push(['markExistingUpToDate', request]);
-      return Promise.resolve(ok({ marked: ['index', 'about'] }));
+      return Promise.resolve(ok({ marked: ['index', 'about'], markedMessages: 2 }));
     },
     chooseTargetLocale: (request) => {
       calls.push(['chooseTargetLocale', request]);
@@ -205,7 +205,7 @@ describe('registerApi', () => {
     });
     expect(await send('markExistingUpToDate', trusted, { projectId: 'p1' })).toEqual({
       ok: true,
-      value: { marked: ['index', 'about'] },
+      value: { marked: ['index', 'about'], markedMessages: 2 },
     });
     const message = { projectId: 'p1', catalog: 'i18n', key: 'm', text: 'שלום $1' };
     expect(await send('checkMessage', trusted, message)).toEqual({

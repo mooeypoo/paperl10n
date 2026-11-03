@@ -87,6 +87,8 @@ async function opened(
     save?: (messages: readonly MessageSaveDto[]) => Promise<SaveAnswer>;
     keep?: Result<readonly SavedMessageDto[], ErrorDto>;
     withPages?: boolean;
+    /** No status file yet, until the first save writes one; its messages are translated. */
+    neverRecorded?: boolean;
   } = {},
 ) {
   const catalogs = options.catalogs ?? { i18n: i18n() };
@@ -101,27 +103,40 @@ async function opened(
         },
       },
     ],
-    list: [{ ok: true, value: options.withPages === true ? documents : [] }],
-    catalogs: {
-      ok: true,
-      value: {
-        catalogs: Object.keys(catalogs).map((key) => ({
-          key,
-          sourcePath: `${key}/en.json`,
-          targetPath: `${key}/he.json`,
-          targetExists: true,
-          hasDraft: false,
-          progress: null,
-          problem: null,
-        })),
-        statusFile: { exists: true, problem: null },
+    list: [
+      {
+        ok: true,
+        value: {
+          documents: options.withPages === true ? documents : [],
+          statusFile: { exists: options.neverRecorded !== true, problem: null },
+        },
       },
-    },
+    ],
     ...(options.keep === undefined ? {} : { keepMessages: options.keep }),
   });
   const saved: MessageSaveDto[][] = [];
+  const progress = { total: 2, byStatus: { missing: 0, draft: 2, translated: 0, outdated: 0 } };
   const wrapped: PaperLionApi = {
     ...client,
+    listCatalogs: ({ projectId }) => {
+      calls.push(`listCatalogs:${projectId}`);
+      const recorded = options.neverRecorded !== true || saved.length > 0;
+      return Promise.resolve({
+        ok: true,
+        value: {
+          catalogs: Object.keys(catalogs).map((key) => ({
+            key,
+            sourcePath: `${key}/en.json`,
+            targetPath: `${key}/he.json`,
+            targetExists: true,
+            hasDraft: false,
+            progress: options.neverRecorded === true ? { ...progress, notInSource: 0 } : null,
+            problem: null,
+          })),
+          statusFile: { exists: recorded, problem: null },
+        },
+      });
+    },
     readCatalog: ({ projectId, key }) => {
       calls.push(`readCatalog:${projectId}:${key}`);
       const found = catalogs[key];
@@ -301,6 +316,21 @@ describe('saving a catalog', () => {
     expect(saved[1]).toEqual([
       { key: 'app-save', text: 'שמירה!', base: 'שמירה', source: 'Source of app-save' },
     ]);
+  });
+});
+
+describe('saving a catalog never recorded', () => {
+  it('stops offering to mark existing translations once the save writes the status file', async () => {
+    const { element } = await opened({ neverRecorded: true });
+    const offer = () =>
+      [...element.querySelectorAll('button')].some(
+        (candidate) => candidate.textContent.trim() === 'Mark all up to date',
+      );
+    expect(offer()).toBe(true);
+    await type(element, 'app-save', 'שמירה');
+    saveButton(element).click();
+    await settle();
+    expect(offer()).toBe(false);
   });
 });
 

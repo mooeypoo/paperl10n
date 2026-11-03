@@ -2,6 +2,9 @@
 // Status through the whole UI (mountApp) with a fake client: the page list's statuses and
 // progress, the one-time offer to mark existing translations, and marking the open page.
 import type {
+  CatalogDetailDto,
+  CatalogDto,
+  CatalogListDto,
   DocumentPairDto,
   DocumentStatusDto,
   PaperLionApi,
@@ -167,7 +170,7 @@ describe('marking existing translations up to date', () => {
   it('offers it once for a language never marked, and lists the pages again after', async () => {
     const { element, calls } = await opened({
       list: [list(before, unrecorded), list(after)],
-      markExisting: { ok: true, value: { marked: ['about', 'index'] } },
+      markExisting: { ok: true, value: { marked: ['about', 'index'], markedMessages: 0 } },
     });
     await openPage(element, 'index');
     expect(navText(element)).toContain(
@@ -189,6 +192,18 @@ describe('marking existing translations up to date', () => {
     // The open page was one of them: its header says so, without reading it again.
     expect(header(element)).toBe('Up to date | Sections up to date: 3 of 3');
     expect(calls.filter((call) => call.startsWith('readDocumentPair:p-1:index'))).toHaveLength(1);
+  });
+
+  it('says when there was nothing left to mark', async () => {
+    const { element } = await opened({
+      list: [list(before, unrecorded), list(before)],
+      markExisting: { ok: true, value: { marked: [], markedMessages: 0 } },
+    });
+    button(element, 'Mark all up to date').click();
+    await flushPromises();
+    expect(element.querySelector('nav [role="status"]')?.textContent.trim()).toBe(
+      '0 pages marked up to date.',
+    );
   });
 
   it('can be put off until the project is opened again', async () => {
@@ -222,6 +237,91 @@ describe('marking existing translations up to date', () => {
       "The status file .paperl10n/status/he.json can't be saved (files.unwritable), so nothing was marked up to date.",
     );
     expect(button(element, 'Mark all up to date').disabled).toBe(false);
+  });
+});
+
+describe('marking existing messages up to date', () => {
+  const banana = { id: 'catalog-banana', displayName: 'banana-i18n' };
+  const catalog = (key: string, draft: number, translated: number): CatalogDto => ({
+    key,
+    sourcePath: `${key}/en.json`,
+    targetPath: `${key}/he.json`,
+    targetExists: true,
+    hasDraft: false,
+    progress: {
+      total: draft + translated + 1,
+      byStatus: { missing: 1, draft, translated, outdated: 0 },
+      notInSource: 0,
+    },
+    problem: null,
+  });
+  const i18n: CatalogDetailDto = {
+    key: 'i18n',
+    sourcePath: 'i18n/en.json',
+    targetPath: 'i18n/he.json',
+    targetExists: true,
+    documentationPath: null,
+    messages: [],
+    notInSource: [],
+    documentationProblem: null,
+    draft: null,
+    statusFile: unrecorded,
+  };
+  /** Lists the catalogs as `lists` says, one answer per call (the last one repeats). */
+  function listing(first: CatalogListDto, ...rest: CatalogListDto[]): Partial<PaperLionApi> {
+    const answers = [first, ...rest];
+    return {
+      listCatalogs: () => Promise.resolve({ ok: true, value: answers.shift() ?? first }),
+    };
+  }
+
+  it('offers it in a project without pages, then lists the catalogs and the open one again', async () => {
+    const { element, calls } = await opened(
+      {
+        open: [{ ok: true, value: { ...summary, documentFormat: null, catalogFormat: banana } }],
+        list: [list([], unrecorded), list([])],
+        readCatalog: { i18n: { ok: true, value: i18n } },
+        markExisting: { ok: true, value: { marked: [], markedMessages: 3 } },
+      },
+      listing(
+        { catalogs: [catalog('i18n', 2, 0), catalog('api', 1, 0)], statusFile: unrecorded },
+        { catalogs: [catalog('i18n', 0, 2), catalog('api', 0, 1)], statusFile: recorded },
+      ),
+    );
+    expect(navText(element)).toContain(
+      '3 messages have translations that were never marked up to date.',
+    );
+    const reads = () => calls.filter((call) => call === 'readCatalog:p-1:i18n').length;
+    expect(reads()).toBe(1);
+    button(element, 'Mark all up to date').click();
+    await flushPromises();
+    expect(calls).toContain('markExistingUpToDate:p-1');
+    expect(element.querySelector('nav [role="status"]')?.textContent.trim()).toBe(
+      '3 messages marked up to date.',
+    );
+    expect(navText(element)).toContain('Up to date: 3 of 5 messages');
+    expect(findButton(element, 'Mark all up to date')).toBeUndefined();
+    expect(reads()).toBe(2);
+  });
+
+  it('counts pages and messages together', async () => {
+    const before = [entry('about', 'draft'), entry('index', 'draft'), entry('new', 'missing')];
+    const { element } = await opened(
+      {
+        open: [{ ok: true, value: { ...summary, catalogFormat: banana } }],
+        list: [list(before, unrecorded), list(before)],
+        markExisting: { ok: true, value: { marked: ['about', 'index'], markedMessages: 1 } },
+      },
+      listing({ catalogs: [catalog('i18n', 1, 0)], statusFile: unrecorded }),
+    );
+    expect(navText(element)).toContain(
+      '2 pages and one message have translations that were never marked up to date.',
+    );
+    button(element, 'Mark all up to date').click();
+    await flushPromises();
+    expect(element.querySelector('nav [role="status"]')?.textContent.trim()).toBe(
+      '2 pages and one message marked up to date.',
+    );
   });
 });
 

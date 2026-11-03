@@ -108,7 +108,7 @@ describe('guardApi', () => {
               changes: { blocks: [], removals: [] },
             }),
           ),
-        markExistingUpToDate: () => Promise.resolve(ok({ marked: ['k'] })),
+        markExistingUpToDate: () => Promise.resolve(ok({ marked: ['k'], markedMessages: 0 })),
       },
       onUnexpected,
     );
@@ -207,7 +207,9 @@ describe('guardApi', () => {
     ).toEqual(
       ok({ page: 'translated', sections: ['translated'], changes: { blocks: [], removals: [] } }),
     );
-    expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(ok({ marked: ['k'] }));
+    expect(await api.markExistingUpToDate({ projectId: 'p' })).toEqual(
+      ok({ marked: ['k'], markedMessages: 0 }),
+    );
     expect(await api.checkMessage({ projectId: 'p', catalog: 'c', key: 'k', text: 'x' })).toEqual(
       ok({ tokens: [], warnings: [] }),
     );
