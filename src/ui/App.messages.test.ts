@@ -454,3 +454,85 @@ describe('the message editor', () => {
     expect(spacers).toEqual([`${String(885 * 72)}px`, `${String(91 * 72)}px`]);
   });
 });
+
+describe('the plural and gender preview', () => {
+  /** Main's answer: each `$n`, and each `{{PLURAL:…}}` or `{{GENDER:…}}` without nesting. */
+  const choices: Check = ({ text }) =>
+    Promise.resolve({
+      ok: true,
+      value: {
+        tokens: [...text.matchAll(/\{\{(PLURAL|GENDER):[^}]*\}\}|\$\d+/g)].map((match) => ({
+          kind:
+            match[1] === 'PLURAL'
+              ? ('plural' as const)
+              : match[1] === 'GENDER'
+                ? ('gender' as const)
+                : ('parameter' as const),
+          start: match.index,
+          end: match.index + match[0].length,
+        })),
+        warnings: [],
+      },
+    });
+  const plural = message('app-pages', 'translated', 'יש {{PLURAL:$1|דף אחד|שני דפים|$1 דפים}}', {
+    source: 'There {{PLURAL:$1|is one page|are $1 pages}}',
+    translationTokens: [{ kind: 'plural', start: 3, end: 37 }],
+  });
+  const preview = (element: Element) =>
+    [...element.querySelectorAll('tr[data-open] .message-preview dl > div')].map((item) => [
+      item.querySelector('dt')?.textContent.trim(),
+      item.querySelector('dd')?.textContent.trim(),
+    ]);
+
+  it('shows each plural form of the target language as soon as a message opens', async () => {
+    const { element, asked } = await opened({
+      check: choices,
+      catalogs: { i18n: detail('i18n', [plural, ...messages]) },
+    });
+    row(element, 'app-pages').click();
+    await flushPromises();
+    // From the tokens as read, before main answers.
+    expect(asked).toEqual([]);
+    expect(element.querySelector('tr[data-open] .message-preview h3')?.textContent.trim()).toBe(
+      'Preview',
+    );
+    expect(preview(element)).toEqual([
+      ['For ⁨1⁩ (⁨one⁩)', 'יש דף אחד'],
+      ['For ⁨2⁩ (⁨two⁩)', 'יש שני דפים'],
+      ['For ⁨3⁩ (⁨other⁩)', 'יש 3 דפים'],
+    ]);
+    const text = element.querySelector('tr[data-open] .message-preview dd');
+    expect([text?.getAttribute('lang'), text?.getAttribute('dir')]).toEqual(['he', 'rtl']);
+  });
+
+  it('follows the translation as main checks it, and shows nothing without a plural or gender', async () => {
+    const { element } = await opened({ check: choices });
+    row(element, 'app-save').click();
+    await settle();
+    expect(element.querySelector('tr[data-open] .message-preview')).toBeNull();
+    editor(element).dispatch({ changes: { from: 0, insert: '{{GENDER:|שמר|שמרה|שמר/ה}}' } });
+    await settle();
+    // Not before main has found the gender.
+    expect(element.querySelector('tr[data-open] .message-preview')).toBeNull();
+    await vi.advanceTimersByTimeAsync(200);
+    await settle();
+    expect(preview(element)).toEqual([
+      ['Male', 'שמר'],
+      ['Female', 'שמרה'],
+      ['Gender not known', 'שמר/ה'],
+    ]);
+  });
+
+  it("says when banana-i18n can't read the translation", async () => {
+    const { element } = await opened({ check: choices });
+    row(element, 'app-save').click();
+    await settle();
+    editor(element).dispatch({ changes: { from: 0, insert: '{{PLURAL:$1|a|b}} {{PLURAL:$1|' } });
+    await vi.advanceTimersByTimeAsync(200);
+    await settle();
+    expect(preview(element)).toEqual([]);
+    expect(element.querySelector('tr[data-open] .message-preview')?.textContent).toContain(
+      "No preview: banana-i18n can't read this translation as it's written.",
+    );
+  });
+});

@@ -21,6 +21,7 @@ import { autonym } from '../i18n/language-name';
 import { warningMessage } from '../i18n/warning-message';
 import AppIcon from './AppIcon.vue';
 import MessageEditor from './MessageEditor.vue';
+import MessagePreview from './MessagePreview.vue';
 import MessageText from './MessageText.vue';
 
 // A catalog's messages: one row per source message (key, source, translation, status), with
@@ -216,6 +217,15 @@ const startTokens = (message: CatalogMessageDto) => {
   return { text: shownText?.text ?? '', tokens: shownText?.tokens ?? [] };
 };
 
+/** What the preview renders: main's latest answer (none while another message's is pending),
+ * else the text's tokens as last known. Its tokens must be for the text it renders. */
+const previewSource = computed(() => {
+  const message = openMessage.value;
+  if (message === null) return null;
+  const answer = checking.check.value;
+  return answer !== null ? { text: answer.text, tokens: answer.tokens } : startTokens(message);
+});
+
 const statusNames: Readonly<Record<MessageStatusDto, string>> = {
   missing: 'paperl10n-status-missing',
   draft: 'paperl10n-message-status-draft',
@@ -400,6 +410,12 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
                         </li>
                       </ul>
                     </div>
+                    <MessagePreview
+                      v-if="previewSource !== null"
+                      :text="previewSource.text"
+                      :tokens="previewSource.tokens"
+                      :locale="targetLocale"
+                    />
                     <div
                       v-if="message.status === 'outdated' && !editing.isEdited(message.key)"
                       class="catalog-keep"
