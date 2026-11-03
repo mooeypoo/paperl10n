@@ -37,6 +37,8 @@ export interface ProjectState {
    * pages again. Returns the keys it marked, or the error.
    */
   markExisting(): Promise<{ readonly marked: readonly string[] } | { readonly error: ErrorDto }>;
+  /** A catalog gained or lost its draft. */
+  markCatalogDraft(key: string, hasDraft: boolean): void;
   /** Lists the catalogs again (after one was saved), for their progress. Failing changes nothing. */
   refreshCatalogs(): Promise<void>;
 }
@@ -225,5 +227,14 @@ export function useProject(client: PaperLionApi): ProjectState {
     },
     markExisting,
     refreshCatalogs,
+    markCatalogDraft: (key, hasDraft) => {
+      const list = catalogs.value;
+      if (list?.some((catalog) => catalog.key === key && catalog.hasDraft !== hasDraft) !== true) {
+        return;
+      }
+      catalogs.value = list.map((catalog) =>
+        catalog.key === key ? { ...catalog, hasDraft } : catalog,
+      );
+    },
   };
 }

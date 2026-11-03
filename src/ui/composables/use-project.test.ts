@@ -206,6 +206,37 @@ describe('useProject', () => {
     });
   });
 
+  describe('markCatalogDraft', () => {
+    it('marks a catalog’s draft, changing the list only when it changes', async () => {
+      const banana = { id: 'catalog-banana', displayName: 'banana-i18n' };
+      const entry = {
+        key: 'i18n',
+        sourcePath: 'i18n/en.json',
+        targetPath: 'i18n/he.json',
+        targetExists: true,
+        hasDraft: false,
+        progress: null,
+        problem: null,
+      };
+      const { client } = fakeClient({
+        open: [{ ok: true, value: { ...summary, catalogFormat: banana } }],
+        list: [{ ok: true, value: documents }],
+        catalogs: {
+          ok: true,
+          value: { catalogs: [entry], statusFile: { exists: true, problem: null } },
+        },
+      });
+      const project = useProject(client);
+      await project.open();
+      const before = project.catalogs.value;
+      project.markCatalogDraft('i18n', false);
+      project.markCatalogDraft('nope', true);
+      expect(project.catalogs.value).toBe(before);
+      project.markCatalogDraft('i18n', true);
+      expect(project.catalogs.value?.[0]?.hasDraft).toBe(true);
+    });
+  });
+
   describe('chooseTarget', () => {
     const noTarget = { ...summary, targetLocale: null };
 

@@ -42,9 +42,19 @@ const props = defineProps<{
   saveError: ErrorDto | null;
   /** Saved, but not recorded as up to date: why. */
   statusProblem: ErrorDto | null;
+  /** The edits are a draft from an earlier session (some changed on disk since: `FromOlder`). */
+  restoredNotice?: boolean;
+  restoredFromOlder?: boolean;
+  /** Keeping the edits as a draft failed. */
+  draftError?: ErrorDto | null;
 }>();
 /** `save`: save every edit (also Ctrl/Cmd+S, App's). `keep`: keep an outdated message as up to date. */
-const emit = defineEmits<{ save: []; keep: [message: CatalogMessageDto] }>();
+const emit = defineEmits<{
+  save: [];
+  keep: [message: CatalogMessageDto];
+  /** Drop the restored draft's edits. */
+  discardRestored: [];
+}>();
 const { t, locale: uiLocale, direction: uiDirection } = useI18n();
 
 const query = ref('');
@@ -102,6 +112,13 @@ watch([query, status, () => props.detail?.key], async () => {
   await nextTick();
   rows.measure();
 });
+
+/** Marks every message the source no longer has for removal (each saved with the rest). */
+function removeAll(): void {
+  for (const message of props.detail?.notInSource ?? []) {
+    editing.remove(message.key, message.text);
+  }
+}
 
 /** What the header says about saving: how many messages wait, or that they're saved. */
 const saveStatusText = computed(() => {
@@ -250,6 +267,23 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
       <p v-if="saveError !== null" class="catalog-warning" role="alert">
         {{ errorMessage(saveError, t) }}
       </p>
+      <p v-if="draftError != null" class="catalog-warning" role="alert">
+        {{ errorMessage(draftError, t) }}
+      </p>
+      <div v-if="restoredNotice" class="catalog-restored">
+        <p class="catalog-note">
+          {{
+            t(
+              restoredFromOlder
+                ? 'paperl10n-catalog-draft-restored-changed'
+                : 'paperl10n-draft-restored',
+            )
+          }}
+        </p>
+        <button type="button" class="pl-button" @click="emit('discardRestored')">
+          {{ t('paperl10n-discard-draft') }}
+        </button>
+      </div>
       <p v-if="statusProblem !== null" class="catalog-warning" role="alert">
         {{ t('paperl10n-catalog-saved-not-recorded') }}
         {{ errorMessage(statusProblem, t) }}
@@ -444,14 +478,56 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
       <p v-else class="catalog-none">{{ t('paperl10n-no-matching-messages') }}</p>
 
       <section v-if="detail.notInSource.length > 0" class="catalog-orphans">
-        <h3>{{ t('paperl10n-not-in-source', detail.notInSource.length) }}</h3>
+        <div class="catalog-orphans-heading">
+          <h3>{{ t('paperl10n-not-in-source', detail.notInSource.length) }}</h3>
+          <button
+            v-if="detail.notInSource.some((message) => !editing.isEdited(message.key))"
+            type="button"
+            class="pl-button"
+            @click="removeAll"
+          >
+            {{ t('paperl10n-remove-all-not-in-source') }}
+          </button>
+        </div>
         <p class="catalog-note">{{ t('paperl10n-not-in-source-note') }}</p>
         <ul>
-          <li v-for="message in detail.notInSource" :key="message.key">
+          <li
+            v-for="message in detail.notInSource"
+            :key="message.key"
+            :data-removed="editing.isEdited(message.key) ? '' : undefined"
+          >
             <bdi dir="ltr" class="catalog-key">{{ message.key }}</bdi>
-            <span :lang="targetLocale.id" :dir="targetLocale.direction">
+            <span :lang="targetLocale.id" :dir="targetLocale.direction" class="catalog-orphan-text">
               <MessageText :text="message.text" :tokens="message.tokens" />
             </span>
+            <span v-if="editing.isEdited(message.key)" class="catalog-edited">
+              {{ t('paperl10n-removed-not-saved') }}
+            </span>
+            <button
+              type="button"
+              class="pl-button"
+              :aria-label="
+                t(
+                  editing.isEdited(message.key)
+                    ? 'paperl10n-keep-message-label'
+                    : 'paperl10n-remove-message-label',
+                  message.key,
+                )
+              "
+              @click="
+                editing.isEdited(message.key)
+                  ? editing.unremove(message.key)
+                  : editing.remove(message.key, message.text)
+              "
+            >
+              {{
+                t(
+                  editing.isEdited(message.key)
+                    ? 'paperl10n-keep-message'
+                    : 'paperl10n-remove-message',
+                )
+              }}
+            </button>
           </li>
         </ul>
       </section>
@@ -743,6 +819,23 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
   display: flex;
   flex-direction: column;
   gap: var(--pl-space-2);
+}
+
+.catalog-orphans-heading,
+.catalog-restored {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-2) var(--pl-space-3);
+}
+
+.catalog-orphans li {
+  align-items: center;
+}
+
+.catalog-orphans li[data-removed] .catalog-orphan-text {
+  color: var(--pl-color-muted);
+  text-decoration: line-through;
 }
 
 .catalog-orphans h3 {

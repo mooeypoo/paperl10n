@@ -70,3 +70,11 @@ it came from. When one is picked up, it moves into that milestone's plan and is 
   page's fingerprints, so it's shared.
 - **Keep "Scroll together" across launches.** The full page's toggle (S6) is kept while the app
   runs; a preference (like the theme) would keep it, if turning it off turns out to be common.
+
+## From M4: catalogs ([plan](M4-catalogs.md))
+
+- **An edited row closed right after typing shows its tokens unmarked.** The open message is
+  checked in main 0.2 s after typing pauses; closing it sooner drops that check (it's for the
+  open message), so the closed row has no tokens for its new text, and `$1` or a tag isn't
+  isolated in a right-to-left row until the message is opened again. A check on closing (or
+  keeping the pending one for the closed message) would fix it.

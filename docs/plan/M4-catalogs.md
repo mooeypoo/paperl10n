@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C6 and C7a–C7c done, C7d next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C6 and C7a–C7d done, C7e next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -687,6 +687,48 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
   - **C7d, drafts and removals in the UI:** edits kept as the catalog's draft as they're typed,
     restored (with a notice and "Discard") when it opens again, and removing messages the source
     no longer has (each, and all).
+    - *Done-notes:*
+      - **Drafts** (`useCatalogDrafts`): the catalog's edits are kept as its draft 0.8 s after the
+        translator's last change (as a page's are), the whole set each time; no edits left
+        forget it. Only the translator's own changes count (`MessageEdits.changes`): resets,
+        saves, and restores don't, so opening another catalog can never overwrite its draft. A
+        change pending when the catalog changes isn't kept (leaving asked first: saved, or
+        dropped).
+      - **Restoring:** a catalog's first read with a draft (and no edits yet) restores it,
+        saying so, with "Discard them" (which forgets the draft and the edits). When some
+        restored messages changed on disk since, the notice says saving won't overwrite them.
+        Reading it again after a save doesn't restore; the notice goes once nothing is unsaved.
+      - **Leaving without saving** forgets the catalog's draft. **The sidebar** marks a catalog
+        with unsaved edits or a draft, as it does a page (and the legend shows the mark).
+      - **Removing messages the source no longer has:** each has "Remove" (then "Keep", to take
+        it back), and "Remove all" marks the rest. A removal is an edit (empty text, the file's
+        text as its base), so it's saved, kept in the draft, counted, and asked about like any
+        other.
+      - Checked in Chromium (the harness): an edit and a removal counted together, the sidebar's
+        mark, the removed message struck through with "Keep", and after Ctrl+S, the message gone
+        and the mark too; no console errors. Found there, not fixed here: an edited row closed
+        right after typing shows its tokens unmarked (in [the follow-ups](follow-ups.md)).
+      - New messages (en, he, qqq): the restored notice when messages changed since, and the
+        removal buttons, labels, and note.
+      - Tests: the edits (removing, keeping, restoring, what counts as a change), the sidebar's
+        draft marks, `useCatalogDrafts` (restoring only on the first read and not over edits,
+        what changed since, nothing kept for another catalog or without a project, a broken
+        transport, stopping, discarding only marking when forgotten), and through the real
+        entry point: the draft kept after the pause (and forgotten when typed back), the
+        sidebar's mark, restoring (not kept again) and discarding, the notice when messages
+        changed since (gone once saved), leaving without saving, a draft error, removing one,
+        keeping it, removing all, saving the removals, and a removal in the draft.
+      - Mutation checks, each failing tests (27): restoring (each guard, the first read only,
+        what changed since, removals compared with the file), the notice going, keeping the
+        draft (the pause, an empty one unmarked, errors cleared, no project, a catalog change
+        cancelling, stopping), discarding (marked only when forgotten, the restored edits
+        dropped), what counts as a change, a removal's base, the sidebar's mark (and legend),
+        "Remove all", the restored notice's wording, and leaving without saving. Survivors at
+        first, each resolved: three guards repeated another (restoring over edits, which the
+        new catalog's reset already cleared; the catalog check when the timer fires, which a
+        catalog change cancels; "Remove all" skipping removed ones): removed; two tests didn't
+        test what they said (stopping before the change was seen; "changed since" without a
+        matching removal), and the legend was untested: each fixed.
 - **C7e, existing translations:** the one-time "Mark all existing translations up to date" offer
   (question 3) covering catalogs too; today it covers pages only.
 - **C8, previews:** plural and gender (question 7).

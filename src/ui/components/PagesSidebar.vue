@@ -19,6 +19,8 @@ const props = withDefaults(
     selectedKey: string | null;
     /** The page whose translation has unsaved changes, if any. */
     unsavedKey: string | null;
+    /** The catalog with unsaved edits, if any. */
+    unsavedCatalog?: string | null;
     /** Offer to mark every existing translation up to date (the one-time start). */
     offerExisting?: boolean;
     /** Marking them is on its way. */
@@ -31,6 +33,7 @@ const props = withDefaults(
     showPages: true,
     catalogs: null,
     selectedCatalog: null,
+    unsavedCatalog: null,
     offerExisting: false,
     markingExisting: false,
     markExistingError: null,
@@ -56,6 +59,14 @@ const statusNames: Readonly<Record<PageStatusDto, string>> = {
 };
 const unsaved = (document: SourceDocumentDto) =>
   document.key === props.unsavedKey || document.hasDraft;
+const unsavedCatalogs = (catalog: CatalogDto) =>
+  catalog.key === props.unsavedCatalog || catalog.hasDraft;
+const anyUnsaved = computed(
+  () =>
+    props.unsavedKey !== null ||
+    props.documents.some((document) => document.hasDraft) ||
+    (props.catalogs ?? []).some(unsavedCatalogs),
+);
 
 /** Every readable catalog's messages, and how many are up to date. */
 const messages = computed(() => {
@@ -168,7 +179,13 @@ const progress = computed(() => {
             @click="emit('selectCatalog', catalog.key)"
           >
             <!-- A key is a folder or a name, not prose in the interface language: isolate it. -->
-            <bdi>{{ catalog.key }}</bdi>
+            <span class="catalogs-name">
+              <bdi>{{ catalog.key }}</bdi>
+              <span v-if="unsavedCatalogs(catalog)" class="pages-unsaved" aria-hidden="true"></span>
+              <span v-if="unsavedCatalogs(catalog)" class="visually-hidden">
+                {{ t('paperl10n-status-unsaved') }}
+              </span>
+            </span>
             <span v-if="catalog.progress !== null" class="catalogs-progress">
               {{
                 t(
@@ -193,7 +210,7 @@ const progress = computed(() => {
       <li v-for="(name, status) in statusNames" :key="status">
         <span class="pages-status" :data-status="status"></span>{{ t(name) }}
       </li>
-      <li v-if="unsavedKey !== null || documents.some((document) => document.hasDraft)">
+      <li v-if="anyUnsaved">
         <span class="pages-unsaved"></span>{{ t('paperl10n-status-unsaved') }}
       </li>
     </ul>
@@ -338,6 +355,12 @@ const progress = computed(() => {
   flex-direction: column;
   align-items: stretch;
   gap: var(--pl-space-1);
+}
+
+.catalogs-name {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
 }
 
 .catalogs-progress,

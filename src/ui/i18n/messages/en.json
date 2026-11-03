@@ -194,5 +194,12 @@
   "paperl10n-catalog-unsaved": "{{PLURAL:$1|One message|$1 messages}} not saved yet",
   "paperl10n-catalog-saved-not-recorded": "Saved, but not recorded as up to date.",
   "paperl10n-keep-up-to-date": "Keep as up to date",
-  "paperl10n-keep-up-to-date-note": "The source changed since this translation was saved. If the translation still fits, keep it as up to date."
+  "paperl10n-keep-up-to-date-note": "The source changed since this translation was saved. If the translation still fits, keep it as up to date.",
+  "paperl10n-catalog-draft-restored-changed": "Unsaved changes from your last session were restored. Some of these messages changed on disk since: saving won't overwrite them, so check them first.",
+  "paperl10n-remove-all-not-in-source": "Remove all",
+  "paperl10n-remove-message": "Remove",
+  "paperl10n-keep-message": "Keep",
+  "paperl10n-remove-message-label": "Remove $1",
+  "paperl10n-keep-message-label": "Keep $1",
+  "paperl10n-removed-not-saved": "Removed when you save"
 }

@@ -194,5 +194,12 @@
   "paperl10n-catalog-unsaved": "Next to a catalog's Save button: how many of its messages were edited and not saved yet. $1: the number.",
   "paperl10n-catalog-saved-not-recorded": "Shown after saving a catalog when its messages were saved but the language's status file couldn't record them as up to date; followed by the reason (an error message).",
   "paperl10n-keep-up-to-date": "Button on an outdated message (its source changed since its translation was saved): record the translation as up to date without changing it.",
-  "paperl10n-keep-up-to-date-note": "Next to the paperl10n-keep-up-to-date button: what it's for."
+  "paperl10n-keep-up-to-date-note": "Next to the paperl10n-keep-up-to-date button: what it's for.",
+  "paperl10n-catalog-draft-restored-changed": "Shown when a catalog opens with unsaved edits restored from an earlier session, and some of those messages changed in the file on disk since. Saving such a message is refused (rather than overwriting the change). Like paperl10n-draft-restored-changed, for pages.",
+  "paperl10n-remove-all-not-in-source": "Button over the list of messages the translation has and the source no longer does: mark them all for removal from the translation file (done when saving).",
+  "paperl10n-remove-message": "Button next to a message the source no longer has: mark it for removal from the translation file (done when saving).",
+  "paperl10n-keep-message": "Button next to a message marked for removal: keep it after all.",
+  "paperl10n-remove-message-label": "Accessible name of the paperl10n-remove-message button. $1: the message's key, e.g. \"myext-old\".",
+  "paperl10n-keep-message-label": "Accessible name of the paperl10n-keep-message button. $1: the message's key, e.g. \"myext-old\".",
+  "paperl10n-removed-not-saved": "Next to a message the source no longer has, once it's marked for removal: it's removed from the file when the catalog is saved."
 }

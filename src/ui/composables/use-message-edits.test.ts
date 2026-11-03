@@ -118,4 +118,22 @@ describe('useMessageEdits', () => {
     edits.discard();
     expect([edits.count.value, edits.pending()]).toEqual([0, []]);
   });
+
+  it('removes a message the source no longer has, keeps it again, and counts only these changes', async () => {
+    const detail = shallowRef<CatalogDetailDto | null>(catalog('i18n'));
+    const edits = useMessageEdits(detail);
+    edits.remove('gone', 'ישן');
+    expect(edits.pending()).toEqual([{ key: 'gone', text: '', base: 'ישן', source: null }]);
+    edits.unremove('gone');
+    edits.edit(missing, 'ביי');
+    expect([edits.count.value, edits.changes.value]).toEqual([1, 3]);
+    // Not the translator's changes: restoring, saving, discarding, another catalog.
+    edits.restore([{ key: 'greeting', text: 'היי', base: 'שלום $1', source: 'Hello $1' }]);
+    expect(edits.pending().map((edit) => edit.key)).toEqual(['greeting']);
+    edits.saved(edits.pending());
+    edits.discard();
+    detail.value = catalog('api');
+    await nextTick();
+    expect(edits.changes.value).toBe(3);
+  });
 });
