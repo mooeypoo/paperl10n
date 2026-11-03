@@ -58,24 +58,29 @@ adding a plugin, not rewriting the app.
 | Document key | The locale-independent identity of a longform document, such as `guide/getting-started`. The format plugin derives it from the file's path. A source document and its translations share a key, which is how translation pairs are found. |
 | Block | A structural unit of a document (heading, paragraph, list, code, image, component). Blocks are the unit of **source-change tracking**: they say *where the source changed*, not where the translation must match. Pairing happens at the section level. |
 | Translation pair | A source document + its target counterpart (which may not exist yet). |
-| Message catalog | A set of key → string messages for one locale (e.g. `i18n/he.json`). |
+| Message catalog | A set of key → string messages, with one file per locale (e.g. `i18n/en.json`, `i18n/he.json`, and the documentation in `i18n/qqq.json`). Identified by a **catalog key** the format plugin chooses: banana-i18n uses the messages folder (`i18n`), gettext would use the domain. |
 | Message | One key with its source text, target text, and documentation. |
+| Token | A piece of a message its translation is expected to keep: a parameter (`$1`), a plural or gender choice (`{{PLURAL:$1|…}}`), another template, a link, or an HTML tag. The format plugin finds them. They're marked and isolated in the editor and compared for warnings. |
 | Format plugin | An adapter that knows how a specific system finds, reads, and writes translations. |
 | Section | The part of a longform document from one heading to the next heading of the same or a higher level. Sections are the unit Paper Lion **pairs** between source and translation; within a section the translation is free-form. |
-| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document** and to **each section**; for catalogs, to **each message**. `missing`: no translation (or, for a section, nothing paired with it). `draft`: never marked up to date. `translated` (shown as "up to date"): marked up to date, and the source is unchanged since. `outdated`: marked once, and the source changed since. |
-| Mark up to date | The translator's explicit statement that a section, a page, or (once, for a project translated before Paper Lion) every existing translation matches the source as it is now. Never a side effect of saving. |
-| Status file | `.paperl10n/status/<locale>.json` in the project, one per target language, committed with the translations: for each page, a fingerprint of each source block as it was when marked up to date. Never a published file. |
+| Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document** and to **each section**; for catalogs, to **each message**. `missing`: no translation (or, for a section, nothing paired with it). `draft`: never marked up to date. `translated` (shown as "up to date"): marked up to date, and the source is unchanged since. `outdated`: marked once, and the source changed since. A message is marked up to date by saving its translation (or by "Keep as up to date"); see §7.3. |
+| Mark up to date | The translator's explicit statement that a section, a page, or (once, for a project translated before Paper Lion) every existing translation matches the source as it is now. For pages, never a side effect of saving. A message is short, so saving its translation marks it (§7.3). |
+| Status file | `.paperl10n/status/<locale>.json` in the project, one per target language, committed with the translations: for each page, a fingerprint of each source block as it was when marked up to date, and for each catalog's messages, a fingerprint of each source message as it was when its translation was saved or kept. Never a published file. |
 | Source change | A change in the source document since its translation was last marked up to date: a block changed, added, or removed. Shown on the source side, as a reference. Paper Lion knows which blocks changed, not their old wording. |
-| Draft (unsaved edits) | A page's edits that aren't saved to its file yet, kept in Paper Lion's own data folder (never in the project) so a crash or a restart doesn't lose them. Not the `draft` status below. |
+| Draft (unsaved edits) | A page's or a catalog's edits that aren't saved to its file yet, kept in Paper Lion's own data folder (never in the project) so a crash or a restart doesn't lose them. Not the `draft` status below. |
 | Preservation hint | A neutral note that something usually kept as is (code blocks, link targets, images, components, frontmatter keys) appears a different number of times in a section of the translation, or the page. A hint, never an error. |
 
 ## 7. Core experiences
 
 ### 7.1 Project overview
-- Open a folder. Paper Lion auto-detects the format(s) or reads the project config.
+- Open a folder. Paper Lion auto-detects the format(s) or reads the project config. A project has
+  at most one longform format and at most one catalog format, and at least one of the two, each
+  detected or pinned on its own (`documentFormat`, `catalogFormat`).
 - Choose the source locale (default `en`) and the target locale.
 - See a dashboard with longform documents and message catalogs, each with a status and progress
-  (for example "12/40 pages, 310/420 messages").
+  (for example "12/40 pages, 310/420 messages"). The page list has a "Pages" group and a
+  "Messages" group (each catalog by its key, with how many messages are up to date), each shown
+  when the project has that kind.
 - Filter by status. Missing and outdated items come first.
 
 ### 7.2 Longform parallel editor
@@ -162,20 +167,50 @@ adding a plugin, not rewriting the app.
     and components may get previews later (see §11).
 
 ### 7.3 Message catalog editor (banana-i18n first)
-- A list or table of messages: key · source · target · status, with search and filters.
-- A focused split editor for one message, with the documentation from `qqq.json` shown alongside.
-- Validation: placeholders (`$1`, `$2`), `{{PLURAL:…}}`, `{{GENDER:…}}`, and wikitext-style
-  links must stay consistent between source and target. Warnings are shown inline.
-- Preserves `@metadata` (authors) and file formatting and key order on save.
-- Shows keys that are missing in the target and orphaned keys that no longer exist in the source.
+- **Finding catalogs (banana-i18n):** the folders listed under `MessagesDirs` in `extension.json`
+  or `skin.json` when there is one, else a scan for folders holding the source locale's file
+  (with `@metadata`, or a `qqq.json` beside it). The plugin's `dirs` option pins the list when
+  the scan guesses wrong. A folder without the target's file lists every message as missing, and
+  the file is written on the first save. Single-file layouts (every locale in one JSON) aren't
+  supported yet.
+- **The message list:** one row per source message (key · source · target · status), each text in
+  its own language and direction, with its tokens isolated so `$1` or `{{PLURAL:…}}` keeps its
+  place in an RTL sentence. Search covers keys, sources, and translations. The status filter
+  offers "Needs work" (missing or outdated) or a single status. The list stays responsive at 5,000
+  messages: rows are a fixed height and only those in view are rendered.
+- **Keys no longer in the source** are listed apart and kept, unless the translator removes them
+  (each one, or all at once).
+- **The message editor:** one message at a time opens in place. It shows the whole source, its
+  documentation from `qqq.json` (read-only; a message without one says so), and an editor for the
+  translation, with the tokens marked and isolated. Alt+↓ and Alt+↑ move to the next and previous
+  message; with Shift, to the next and previous one needing work. Esc closes it.
+- **Validation:** warnings only, never blocking a save (a Hebrew plural form may rightly drop
+  `$1`). They're checked in the main process after typing pauses, and compare the translation's
+  tokens with the source's: the same set of parameters, a plural or gender for each one the source
+  has (adding one is fine: a language can need one its source doesn't), the same link targets
+  and tags, and `{}` and `[]` balanced as in the source.
+- **Plural and gender preview:** when the translation has a plural or a gender, it's shown rendered
+  by banana-i18n for each plural form the target language has (with a sample number) and for
+  each gender, with links as text.
+- **Status:** saving a message's translation marks it up to date, against the source text the
+  translator saw (if the source changed since, the translation is saved and not marked). An
+  outdated message also has "Keep as up to date", for a source change that doesn't need a new
+  translation. Existing translations start as drafts and get the same one-time "Mark all existing
+  translations up to date" offer as pages.
+- **Saving keeps the file's bytes:** a changed message replaces only its value, escaped as the file
+  escapes. A new message goes after the nearest preceding key the source has, in the file's
+  indentation and line endings. A new file is shaped like the source, with an empty
+  `@metadata.authors`. An emptied message is removed from the file, so banana-i18n falls back to
+  the source. `@metadata`, formatting, and key order are otherwise untouched. Adding the
+  translator to `authors`, and editing `qqq`, come later.
 
 ### 7.4 Saving
 - **Explicit save:** Save, or Ctrl/Cmd+S from anywhere in the window (on any keyboard layout).
   Writes are atomic.
 - **Drafts:** unsaved edits are kept automatically, shortly after typing pauses, as a draft in
-  Paper Lion's own data folder, never in the project. After a crash or a restart, the page opens
-  with them, says they were restored, and offers to discard them. Pages with drafts are marked in
-  the page list. Saving, undoing back to the file, or leaving without saving forgets the draft.
+  Paper Lion's own data folder, never in the project. After a crash or a restart, the page or
+  catalog opens with them, says they were restored, and offers to discard them. Pages and
+  catalogs with drafts are marked in the page list. Saving, undoing back to the file, or leaving without saving forgets the draft.
 - **Leaving with unsaved changes** (another page, project, or target language, or closing the
   window) asks first: save, don't save, or stay.
 - Round-trip guarantee: a file that wasn't edited is never rewritten. An edited file changes only
@@ -183,8 +218,10 @@ adding a plugin, not rewriting the app.
   identical to the file writes nothing.
 - **External changes** (git pull, another editor) are checked on save: a file that changed on disk
   since editing started is never overwritten silently. Paper Lion asks: keep editing, reload the
-  file (dropping the edits), or overwrite it with the edits. Watching files for changes while
-  editing comes later.
+  file (dropping the edits), or overwrite it with the edits. A catalog is checked per message
+  instead: only an edited message whose translation changed on disk blocks the save (naming it),
+  and other changes to the file, like keys a `git pull` added, are kept. Watching files for
+  changes while editing comes later.
 
 ## 8. Format plugin system
 Two plugin families share one registration mechanism:
@@ -193,8 +230,10 @@ Two plugin families share one registration mechanism:
   target path for a locale, and give the translatable and keep-as-is rules for frontmatter.
   Optionally, map a translation's link target to the source's form, for preservation hints.
   - Initial: VitePress, Astro Starlight. Later: Nuxt Content, Docusaurus, plain folder-per-locale.
-- **Catalog format** (`CatalogFormat`): locate catalogs, parse a catalog into messages, serialize
-  messages back, and declare its placeholder or plural syntax for validation.
+- **Catalog format** (`CatalogFormat`): locate catalogs (each by a catalog key, with the target
+  file's path for a locale named the system's way), parse a catalog into messages, serialize
+  edits back by patching the file (given the source too, for order and a new file's shape), and
+  scan a message for its tokens, typed by kind, for validation.
   - Initial: banana-i18n JSON (incl. `qqq`). Later: gettext `.po/.pot`, i18next JSON, Fluent, XLIFF.
 
 Principles:
@@ -231,7 +270,9 @@ Principles:
   full-page view, source-change highlighting, preservation hints, the length comparison, and loose
   scroll sync. Done, except changing the split level per document (deferred). Decisions and step
   notes in `docs/plan/M3-sections.md`.
-- **M4: banana-i18n.** Catalog list, split message editor, `qqq` docs, and validation.
+- **M4: banana-i18n.** Catalog list, split message editor, `qqq` docs, and validation. Done,
+  with saving, drafts, status per message, and plural and gender previews. Decisions and step
+  notes in `docs/plan/M4-catalogs.md`.
 - **M5: Second plugins.** VitePress + gettext `.po`, to prove the plugin contracts hold.
 
 ## 11. Open questions
@@ -256,5 +297,13 @@ Principles:
 - **More than one target:** a three-pane view (source + two targets) someday?
 - **Assistive translation:** an optional, pluggable MT or LLM suggestion provider behind a port, off
   by default?
+- ~~**Message status**~~ **Decided in M4:** unlike pages, saving a message's translation marks it
+  up to date (as translatewiki.net clears "outdated" with a new translation), with "Keep as up
+  to date" for a source change that needs none. Recorded in the same status file as pages.
+- **Crediting translators:** add the translator's name to a banana-i18n file's
+  `@metadata.authors` on save, as MediaWiki credits translators? It needs a name setting; M4
+  leaves `authors` as it is.
+- **Editing `qqq` documentation:** the developer's job, not the translator's, so M4 shows it
+  read-only. Worth editing in Paper Lion when the developer is the one using it?
 - ~~**Sidecar state**~~ **Decided:** status lives next to the project, in its status file
   (M3), so it's shared with co-translators; drafts live in app data, never in the project (M2).

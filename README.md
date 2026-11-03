@@ -53,7 +53,8 @@ Interface strings (the buttons, menus and messages of an app) open as one search
 the message, the original, your translation, and its status. Open a message to translate it,
 with the developers' notes on what it means and where it appears. Paper Lion checks your
 translation as you type: a missing `$1`, or a plural, gender, or link that's in the original but
-not in yours, gets a gentle warning. Warnings never stop you from saving.
+not in yours, gets a gentle warning. Warnings never stop you from saving. A message with a
+plural or gender shows how your translation reads for each form your language has.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/catalog-dark.png">
