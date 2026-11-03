@@ -12,7 +12,7 @@ domain's.
 |---|---|
 | Catalog | A set of messages with one file per locale, and maybe a documentation file. Identified by a catalog key. |
 | Catalog key | A catalog's locale-independent identity, chosen by its plugin (banana-i18n: the messages folder; gettext: the domain). Any non-empty text. |
-| Message | A key and its text, in one locale's file. |
+| Message | A key and its text, in one locale's file. Some systems keep more with it (gettext: plural forms, the developers' notes, a "needs review" mark and the source it was made for, and flags); those fields are optional ([the formats doc](formats.md#catalogformat)). |
 | Message key | A message's identity in its catalog (`paperl10n-open-folder`). Any non-empty text, as written. |
 | Documentation | What the catalog says about a message for translators (banana-i18n's `qqq.json`). Read-only in Paper Lion. |
 | Catalog message | A source message with its documentation and its translation into the target language. |

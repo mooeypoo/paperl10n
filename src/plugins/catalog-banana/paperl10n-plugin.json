@@ -3,7 +3,7 @@
   "id": "catalog-banana",
   "packageName": "@paperl10n/catalog-banana",
   "kind": "catalog",
-  "apiVersion": 3,
+  "apiVersion": 4,
   "version": "0.1.0",
   "displayName": "banana-i18n",
   "description": "Message catalogs of MediaWiki extensions and skins, and jQuery.i18n apps: one JSON file per locale in a messages folder.",

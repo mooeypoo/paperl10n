@@ -143,8 +143,8 @@ async function recordExistingMessages(
     if (recorded.has(catalog.key)) continue;
     const targetPath = layout.targetPathFor(catalog, locale.id);
     if (!targetPath.ok) return targetPath;
-    const source = await readCatalogFile(project, format, catalog.path);
-    const target = await readCatalogFile(project, format, targetPath.value);
+    const source = await readCatalogFile(project, format, catalog.path, 'source');
+    const target = await readCatalogFile(project, format, targetPath.value, 'target');
     if (!source.ok || !target.ok) continue;
     const translations = new Map(target.value?.map((message) => [message.key, message.text]));
     // A catalog with nothing translated gets an empty record, which the status file leaves out.

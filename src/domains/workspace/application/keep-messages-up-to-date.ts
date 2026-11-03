@@ -59,13 +59,13 @@ export function createKeepMessagesUpToDate(deps: {
     const path = layout.targetPathFor(catalog, locale.id);
     if (!path.ok) return path;
 
-    const source = await readParsedCatalog(project, format, catalog.path);
+    const source = await readParsedCatalog(project, format, catalog.path, 'source');
     if (!source.ok) return source;
     const sourceMessages = source.value?.messages ?? [];
     if (messages.some((message) => sourceOf(sourceMessages, message.key) !== message.source)) {
       return err({ code: 'workspace.source-changed', path: catalog.path });
     }
-    const target = await readParsedCatalog(project, format, path.value);
+    const target = await readParsedCatalog(project, format, path.value, 'target');
     if (!target.ok) return target;
     const translation = (key: string) => translationIn(target.value, key);
 

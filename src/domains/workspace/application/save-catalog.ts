@@ -106,11 +106,11 @@ export function createSaveCatalog(deps: {
 
     // One save of a file at a time: each reads the file the last one wrote.
     const saved = await deps.updates.run(`${project.location}\n${path.value}`, async () => {
-      const source = await readParsedCatalog(project, format, catalog.path);
+      const source = await readParsedCatalog(project, format, catalog.path, 'source');
       if (!source.ok) return source;
       if (source.value === null)
         return err({ code: 'workspace.unknown-catalog' as const, key: catalogKey });
-      const target = await readParsedCatalog(project, format, path.value);
+      const target = await readParsedCatalog(project, format, path.value, 'target');
       if (!target.ok) return target;
 
       const changed = messages
@@ -122,7 +122,12 @@ export function createSaveCatalog(deps: {
       const nothingToWrite = target.value === null && messages.every((m) => m.text === '');
       const text = nothingToWrite
         ? ok(null)
-        : format.serialize({ source: source.value, target: target.value, changes });
+        : format.serialize({
+            locale: locale.id,
+            source: source.value,
+            target: target.value,
+            changes,
+          });
       if (!text.ok) return text;
       if (text.value === null || text.value === target.value?.text) {
         return ok({ source: source.value.messages, written: false });

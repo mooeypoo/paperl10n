@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import type { PlaceholderToken } from '#domains/catalog';
+import type { Message, PlaceholderToken } from '#domains/catalog';
 import type { SourceDocument } from '#domains/document';
 import type { LocaleId } from '#kernel/locale-id';
 import type { ProjectPath } from '#kernel/project-path';
@@ -9,9 +9,11 @@ import type { FormatId } from '../domain/format-id.ts';
 import { parsePluginManifest, type PluginManifest } from '../domain/plugin-manifest.ts';
 import type {
   CatalogEdit,
+  CatalogFileRole,
   CatalogFormat,
   CatalogLayout,
   ParsedCatalog,
+  PluralForm,
   SourceCatalog,
 } from './ports/catalog-format.ts';
 import type { DocumentFormat, ProjectLocale } from './ports/document-format.ts';
@@ -49,9 +51,17 @@ export interface RegisteredCatalogFormat {
   readonly manifest: PluginManifest;
   detect(files: ProjectFiles): Promise<Result<Detection, FormatError>>;
   open(context: FormatContext): Promise<Result<GuardedCatalogLayout, FormatError>>;
-  parse(text: string): Result<ParsedCatalog, FormatError>;
+  parse(text: string, role: CatalogFileRole): Result<ParsedCatalog, FormatError>;
   serialize(edit: CatalogEdit): Result<string, FormatError>;
-  scanPlaceholders(text: string): Result<readonly PlaceholderToken[], FormatError>;
+  scanPlaceholders(
+    text: string,
+    message?: Message,
+  ): Result<readonly PlaceholderToken[], FormatError>;
+  /** The plural forms of `locale` (none when the plugin doesn't keep them apart). */
+  pluralForms(
+    locale: LocaleId,
+    target: ParsedCatalog | null,
+  ): Result<readonly PluralForm[], FormatError>;
 }
 
 export type RegisteredFormat = RegisteredDocumentFormat | RegisteredCatalogFormat;
@@ -159,9 +169,13 @@ function guardCatalogFormat(
         targetPathFor: (catalog, locale) => guard(id, () => inner.targetPathFor(catalog, locale)),
       });
     },
-    parse: (text) => guard(id, () => plugin.parse(text)),
+    parse: (text, role) => guard(id, () => plugin.parse(text, role)),
     serialize: (edit) => guard(id, () => plugin.serialize(edit)),
-    scanPlaceholders: (text) => guard(id, () => ok(plugin.placeholders.scan(text))),
+    scanPlaceholders: (text, message) =>
+      guard(id, () => ok(plugin.placeholders.scan(text, message))),
+    // Without the plugin's, messages have no plural forms.
+    pluralForms: (locale, target) =>
+      guard(id, () => ok(plugin.pluralForms?.(locale, target) ?? [])),
   };
 }
 

@@ -7,7 +7,7 @@ import { documentKey, type SourceDocument } from '#domains/document';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { projectPath, type ProjectPath } from '#kernel/project-path';
 import { err, ok } from '#kernel/result';
-import { catalogKey, messageKey, type PlaceholderToken } from '#domains/catalog';
+import { catalogKey, messageKey, type Message, type PlaceholderToken } from '#domains/catalog';
 import type { Detection } from '../domain/detection.ts';
 import type {
   CatalogFormat,
@@ -20,8 +20,10 @@ import { InMemoryProjectFiles } from '../adapters/in-memory-project-files.ts';
 import { fakeCatalogPlugin } from './fake-catalog-plugin.ts';
 import {
   fixtureChecksFor,
+  messageProblems,
   placeholderProblems,
   pluginChecks,
+  pluralFormProblems,
   type FixtureUnderTest,
   type PluginContractOptions,
 } from './plugin-contract.ts';
@@ -59,7 +61,7 @@ const manifest = {
   id: 'format-good',
   packageName: '@paperl10n/format-good',
   kind: 'document',
-  apiVersion: 3,
+  apiVersion: 4,
   version: '1.0.0',
   displayName: 'Good',
   description: 'A well-behaved test plugin',
@@ -265,10 +267,12 @@ describe('the plugin contract kit', () => {
 
 const catalogTree = {
   'i18n/en.cat':
-    '# The source\nhello=Hello\nbye=Goodbye, $1\nitems={{PLURAL:$1|one item|$1 items}}\n',
-  // CRLF, a message missing, and no line break at the end.
-  'i18n/he.cat': '# Translators\r\nhello=שלום\r\nitems={{PLURAL:$1|פריט אחד|$1 פריטים}}',
-  'i18n/qqq.cat': 'hello=A greeting\n',
+    '# The source\n# role: source\nhello=Hello\nbye=Goodbye, $1\nitems={{PLURAL:$1|one item|$1 items}}\nfiles[]=one file|$1 files\n',
+  // CRLF, a message missing, a translation needing review first, plural forms last, and no line
+  // break at the end.
+  'i18n/he.cat':
+    '# Translators\r\n# role: target\r\n?(Hi)hello=שלום\r\nitems={{PLURAL:$1|פריט אחד|$1 פריטים}}\r\nfiles[]=קובץ אחד|$1 קבצים',
+  'i18n/qqq.cat': '# role: documentation\nhello=A greeting\n',
   'api/en.cat': 'first=First\nsecond=<b>Second</b> [[Page|link]]\n',
 };
 const catalogKit = {
@@ -286,7 +290,7 @@ const catalogKit = {
 };
 
 const goodCatalog = (() => {
-  const format = fakeCatalogPlugin('catalog-good').create({ apiVersion: 3 });
+  const format = fakeCatalogPlugin('catalog-good').create({ apiVersion: 4 });
   if (format.kind !== 'catalog') throw new Error('test setup');
   return {
     ...format,
@@ -333,6 +337,64 @@ describe('the plugin contract kit, for catalog plugins', () => {
     expect(await runCatalog(catalogWith({}))).toEqual([]);
   });
 
+  it.each<[string, PluginModule]>([
+    [
+      'says `needsReview: false` of messages that need no review',
+      catalogWith({
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
+          return parsed.ok
+            ? ok({
+                ...parsed.value,
+                messages: parsed.value.messages.map((m) => ({ needsReview: false, ...m })),
+              })
+            : parsed;
+        },
+      }),
+    ],
+    [
+      'gives a source plural more forms than a translation has (a template)',
+      catalogWith({
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
+          return parsed.ok && role === 'source'
+            ? ok({
+                ...parsed.value,
+                messages: parsed.value.messages.map((m) =>
+                  m.forms === undefined ? m : { ...m, forms: [...m.forms, 'many'] },
+                ),
+              })
+            : parsed;
+        },
+      }),
+    ],
+    [
+      'keeps an emptied entry when a message is removed (gettext)',
+      catalogWith({
+        serialize: (edit) =>
+          goodCatalog.serialize({
+            ...edit,
+            changes: edit.changes.map((c) =>
+              c.kind === 'remove' && edit.target?.messages.some((m) => m.key === c.key)
+                ? { kind: 'set' as const, key: c.key, text: '' }
+                : c,
+            ),
+          }),
+      }),
+    ],
+    [
+      'refuses to change a source file',
+      catalogWith({
+        serialize: (edit) =>
+          edit.target?.text === edit.source.text && edit.changes.length > 0
+            ? err({ code: 'formats.unsupported-project', reason: 'a source' })
+            : goodCatalog.serialize(edit),
+      }),
+    ],
+  ])('passes a catalog plugin that %s', async (_description, plugin) => {
+    expect(await runCatalog(plugin)).toEqual([]);
+  });
+
   const listing =
     'lists catalogs in a stable order, each key once, in the source locale, with their files';
   const locales = "lists the project's catalog locales once each, the source locale included";
@@ -346,6 +408,19 @@ describe('the plugin contract kit, for catalog plugins', () => {
   const scanning =
     'scans every message into tokens in order, inside the text, nested or apart, the same every time';
   const malformed = 'reads malformed text as formats.invalid-catalog, never a crash';
+  const shapes =
+    "reads each message's forms and marks as the contract shapes them, as many forms as its locale has";
+  const pluralForms =
+    'describes each plural form by whole numbers, none in two forms, the same every time';
+  /** The good plugin's serialize, with each written line passed through `map`. */
+  const rewriting = (map: (line: string) => string) =>
+    catalogWith({
+      serialize: (edit) => {
+        const written = goodCatalog.serialize(edit);
+        return written.ok ? ok(written.value.split('\n').map(map).join('\n')) : written;
+      },
+    });
+  let answers = 0;
 
   let flips = 0;
   const he = locale('he');
@@ -433,8 +508,8 @@ describe('the plugin contract kit, for catalog plugins', () => {
       roundTrip,
       'duplicate keys parsed',
       catalogWith({
-        parse: (text) => {
-          const parsed = goodCatalog.parse(text);
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
           return parsed.ok
             ? ok({
                 ...parsed.value,
@@ -636,8 +711,8 @@ describe('the plugin contract kit, for catalog plugins', () => {
       malformed,
       'a parse that throws',
       catalogWith({
-        parse: (text) => {
-          const parsed = goodCatalog.parse(text);
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
           if (!parsed.ok) throw new Error('boom');
           return parsed;
         },
@@ -647,14 +722,275 @@ describe('the plugin contract kit, for catalog plugins', () => {
       malformed,
       'another error code',
       catalogWith({
-        parse: (text) => {
-          const parsed = goodCatalog.parse(text);
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
           return parsed.ok ? parsed : err({ code: 'formats.unsupported-project', reason: 'bad' });
+        },
+      }),
+    ],
+    [
+      shapes,
+      'a first form that is not the text',
+      catalogWith({
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
+          return parsed.ok
+            ? ok({
+                ...parsed.value,
+                messages: parsed.value.messages.map((m) =>
+                  m.forms === undefined ? m : { ...m, text: `${m.text}!` },
+                ),
+              })
+            : parsed;
+        },
+      }),
+    ],
+    [
+      shapes,
+      'empty forms',
+      catalogWith({
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
+          return parsed.ok
+            ? ok({
+                ...parsed.value,
+                messages: parsed.value.messages.map((m) =>
+                  m.forms === undefined ? m : { ...m, forms: [] },
+                ),
+              })
+            : parsed;
+        },
+      }),
+    ],
+    [
+      shapes,
+      'more plural forms for the locale than its messages have',
+      catalogWith({ pluralForms: () => [{ samples: [1] }, { samples: [2] }, { samples: [0] }] }),
+    ],
+    [
+      pluralForms,
+      'a number in two forms',
+      catalogWith({ pluralForms: () => [{ samples: [1] }, { samples: [1, 2] }] }),
+    ],
+    [
+      pluralForms,
+      'a form without numbers',
+      catalogWith({ pluralForms: () => [{ samples: [1] }, { samples: [] }] }),
+    ],
+    [
+      pluralForms,
+      'a number that is not whole',
+      catalogWith({ pluralForms: () => [{ samples: [1.5] }] }),
+    ],
+    [
+      pluralForms,
+      'bad forms for a new file only',
+      catalogWith({
+        pluralForms: (l, target) =>
+          target === null
+            ? [{ samples: [1] }, { samples: [1] }]
+            : (goodCatalog.pluralForms?.(l, target) ?? []),
+      }),
+    ],
+    [
+      pluralForms,
+      'bad forms for an existing file only',
+      catalogWith({
+        pluralForms: (l, target) =>
+          target !== null
+            ? [{ samples: [1] }, { samples: [1] }]
+            : (goodCatalog.pluralForms?.(l, target) ?? []),
+      }),
+    ],
+    [
+      pluralForms,
+      'answers that change',
+      catalogWith({
+        pluralForms: () => (answers++ % 2 ? [{ samples: [1] }] : [{ samples: [2] }]),
+      }),
+    ],
+    [
+      pluralForms,
+      'plural forms that crash',
+      catalogWith({
+        pluralForms: () => {
+          throw new Error('boom');
+        },
+      }),
+    ],
+    [
+      editing,
+      'the review mark kept when a message is set',
+      rewriting((line) => (line.startsWith('hello=') ? `?${line}` : line)),
+    ],
+    [
+      editing,
+      'the source it was made for kept when a message is set',
+      catalogWith({
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
+          return parsed.ok
+            ? ok({
+                ...parsed.value,
+                messages: parsed.value.messages.map((m) =>
+                  m.key === 'hello' ? { ...m, previousSource: 'Hi' } : m,
+                ),
+              })
+            : parsed;
+        },
+      }),
+    ],
+    [
+      editing,
+      'a message needing review left as is when set to its own text',
+      catalogWith({
+        serialize: (edit) =>
+          goodCatalog.serialize({
+            ...edit,
+            changes: edit.changes.filter(
+              (c) =>
+                !edit.target?.messages.some(
+                  (m) =>
+                    m.needsReview === true &&
+                    c.kind === 'set' &&
+                    m.key === c.key &&
+                    m.text === c.text,
+                ),
+            ),
+          }),
+      }),
+    ],
+    [
+      editing,
+      'another message changed when one needing review is set to its own text',
+      catalogWith({
+        serialize: (edit) => {
+          const reviewing = edit.changes.some((c) =>
+            edit.target?.messages.some(
+              (m) =>
+                m.needsReview === true && c.kind === 'set' && m.key === c.key && m.text === c.text,
+            ),
+          );
+          const items = unwrap(messageKey('items'));
+          return goodCatalog.serialize(
+            reviewing
+              ? { ...edit, changes: [...edit.changes, { kind: 'set', key: items, text: 'x' }] }
+              : edit,
+          );
+        },
+      }),
+    ],
+    [
+      editing,
+      'the other plural forms dropped when a message is set',
+      catalogWith({
+        serialize: (edit) =>
+          goodCatalog.serialize({
+            ...edit,
+            changes: edit.changes.map((c) =>
+              c.kind === 'set' && c.forms !== undefined ? { ...c, forms: [c.text, ''] } : c,
+            ),
+          }),
+      }),
+    ],
+    [
+      creating,
+      'plural forms written as one text in a new file',
+      catalogWith({
+        serialize: (edit) =>
+          goodCatalog.serialize(
+            edit.target === null
+              ? {
+                  ...edit,
+                  changes: edit.changes.map((c) =>
+                    c.kind === 'set' ? { kind: 'set' as const, key: c.key, text: c.text } : c,
+                  ),
+                }
+              : edit,
+          ),
+      }),
+    ],
+    [
+      scanning,
+      'a scanner that crashes when given the message',
+      catalogWith({
+        placeholders: {
+          scan: (text, message) => {
+            if (message !== undefined) throw new Error('boom');
+            return goodCatalog.placeholders.scan(text);
+          },
+        },
+      }),
+    ],
+    [
+      roundTrip,
+      'a parse that fails for target files',
+      catalogWith({
+        parse: (text, role) =>
+          role === 'target'
+            ? err({ code: 'formats.invalid-catalog', reason: 'no' })
+            : goodCatalog.parse(text, role),
+      }),
+    ],
+    [
+      malformed,
+      'a parse that throws for documentation only',
+      catalogWith({
+        parse: (text, role) => {
+          const parsed = goodCatalog.parse(text, role);
+          if (!parsed.ok && role === 'documentation') throw new Error('boom');
+          return parsed;
         },
       }),
     ],
   ])('fails "%s" for a plugin with %s', async (check, _broken, plugin) => {
     expect(await runCatalog(plugin)).toContain(check);
+  });
+});
+
+describe('messageProblems', () => {
+  const key = unwrap(messageKey('a'));
+  it('accepts a message with only a key and text, and one with every field', () => {
+    expect(messageProblems({ key, text: 'A' })).toEqual([]);
+    expect(
+      messageProblems({
+        key,
+        text: 'one',
+        forms: ['one', 'many'],
+        documentation: 'Docs',
+        needsReview: true,
+        previousSource: 'Old',
+        flags: ['c-format'],
+      }),
+    ).toEqual([]);
+  });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ['empty forms', { forms: [] }, 'forms is empty'],
+    ['a first form that is not the text', { forms: ['other', 'B'] }, "text isn't its first form"],
+    ['documentation that is not text', { documentation: 3 }, "documentation isn't text"],
+    ['a previous source that is not text', { previousSource: false }, "previousSource isn't text"],
+    ['a review mark that is not a boolean', { needsReview: 'yes' }, "needsReview isn't a boolean"],
+    ['a flag that is not text', { flags: ['ok', 1] }, "a flag isn't text"],
+  ])('rejects %s', (_description, fields, problem) => {
+    const message = { key, text: 'A', ...fields } as unknown as Message;
+    expect(messageProblems(message)).toEqual([`message "a": ${problem}`]);
+  });
+});
+
+describe('pluralFormProblems', () => {
+  it('accepts no forms, and forms of distinct whole numbers', () => {
+    expect(pluralFormProblems([])).toEqual([]);
+    expect(pluralFormProblems([{ samples: [1] }, { samples: [0, 2, 3] }])).toEqual([]);
+  });
+
+  it.each<[string, { samples: number[] }[]]>([
+    ['a form without numbers', [{ samples: [] }]],
+    ['a fraction', [{ samples: [1.5] }]],
+    ['a negative number', [{ samples: [-1] }]],
+    ['a number in two forms', [{ samples: [1] }, { samples: [1] }]],
+  ])('rejects %s', (_description, forms) => {
+    expect(pluralFormProblems(forms)).toHaveLength(1);
   });
 });
 

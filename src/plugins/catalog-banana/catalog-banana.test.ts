@@ -300,7 +300,7 @@ describe("catalog-banana: Paper Lion's own messages", () => {
     });
     expect(layout.locales).toEqual(['en', 'he']);
     const text = await files.readText(catalog?.path ?? PROJECT_ROOT);
-    const parsed = text.ok ? catalogBanana.parse(text.value) : undefined;
+    const parsed = text.ok ? catalogBanana.parse(text.value, 'source') : undefined;
     expect(parsed?.ok && parsed.value.messages.length).toBeGreaterThan(100);
   });
 });

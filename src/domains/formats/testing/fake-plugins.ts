@@ -14,7 +14,7 @@ export function fakeManifest(id: string): Record<string, unknown> {
     id,
     packageName: `@paperl10n/${id}`,
     kind: id.startsWith('format-') ? 'document' : 'catalog',
-    apiVersion: 3,
+    apiVersion: 4,
     version: '0.0.0',
     displayName: `Fake ${id}`,
     description: 'A fake plugin for tests',

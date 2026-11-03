@@ -36,15 +36,15 @@ export function createCheckMessage(deps: { readonly sessions: ProjectSessions })
     if (!found.ok) return found;
     const { catalog, format } = found.value;
 
-    const source = await readCatalogFile(project, format, catalog.path);
+    const source = await readCatalogFile(project, format, catalog.path, 'source');
     if (!source.ok) return source;
     const message = source.value?.find((candidate) => candidate.key === key);
     if (message === undefined) {
       return err({ code: 'workspace.unknown-message', catalog: catalogKey, key });
     }
-    const tokens = scanText(format, text);
+    const tokens = scanText(format, text, message);
     const warnings = checkMessage(
-      { text: message.text, tokens: scanText(format, message.text) },
+      { text: message.text, tokens: scanText(format, message.text, message) },
       { text, tokens },
     );
     return ok({ tokens, warnings });

@@ -41,10 +41,12 @@ export type {
 } from './application/ports/document-format.ts';
 export type {
   CatalogEdit,
+  CatalogFileRole,
   CatalogFormat,
   CatalogLayout,
   MessageChange,
   ParsedCatalog,
+  PluralForm,
   SourceCatalog,
 } from './application/ports/catalog-format.ts';
 export type { FormatPlugin, PluginHost, PluginModule } from './application/ports/plugin-module.ts';

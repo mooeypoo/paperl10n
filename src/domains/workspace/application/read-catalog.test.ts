@@ -35,7 +35,7 @@ const tree: FileTree = {
 async function open(files: FileTree, plugins?: PluginModule[]) {
   const registry = createFormatRegistry(
     plugins ?? [fakeCatalogPlugin('catalog-fake', detects('likely'))],
-    { apiVersion: 3 },
+    { apiVersion: 4 },
   );
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
@@ -219,7 +219,7 @@ describe('readCatalog', () => {
     );
     expect(await listing()).toEqual({ ok: false, error: { ...failure, formatId: 'catalog-fake' } });
 
-    const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 3 });
+    const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
     if (plugin.kind !== 'catalog') throw new Error('test setup');
     const paths = await open(
       tree,
@@ -233,6 +233,35 @@ describe('readCatalog', () => {
       }),
     );
     expect(await paths()).toEqual({ ok: false, error: { ...failure, formatId: 'catalog-fake' } });
+  });
+
+  it('reads each file as its role, and scans each text as a text of its source message', async () => {
+    const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
+    if (plugin.kind !== 'catalog') throw new Error('test setup');
+    const roles: string[] = [];
+    const scanned: [string, string | undefined][] = [];
+    const read = await open(
+      tree,
+      withPlugin({
+        parse: (text, role) => {
+          roles.push(role);
+          return plugin.parse(text, role);
+        },
+        placeholders: {
+          scan: (text, message) => {
+            scanned.push([text, message?.text]);
+            return plugin.placeholders.scan(text, message);
+          },
+        },
+      }),
+    );
+    roles.length = 0;
+    expect((await read()).ok).toBe(true);
+    expect(roles).toEqual(['source', 'target', 'documentation']);
+    // A translation by its source message; one the source doesn't have, by itself.
+    expect(scanned).toContainEqual(['שלום $1', 'Hello $1']);
+    expect(scanned).toContainEqual(['Hello $1', 'Hello $1']);
+    expect(scanned).toContainEqual(['ישן $1', 'ישן $1']);
   });
 
   it('reports an unknown project and a project without a target language', async () => {

@@ -27,7 +27,7 @@ const writeFails: ProjectWriter['writeText'] = (path) =>
 async function opened(configText = '{\n  "sourceLocale": "en",\n  "targetLocale": "he"\n}\n') {
   const registry = createFormatRegistry(
     [fakeDocumentPlugin('format-fake', detects('likely'), ['he', 'qaa-x-folder'])],
-    { apiVersion: 3 },
+    { apiVersion: 4 },
   );
   if (!registry.ok) throw new Error('test setup: registry');
   const sessions = new InMemoryProjectSessions(randomUUID);

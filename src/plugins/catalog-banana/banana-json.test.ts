@@ -1,10 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { messageKey, type MessageChange, type MessageKey, type ParsedCatalog } from '#plugin-api';
+import {
+  localeId,
+  messageKey,
+  type LocaleId,
+  type MessageChange,
+  type MessageKey,
+  type ParsedCatalog,
+} from '#plugin-api';
 import { parseBananaJson, serializeBananaJson } from './banana-json.ts';
 
 function key(raw: string): MessageKey {
   const parsed = messageKey(raw);
+  if (!parsed.ok) throw new Error(`test setup: ${raw}`);
+  return parsed.value;
+}
+
+function unwrapLocale(raw: string): LocaleId {
+  const parsed = localeId(raw);
   if (!parsed.ok) throw new Error(`test setup: ${raw}`);
   return parsed.value;
 }
@@ -20,6 +33,7 @@ const remove = (k: string): MessageChange => ({ kind: 'remove', key: key(k) });
 
 function write(target: string | null, changes: MessageChange[], source = target ?? ''): string {
   const result = serializeBananaJson({
+    locale: unwrapLocale('he'),
     source: parsed(source),
     target: target === null ? null : parsed(target),
     changes,
@@ -205,6 +219,7 @@ describe('serializeBananaJson: a new file', () => {
 describe('serializeBananaJson: malformed input', () => {
   it('reports a malformed target as formats.invalid-catalog', () => {
     const result = serializeBananaJson({
+      locale: unwrapLocale('he'),
       source: parsed(tabbed),
       target: { text: '{', messages: [] },
       changes: [],

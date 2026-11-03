@@ -34,7 +34,7 @@ const tree: FileTree = {
 async function open(files: FileTree, overrides: Partial<CatalogFormat> = {}) {
   const registry = createFormatRegistry(
     [fakeCatalogPlugin('catalog-fake', { ...detects('likely'), ...overrides })],
-    { apiVersion: 3 },
+    { apiVersion: 4 },
   );
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
@@ -119,6 +119,27 @@ describe('saveCatalog', () => {
     expect(await app.text(TARGET)).toBe('a=שלום\nc=נתראה\n');
   });
 
+  it('reads the source and target as their roles, and writes for the target locale', async () => {
+    const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
+    if (plugin.kind !== 'catalog') throw new Error('test setup');
+    const roles: string[] = [];
+    const locales: string[] = [];
+    const app = await open(tree, {
+      parse: (text, role) => {
+        roles.push(role);
+        return plugin.parse(text, role);
+      },
+      serialize: (edit) => {
+        locales.push(edit.locale);
+        return plugin.serialize(edit);
+      },
+    });
+    roles.length = 0;
+    expect((await app.save([message('b', 'ביי', null, 'Bye')])).ok).toBe(true);
+    expect(roles.slice(0, 2)).toEqual(['source', 'target']);
+    expect(locales).toEqual(['he']);
+  });
+
   it('writes nothing for text the file already has, and still records it', async () => {
     const app = await open(tree);
     // An existing translation, saved as it is: a draft becomes up to date.
@@ -172,7 +193,7 @@ describe('saveCatalog', () => {
   it('creates the translation’s folder when its layout puts it in a new one', async () => {
     const app = await open(untranslated, {
       open: async (context) => {
-        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 3 });
+        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
         if (plugin.kind !== 'catalog') throw new Error('test setup');
         const layout = await plugin.open(context);
         const elsewhere = 'he/i18n/messages.cat' as ProjectPath;
@@ -324,7 +345,7 @@ describe('saveCatalog', () => {
   it('reports a source gone since the catalog was listed', async () => {
     const app = await open(tree, {
       open: async (context) => {
-        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 3 });
+        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
         if (plugin.kind !== 'catalog') throw new Error('test setup');
         const layout = await plugin.open(context);
         if (!layout.ok) return layout;
@@ -356,7 +377,7 @@ describe('saveCatalog', () => {
     const failure = { code: 'formats.unsupported-project' as const, reason: 'boom' };
     const paths = await open(tree, {
       open: async (context) => {
-        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 3 });
+        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
         if (plugin.kind !== 'catalog') throw new Error('test setup');
         const layout = await plugin.open(context);
         return layout.ok
@@ -391,13 +412,18 @@ describe('saveCatalog', () => {
 
 describe('keepMessagesUpToDate', () => {
   it('records an outdated message as up to date with its source now, leaving the file', async () => {
-    const app = await open(tree);
+    // Each file says its role: read as another, it's malformed.
+    const app = await open({
+      ...tree,
+      'i18n/en.cat': `# role: source\n${String(tree['i18n/en.cat'])}`,
+      [TARGET]: `# role: target\n${String(tree[TARGET])}`,
+    });
     expect(await app.keep([{ key: 'c', source: 'See you' }])).toEqual({
       ok: true,
       value: [{ key: 'c', status: 'translated' }],
     });
     expect(await app.record()).toEqual({ c: messageFingerprint('See you') });
-    expect(await app.text(TARGET)).toBe(tree[TARGET]);
+    expect(await app.text(TARGET)).toBe(`# role: target\n${String(tree[TARGET])}`);
   });
 
   it('keeps nothing for a message without a translation: it stays missing, with no record', async () => {
@@ -480,7 +506,7 @@ describe('keepMessagesUpToDate', () => {
     const failure = { code: 'formats.unsupported-project' as const, reason: 'boom' };
     const app = await open(tree, {
       open: async (context) => {
-        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 3 });
+        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
         if (plugin.kind !== 'catalog') throw new Error('test setup');
         const layout = await plugin.open(context);
         return layout.ok

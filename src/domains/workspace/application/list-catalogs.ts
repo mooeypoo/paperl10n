@@ -98,12 +98,12 @@ export function createListCatalogs(deps: {
           targetExists: await project.files.exists(targetPath.value),
           hasDraft: withDrafts.has(catalog.key),
         };
-        const source = await readCatalogFile(project, format, catalog.path);
+        const source = await readCatalogFile(project, format, catalog.path, 'source');
         if (!source.ok) {
           entries.push({ ...entry, progress: null, problem: source.error });
           continue;
         }
-        const translation = await readCatalogFile(project, format, targetPath.value);
+        const translation = await readCatalogFile(project, format, targetPath.value, 'target');
         if (!translation.ok) {
           entries.push({ ...entry, progress: null, problem: translation.error });
           continue;

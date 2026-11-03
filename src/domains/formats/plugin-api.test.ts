@@ -69,7 +69,7 @@ describe('#plugin-api', () => {
     };
     const module: PluginModule = { manifest: {}, create: () => format };
 
-    expectTypeOf(module.create({ apiVersion: 3 })).toEqualTypeOf<FormatPlugin>();
+    expectTypeOf(module.create({ apiVersion: 4 })).toEqualTypeOf<FormatPlugin>();
     expectTypeOf(document.path).toEqualTypeOf<ProjectPath>();
   });
 
@@ -115,7 +115,7 @@ describe('#plugin-api', () => {
     };
     const module: PluginModule = { manifest: {}, create: () => format };
 
-    expectTypeOf(module.create({ apiVersion: 3 })).toEqualTypeOf<FormatPlugin>();
+    expectTypeOf(module.create({ apiVersion: 4 })).toEqualTypeOf<FormatPlugin>();
   });
 });
 

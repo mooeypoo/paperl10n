@@ -91,14 +91,14 @@ export function createReadCatalog(deps: {
     const targetPath = layout.targetPathFor(catalog, target.id);
     if (!targetPath.ok) return targetPath;
 
-    const source = await readCatalogFile(project, format, catalog.path);
+    const source = await readCatalogFile(project, format, catalog.path, 'source');
     if (!source.ok) return source;
-    const translation = await readCatalogFile(project, format, targetPath.value);
+    const translation = await readCatalogFile(project, format, targetPath.value, 'target');
     if (!translation.ok) return translation;
     let documentation: readonly Message[] | null = null;
     let documentationProblem: CatalogReadError | null = null;
     if (catalog.documentation !== undefined) {
-      const read = await readCatalogFile(project, format, catalog.documentation);
+      const read = await readCatalogFile(project, format, catalog.documentation, 'documentation');
       if (read.ok) documentation = read.value;
       else documentationProblem = read.error;
     }
@@ -122,6 +122,8 @@ export function createReadCatalog(deps: {
     const status = await readStatusFile(project, target.id);
     const record = (status.ok ? status.value.file : emptyStatusFile).catalogs.get(catalog.key);
     const paired = pairCatalog(source.value ?? [], translation.value, documentation);
+    // Each text is scanned as a text of its source message (its flags may say what to look for).
+    const sourceMessages = new Map((source.value ?? []).map((message) => [message.key, message]));
     return ok({
       key: catalog.key,
       sourcePath: catalog.path,
@@ -134,14 +136,16 @@ export function createReadCatalog(deps: {
         documentation: message.documentation,
         translation: message.translation,
         status: messageStatus(message.source, message.translation, record?.get(message.key)),
-        sourceTokens: scanText(format, message.source),
+        sourceTokens: scanText(format, message.source, sourceMessages.get(message.key)),
         translationTokens:
-          message.translation === null ? [] : scanText(format, message.translation),
+          message.translation === null
+            ? []
+            : scanText(format, message.translation, sourceMessages.get(message.key)),
       })),
       notInSource: paired.notInSource.map((message) => ({
         key: message.key,
         text: message.text,
-        tokens: scanText(format, message.text),
+        tokens: scanText(format, message.text, message),
       })),
       documentationProblem,
       draft,

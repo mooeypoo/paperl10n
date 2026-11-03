@@ -23,7 +23,7 @@ const subject: FixtureUnderTest = {
 
 describe('fakeDocumentPlugin', () => {
   it('registers', () => {
-    expect(createFormatRegistry([fakeDocumentPlugin('format-fake')], { apiVersion: 3 }).ok).toBe(
+    expect(createFormatRegistry([fakeDocumentPlugin('format-fake')], { apiVersion: 4 }).ok).toBe(
       true,
     );
   });
@@ -38,7 +38,7 @@ describe('fakeDocumentPlugin', () => {
   it('detects with the requested confidence', async () => {
     const files = new InMemoryProjectFiles(tree);
     const module = fakeDocumentPlugin('format-fake', detects('likely'));
-    const format = module.create({ apiVersion: 3 });
+    const format = module.create({ apiVersion: 4 });
     expect(await format.detect(files)).toEqual({
       matches: true,
       confidence: 'likely',
@@ -47,7 +47,7 @@ describe('fakeDocumentPlugin', () => {
   });
 
   it('reports an unlistable source folder', async () => {
-    const format = fakeDocumentPlugin('format-fake').create({ apiVersion: 3 });
+    const format = fakeDocumentPlugin('format-fake').create({ apiVersion: 4 });
     if (format.kind !== 'document') throw new Error('test setup');
     const en = localeId('en');
     if (!en.ok) throw new Error('test setup');

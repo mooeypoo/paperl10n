@@ -39,7 +39,7 @@ const hello = edit('a', 'שלום רב', 'שלום', 'Hello');
 
 async function open(files: FileTree = tree, catalogDrafts: DraftStore = new InMemoryDraftStore()) {
   const registry = createFormatRegistry([fakeCatalogPlugin('catalog-fake', detects('likely'))], {
-    apiVersion: 3,
+    apiVersion: 4,
   });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);

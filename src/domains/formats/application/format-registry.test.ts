@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { catalogKey } from '#domains/catalog';
+import { catalogKey, messageKey } from '#domains/catalog';
 import { documentKey, type SourceDocument } from '#domains/document';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import { PROJECT_ROOT, projectPath, type ProjectPath } from '#kernel/project-path';
@@ -13,7 +13,7 @@ import type { FormatContext } from './ports/format-context.ts';
 import type { PluginHost, PluginModule } from './ports/plugin-module.ts';
 import { createFormatRegistry, type FormatRegistry } from './format-registry.ts';
 
-const host: PluginHost = { apiVersion: 3 };
+const host: PluginHost = { apiVersion: 4 };
 
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: unknown }): T {
   if (!result.ok) throw new Error(`test setup: ${JSON.stringify(result.error)}`);
@@ -31,7 +31,7 @@ function manifest(
     id,
     packageName: `@paperl10n/${id}`,
     kind,
-    apiVersion: 3,
+    apiVersion: 4,
     version: '0.1.0',
     displayName: id,
     description: 'test plugin',
@@ -378,7 +378,7 @@ describe('guarded document formats', () => {
 });
 
 describe('guarded catalog formats', () => {
-  const edit = { source: parsed, target: null, changes: [] };
+  const edit = { locale: locale('he'), source: parsed, target: null, changes: [] };
   function catalogFormat(overrides: Partial<CatalogFormat>) {
     const format = registry([catalogModule('catalog-a', overrides)]).find('catalog-a');
     if (format?.kind !== 'catalog') throw new Error('test setup');
@@ -395,12 +395,41 @@ describe('guarded catalog formats', () => {
       ok: true,
       value: 'i18n/he.json',
     });
-    expect(format.parse('{}')).toEqual({ ok: true, value: parsed });
+    expect(format.parse('{}', 'target')).toEqual({ ok: true, value: parsed });
     expect(format.serialize(edit)).toEqual({ ok: true, value: '{}' });
     expect(format.scanPlaceholders('$1')).toEqual({
       ok: true,
       value: [{ kind: 'parameter', text: '$1', start: 0, end: 2 }],
     });
+    // Without its own plural forms, a plugin's messages have none.
+    expect(format.pluralForms(locale('he'), null)).toEqual({ ok: true, value: [] });
+  });
+
+  it('passes the role, the message, and plural forms through', () => {
+    const roles: string[] = [];
+    const scanned: unknown[] = [];
+    const forms = [{ samples: [1] }, { samples: [0, 2] }];
+    const format = catalogFormat({
+      parse: (text, role) => {
+        roles.push(role);
+        return ok(parsed);
+      },
+      placeholders: {
+        scan: (_text, message) => {
+          scanned.push(message);
+          return [];
+        },
+      },
+      pluralForms: (forLocale, target) => (forLocale === 'he' && target === parsed ? forms : []),
+    });
+    format.parse('{}', 'source');
+    format.parse('{}', 'documentation');
+    expect(roles).toEqual(['source', 'documentation']);
+    const message = { key: unwrap(messageKey('a')), text: 'A', flags: ['c-format'] };
+    format.scanPlaceholders('A', message);
+    format.scanPlaceholders('B');
+    expect(scanned).toEqual([message, undefined]);
+    expect(format.pluralForms(locale('he'), parsed)).toEqual({ ok: true, value: forms });
   });
 
   it('turns crashes in every call into formats.plugin-failed', async () => {
@@ -408,10 +437,16 @@ describe('guarded catalog formats', () => {
       ok: false,
       error: { code: 'formats.plugin-failed', formatId: 'catalog-a', reason: 'boom' },
     };
-    const format = catalogFormat({ parse: boom, serialize: boom, placeholders: { scan: boom } });
-    expect(format.parse('{}')).toEqual(failed);
+    const format = catalogFormat({
+      parse: boom,
+      serialize: boom,
+      placeholders: { scan: boom },
+      pluralForms: boom,
+    });
+    expect(format.parse('{}', 'target')).toEqual(failed);
     expect(format.serialize(edit)).toEqual(failed);
     expect(format.scanPlaceholders('$1')).toEqual(failed);
+    expect(format.pluralForms(locale('he'), null)).toEqual(failed);
 
     const crashingLayout = catalogFormat({
       open: () =>
@@ -433,7 +468,7 @@ describe('guarded catalog formats', () => {
     const format = catalogFormat({
       parse: () => err({ code: 'formats.invalid-catalog', reason: 'not JSON' }),
     });
-    expect(format.parse('x')).toEqual({
+    expect(format.parse('x', 'target')).toEqual({
       ok: false,
       error: { code: 'formats.invalid-catalog', reason: 'not JSON', formatId: 'catalog-a' },
     });

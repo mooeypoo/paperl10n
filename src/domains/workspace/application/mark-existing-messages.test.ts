@@ -29,8 +29,9 @@ const tree: FileTree = {
   'en/index.md': 'Intro\n',
   'he/index.md': 'מבוא\n',
   // `b` is empty and `c` missing: nothing to record. `old` isn't in the source.
-  'i18n/en.cat': 'a=Hello\nb=Bye\nc=New\n',
-  'i18n/he.cat': 'a=שלום\nb=\nold=ישן\n',
+  // Each file says its role: read as another, it's malformed.
+  'i18n/en.cat': '# role: source\na=Hello\nb=Bye\nc=New\n',
+  'i18n/he.cat': '# role: target\na=שלום\nb=\nold=ישן\n',
   'api/en.cat': 'x=X\n',
   'api/he.cat': 'x=איקס\n',
   // No translation at all.
@@ -49,7 +50,7 @@ async function open(
     options.pages === false
       ? [catalogs]
       : [fakeDocumentPlugin('format-fake', detects('likely')), catalogs];
-  const registry = createFormatRegistry(plugins, { apiVersion: 3 });
+  const registry = createFormatRegistry(plugins, { apiVersion: 4 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opener = new FakeProjectFilesOpener({ '/p': files });
@@ -158,7 +159,7 @@ describe('markExistingUpToDate, for catalogs', () => {
     const failure = { code: 'formats.unsupported-project' as const, reason: 'boom' };
     const layoutWith = (changes: object): Partial<CatalogFormat> => ({
       open: async (context) => {
-        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 3 });
+        const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
         if (plugin.kind !== 'catalog') throw new Error('test setup');
         const layout = await plugin.open(context);
         return layout.ok ? { ok: true, value: { ...layout.value, ...changes } } : layout;

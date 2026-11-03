@@ -19,14 +19,38 @@ export interface CatalogFormat {
   detect(files: ProjectFiles): Promise<Detection>;
   /** Loads the system's own config once and returns a layout bound to this project. */
   open(context: FormatContext): Promise<Result<CatalogLayout, PluginError>>;
-  /** A catalog file's text → its messages, in file order, with unique keys. Malformed text is a
-   * `formats.invalid-catalog` error. The same for a locale's messages and for documentation. */
-  parse(text: string): Result<ParsedCatalog, PluginError>;
+  /**
+   * A catalog file's text → its messages, in file order, with unique keys. Malformed text is a
+   * `formats.invalid-catalog` error. `role` says which file it is: a source's message text is the
+   * source text (gettext's `msgid` in a template, whose `msgstr` is empty), a target's is the
+   * translation, and documentation's is what it says about each message.
+   */
+  parse(text: string, role: CatalogFileRole): Result<ParsedCatalog, PluginError>;
   /** Writes `edit.changes` into the target's file as patches: bytes outside what changed stay
    * identical, and no changes return the text as read. */
   serialize(edit: CatalogEdit): Result<string, PluginError>;
-  /** Tokens that must survive translation: `$1`, `{{PLURAL:…}}`, `%s`, `{name}`. */
-  readonly placeholders: { scan(text: string): readonly PlaceholderToken[] };
+  /**
+   * Tokens that must survive translation: `$1`, `{{PLURAL:…}}`, `%s`, `{name}`. `message` is the
+   * message the text belongs to, as the source has it, when there is one: its `flags` may say
+   * what its placeholders look like (gettext's `c-format`, `python-format`).
+   */
+  readonly placeholders: { scan(text: string, message?: Message): readonly PlaceholderToken[] };
+  /**
+   * Optional: the plural forms a message in `locale` has, in order, when the system keeps them
+   * apart (gettext). `target` is that locale's file as read (its header may say), or `null` when
+   * it doesn't exist yet. Without it, messages have no forms.
+   */
+  pluralForms?(locale: LocaleId, target: ParsedCatalog | null): readonly PluralForm[];
+}
+
+/** Which file of a catalog a text is. */
+export type CatalogFileRole = 'source' | 'target' | 'documentation';
+
+/** One plural form of a language, as the system numbers them. */
+export interface PluralForm {
+  /** The first few whole numbers that take this form, in order (`[1]`, `[2]`, `[0, 3, 4, 5]`),
+   * to label it. Never empty, and no number in two forms. */
+  readonly samples: readonly number[];
 }
 
 /**
@@ -66,16 +90,28 @@ export interface ParsedCatalog {
 
 /** What to write into one locale's file of a catalog. */
 export interface CatalogEdit {
+  /** The locale the file is for (a new file may say so, as gettext's header does). */
+  readonly locale: LocaleId;
   /** The source locale's file. New messages go after the nearest message before them in the
    * source that the target has (first, when none does), and a new file is shaped like it. */
   readonly source: ParsedCatalog;
   /** The target's file as read, or `null` when it doesn't exist yet. */
   readonly target: ParsedCatalog | null;
-  /** Applied in order. Setting a message to its current text, or removing one the target doesn't
-   * have, changes nothing. */
+  /**
+   * Applied in order. Setting a message to its current text, or removing one the target doesn't
+   * have, changes nothing, except that setting a message that needs review always clears that
+   * mark (and its `previousSource`): the translator has seen it.
+   */
   readonly changes: readonly MessageChange[];
 }
 
 export type MessageChange =
-  | { readonly kind: 'set'; readonly key: MessageKey; readonly text: string }
+  | {
+      readonly kind: 'set';
+      readonly key: MessageKey;
+      /** The text; for a message with plural forms, the first form. */
+      readonly text: string;
+      /** Every plural form, for a message that has them (`text` is the first). */
+      readonly forms?: readonly string[];
+    }
   | { readonly kind: 'remove'; readonly key: MessageKey };

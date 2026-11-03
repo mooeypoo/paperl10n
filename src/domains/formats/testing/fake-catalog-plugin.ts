@@ -12,9 +12,11 @@ import { err, ok, type Result } from '#kernel/result';
 import type { Detection } from '../domain/detection.ts';
 import type {
   CatalogEdit,
+  CatalogFileRole,
   CatalogFormat,
   CatalogLayout,
   ParsedCatalog,
+  PluralForm,
   SourceCatalog,
 } from '../application/ports/catalog-format.ts';
 import type { PluginError } from '../application/ports/plugin-error.ts';
@@ -23,8 +25,13 @@ import { fakeManifest } from './fake-plugins.ts';
 
 // A catalog plugin for tests, with a deliberately simple file format so that it's obviously
 // right: one `key=value` line per message, in `<folder>/<locale>.cat`, with `qqq.cat` as the
-// documentation. Values escape `\` and line breaks (`\\`, `\n`, `\r`). Lines starting with `#`,
-// and blank lines, aren't messages and are kept as they are.
+// documentation. Values escape `\`, `|`, and line breaks (`\\`, `\|`, `\n`, `\r`). A message
+// with plural forms is `key[]=one|other` (every locale has those two forms), and one whose
+// translation needs review starts with `?` (`?key=value`), maybe with the source it was made for
+// in parentheses (`?(Hi)key=value`); setting it drops both. A file may say which file of its
+// catalog it is (`# role: source`), and then reads as malformed in another role, so tests can
+// see that each file is read as what it is. Lines starting with `#`, and blank lines, aren't
+// messages and are kept as they are.
 
 const EXTENSION = '.cat';
 const DOCUMENTATION = 'qqq';
@@ -37,14 +44,43 @@ interface Line {
   readonly message?: Message;
 }
 
-function escapeValue(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+/** The plural forms of every locale here: "one" and "other". */
+const PLURAL_FORMS: readonly PluralForm[] = [{ samples: [1] }, { samples: [0, 2, 3, 4, 5] }];
+
+/** A value as written: `\\` and line breaks escaped, and `|` too in a plural form. */
+function escapeValue(text: string, form: boolean): string {
+  const escaped = text.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+  return form ? escaped.replace(/\|/g, '\\|') : escaped;
 }
 
-function unescapeValue(raw: string): string {
-  return raw.replace(/\\([\\nr])/g, (_all, c: string) =>
-    c === 'n' ? '\n' : c === 'r' ? '\r' : '\\',
-  );
+/** A value's texts: the value, or (`forms`) each plural form, split at each unescaped `|`. */
+function unescapeValues(raw: string, forms: boolean): string[] {
+  const values: string[] = [];
+  let current = '';
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i] ?? '';
+    const next = raw[i + 1] ?? '';
+    if (
+      char === '\\' &&
+      (next === '\\' || next === 'n' || next === 'r' || (forms && next === '|'))
+    ) {
+      current += next === 'n' ? '\n' : next === 'r' ? '\r' : next;
+      i++;
+    } else if (forms && char === '|') {
+      values.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  return [...values, current];
+}
+
+/** A message's line, without its line break. */
+function contentOf(key: MessageKey, text: string, forms: readonly string[] | undefined): string {
+  return forms === undefined
+    ? `${key}=${escapeValue(text, false)}`
+    : `${key}[]=${forms.map((form) => escapeValue(form, true)).join('|')}`;
 }
 
 function splitLines(text: string): Result<Line[], PluginError> {
@@ -57,21 +93,39 @@ function splitLines(text: string): Result<Line[], PluginError> {
       lines.push({ content, lineBreak });
       continue;
     }
-    const equals = content.indexOf('=');
-    const key = messageKey(equals < 0 ? '' : content.slice(0, equals));
+    const review = /^\?(?:\(([^)]*)\))?/.exec(content);
+    const needsReview = review !== null;
+    const previousSource = review?.[1];
+    const line = content.slice(review?.[0].length ?? 0);
+    const equals = line.indexOf('=');
+    const name = equals < 0 ? '' : line.slice(0, equals);
+    const plural = name.endsWith('[]');
+    const key = messageKey(plural ? name.slice(0, -2) : name);
     if (!key.ok)
       return err({ code: 'formats.invalid-catalog', reason: `not a message: ${content}` });
     if (keys.has(key.value)) {
       return err({ code: 'formats.invalid-catalog', reason: `duplicate key: ${key.value}` });
     }
     keys.add(key.value);
-    const message = { key: key.value, text: unescapeValue(content.slice(equals + 1)) };
+    const raw = line.slice(equals + 1);
+    const forms = plural ? unescapeValues(raw, true) : undefined;
+    const message: Message = {
+      key: key.value,
+      text: (forms ?? unescapeValues(raw, false))[0] ?? '',
+      ...(forms === undefined ? {} : { forms }),
+      ...(needsReview ? { needsReview } : {}),
+      ...(previousSource === undefined ? {} : { previousSource }),
+    };
     lines.push({ content, lineBreak, message });
   }
   return ok(lines);
 }
 
-function parse(text: string): Result<ParsedCatalog, PluginError> {
+function parse(text: string, role: CatalogFileRole): Result<ParsedCatalog, PluginError> {
+  const declared = /^# role: (\S+)$/m.exec(text)?.[1];
+  if (declared !== undefined && declared !== role) {
+    return err({ code: 'formats.invalid-catalog', reason: `a ${declared} file read as ${role}` });
+  }
   const lines = splitLines(text);
   if (!lines.ok) return lines;
   return ok({ text, messages: lines.value.flatMap((line) => line.message ?? []) });
@@ -84,11 +138,13 @@ function serialize(edit: CatalogEdit): Result<string, PluginError> {
   const lineBreak = lines.find((line) => line.lineBreak !== '')?.lineBreak ?? '\n';
   const sourceOrder = edit.source.messages.map((message) => message.key);
   const indexOf = (key: MessageKey) => lines.findIndex((line) => line.message?.key === key);
-  const lineFor = (key: MessageKey, text: string): Line => ({
-    content: `${key}=${escapeValue(text)}`,
+  const lineFor = (key: MessageKey, text: string, forms?: readonly string[]): Line => ({
+    content: contentOf(key, text, forms),
     lineBreak,
-    message: { key, text },
+    message: { key, text, ...(forms === undefined ? {} : { forms }) },
   });
+  const sameForms = (a: readonly string[] | undefined, b: readonly string[] | undefined) =>
+    JSON.stringify(a) === JSON.stringify(b);
 
   for (const change of edit.changes) {
     const at = indexOf(change.key);
@@ -96,8 +152,15 @@ function serialize(edit: CatalogEdit): Result<string, PluginError> {
       if (at >= 0) lines.splice(at, 1);
     } else if (at >= 0) {
       const current = lines[at];
-      if (current !== undefined && current.message?.text !== change.text) {
-        lines[at] = { ...lineFor(change.key, change.text), lineBreak: current.lineBreak };
+      const unchanged =
+        current?.message?.text === change.text &&
+        sameForms(current.message.forms, change.forms) &&
+        current.message.needsReview !== true;
+      if (current !== undefined && !unchanged) {
+        lines[at] = {
+          ...lineFor(change.key, change.text, change.forms),
+          lineBreak: current.lineBreak,
+        };
       }
     } else {
       // After the nearest message before it in the source that this file has; else first.
@@ -109,7 +172,7 @@ function serialize(edit: CatalogEdit): Result<string, PluginError> {
       const firstMessage = lines.findIndex((line) => line.message !== undefined);
       const insertAt =
         previous !== undefined ? previous + 1 : firstMessage >= 0 ? firstMessage : lines.length;
-      const line = lineFor(change.key, change.text);
+      const line = lineFor(change.key, change.text, change.forms);
       // After a last line without a line break, the new line becomes the last one instead.
       const prior = lines[insertAt - 1];
       if (prior !== undefined && prior.lineBreak === '') {
@@ -249,6 +312,7 @@ export function fakeCatalogPlugin(
     parse,
     serialize,
     placeholders: { scan },
+    pluralForms: () => PLURAL_FORMS,
     ...overrides,
   };
   return { manifest: fakeManifest(id), create: () => format };

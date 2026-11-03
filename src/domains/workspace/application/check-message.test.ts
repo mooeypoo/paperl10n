@@ -25,7 +25,7 @@ const tree: FileTree = { ...untranslated, 'i18n/he.cat': 'a=שלום\n' };
 async function open(files: FileTree, plugins?: PluginModule[]) {
   const registry = createFormatRegistry(
     plugins ?? [fakeCatalogPlugin('catalog-fake', detects('likely'))],
-    { apiVersion: 3 },
+    { apiVersion: 4 },
   );
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
@@ -69,6 +69,35 @@ describe('checkMessage', () => {
         ],
       },
     });
+  });
+
+  it('scans both texts as texts of the source message, read as a source', async () => {
+    const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
+    if (plugin.kind !== 'catalog') throw new Error('test setup');
+    const roles: string[] = [];
+    const scanned: [string, string | undefined][] = [];
+    const check = await open(
+      tree,
+      withPlugin({
+        parse: (text, role) => {
+          roles.push(role);
+          return plugin.parse(text, role);
+        },
+        placeholders: {
+          scan: (text, message) => {
+            scanned.push([text, message?.key]);
+            return plugin.placeholders.scan(text, message);
+          },
+        },
+      }),
+    );
+    roles.length = 0;
+    expect((await check('a', 'שלום $1')).ok).toBe(true);
+    expect(roles).toEqual(['source']);
+    expect(scanned).toEqual([
+      ['שלום $1', 'a'],
+      ['Hello $1', 'a'],
+    ]);
   });
 
   it('finds nothing to warn about in a translation that keeps what the source has', async () => {

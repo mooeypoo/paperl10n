@@ -23,8 +23,9 @@ const config = (settings: object = { targetLocale: 'he' }) =>
 
 const messagesTree: FileTree = {
   'paperl10n.config.json': config(),
-  'i18n/en.cat': 'a=A\nb=B\nc=C\nd=D\n',
-  'i18n/he.cat': 'a=א\nb=ב\nc=ג\ngone=old\n',
+  // Each file says its role: read as another, it's malformed.
+  'i18n/en.cat': '# role: source\na=A\nb=B\nc=C\nd=D\n',
+  'i18n/he.cat': '# role: target\na=א\nb=ב\nc=ג\ngone=old\n',
   'api/en.cat': 'x=X\n',
 };
 
@@ -39,7 +40,7 @@ async function listWith(
 ) {
   const plugins = [fakeCatalogPlugin('catalog-fake', { ...detects('likely'), ...overrides })];
   if (withDocuments) plugins.push(fakeDocumentPlugin('format-fake', detects('likely')));
-  const registry = createFormatRegistry(plugins, { apiVersion: 3 });
+  const registry = createFormatRegistry(plugins, { apiVersion: 4 });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
   const opened = await createOpenProject({
@@ -101,7 +102,7 @@ describe('listCatalogs', () => {
   it('lists nothing for a project without catalogs', async () => {
     const tree = { 'paperl10n.config.json': config(), 'en/index.md': '# Home\n' };
     const registry = createFormatRegistry([fakeDocumentPlugin('format-fake', detects('likely'))], {
-      apiVersion: 3,
+      apiVersion: 4,
     });
     if (!registry.ok) throw new Error('test setup');
     const sessions = new InMemoryProjectSessions(randomUUID);
@@ -184,7 +185,7 @@ describe('listCatalogs', () => {
 
   it('passes a path error from the format through', async () => {
     const failure = { code: 'formats.unsupported-project' as const, reason: 'no path' };
-    const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 3 });
+    const plugin = fakeCatalogPlugin('catalog-fake').create({ apiVersion: 4 });
     if (plugin.kind !== 'catalog') throw new Error('test setup');
     const result = await listWith(messagesTree, {
       open: async (context) => {

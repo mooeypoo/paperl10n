@@ -26,7 +26,7 @@ system is a new plugin plus fixtures, with zero changes to domain code.
 | Plugin error | An expected failure a plugin returns (`formats.invalid-options`, `formats.unsupported-project`, `formats.invalid-catalog`, `formats.file-access`). |
 | Format error | A plugin error as the app sees it: with the plugin's `formatId` added, plus `formats.plugin-failed` for crashes. |
 
-## The contracts (plugin API v3)
+## The contracts (plugin API v4)
 
 ### Manifest
 
@@ -36,7 +36,7 @@ system is a new plugin plus fixtures, with zero changes to domain code.
   "id": "format-stub",                     // also the config key and the folder name
   "packageName": "@paperl10n/format-stub", // built-ins must use @paperl10n/<id>
   "kind": "document",                      // must match the id prefix
-  "apiVersion": 3,
+  "apiVersion": 4,
   "version": "0.1.0",
   "displayName": "Folder per locale (stub)",
   "description": "…",
@@ -92,16 +92,34 @@ layout always has it: without the plugin's, a link compares as written.
 
 ### `CatalogFormat`
 
-Shaped by M4 (banana-i18n); gettext (M5) fills in the same contract.
+Shaped by M4 (banana-i18n), and reshaped by M5 for gettext (API v4): a file is read as its role,
+a message may have plural forms and marks of its own, and scanning sees the message.
 
 ```ts
 interface CatalogFormat {
   readonly kind: 'catalog';
   detect(files: ProjectFiles): Promise<Detection>;
   open(context: FormatContext): Promise<Result<CatalogLayout, PluginError>>;
-  parse(text: string): Result<ParsedCatalog, PluginError>;              // malformed: formats.invalid-catalog
+  parse(text: string, role: CatalogFileRole): Result<ParsedCatalog, PluginError>; // malformed: formats.invalid-catalog
   serialize(edit: CatalogEdit): Result<string, PluginError>;            // patches; untouched bytes stay
-  readonly placeholders: { scan(text: string): readonly PlaceholderToken[] };
+  readonly placeholders: { scan(text: string, message?: Message): readonly PlaceholderToken[] };
+  pluralForms?(locale: LocaleId, target: ParsedCatalog | null): readonly PluralForm[]; // optional
+}
+
+type CatalogFileRole = 'source' | 'target' | 'documentation';
+
+interface PluralForm {
+  readonly samples: readonly number[];                                  // [1], [2], [0, 3, 4, 5]
+}
+
+interface Message {                                                     // in `catalog`
+  readonly key: MessageKey;
+  readonly text: string;                                                // the first form, with forms
+  readonly forms?: readonly string[];                                   // gettext's msgstr[n]
+  readonly documentation?: string;                                      // gettext's `#.`
+  readonly needsReview?: boolean;                                       // gettext's `fuzzy`
+  readonly previousSource?: string;                                     // gettext's `#|`
+  readonly flags?: readonly string[];                                   // gettext's `c-format`
 }
 
 interface CatalogLayout {
@@ -123,11 +141,32 @@ interface ParsedCatalog {
 }
 
 interface CatalogEdit {
+  readonly locale: LocaleId;                                            // the target's (a new file's header)
   readonly source: ParsedCatalog;                                       // orders new messages, shapes new files
   readonly target: ParsedCatalog | null;                                // null: the file doesn't exist yet
-  readonly changes: readonly MessageChange[];                           // set (key, text) or remove (key)
+  readonly changes: readonly MessageChange[];                           // set (key, text, forms?) or remove (key)
 }
 ```
+
+**A file is read as its role.** In a gettext template (`.pot`), every `msgstr` is empty, and the
+source text is the `msgid`: so `parse` is told whether it's reading the source, a target, or the
+documentation. banana-i18n reads every file the same way.
+
+**What a message may carry** beyond its key and text is optional, and the plugin fills in what
+its system keeps: plural forms kept apart (`forms`, with `text` the first; a source's are
+`msgid` and `msgid_plural`), the developers' notes kept with the message (`documentation`;
+banana-i18n keeps those in `qqq.json` instead), a mark that the translation needs review
+(`needsReview`, gettext's `fuzzy`) and the source it was made for (`previousSource`, `#|`), and
+the system's own markers the plugin reads back (`flags`). **Setting a message always clears its
+review mark** (and `previousSource`), even to the same text: the translator has seen it.
+
+**Plural forms** (optional) are the forms a message in a locale has, in the order the system
+numbers them, each described by the first few whole numbers that take it, to label it. The target
+file is passed when it exists (gettext reads its `Plural-Forms` header). A plugin without it has
+no forms; the registry's guarded view then answers none.
+
+**Scanning sees the message**, as the source has it, when there is one: gettext's flags say
+what a message's placeholders look like (`c-format`: `%s`; `python-brace-format`: `{name}`).
 
 **A catalog is a set of messages with one file per locale, identified by its key.** Where those
 files live is the system's, and only the plugin knows it:
@@ -245,11 +284,14 @@ reads what it can statically and never runs it.
 
 - **`apiVersion`** in the manifest is the plugin API version the plugin was written for. The
   manifest validator accepts only versions this app supports (`SUPPORTED_API_VERSIONS`, now
-  `[3]`), and the registry passes the host's version to `create(host)`. Version 2 (M1) replaced
+  `[4]`), and the registry passes the host's version to `create(host)`. Version 2 (M1) replaced
   `declaredLocales` with `locales: ProjectLocale[]`. Version 3 (M4) reshaped `CatalogFormat` from
   its sketch: catalogs identified by a key, the layout's `locales`, `serialize` taking a
-  `CatalogEdit`, typed placeholder tokens, `catalogKey` and `messageKey`, and the `formats.invalid-catalog` error.
-  No plugins outside this repository existed yet, so neither kept the older version.
+  `CatalogEdit`, typed placeholder tokens, `catalogKey` and `messageKey`, and the
+  `formats.invalid-catalog` error. Version 4 (M5) reshaped it for gettext: `parse` takes the
+  file's role, `scan` the message, `CatalogEdit` the locale, a `set` change plural forms, and
+  `Message` optional forms, documentation, review marks, and flags; `pluralForms` is new and
+  optional. No plugins outside this repository existed yet, so none kept the older version.
 - Adding an optional capability, or a field to `PluginHost`, is not breaking: plugins keep
   working. (M3 added `DocumentLayout.sourceLinkTarget` this way, within version 2.) Removing or changing anything a plugin can see is breaking, needs a new `apiVersion`,
   and shows up as a diff in the frozen export list (`plugin-api.test.ts`).
@@ -333,19 +375,32 @@ For a **catalog plugin**, per fixture:
   or documentation file, for the others (the listed locales and `targetLocales`);
 - **round trip:** every existing file (source, each listed locale's, documentation) parses with
   unique keys, and writing it with no changes gives back its text byte for byte;
-- **writing only what changed**, on each locale's file, for its first and last message: setting it
-  to its own text, or removing a key the file lacks, changes nothing; setting it changes only that
-  message, and setting it back restores the file byte for byte; removing it removes only it; a
-  message added back goes after the nearest message before it in the source; a new file has its
-  messages in source order;
-- **scanning** every message in the fixture, and a set of tricky texts (unbalanced syntax,
-  nesting, lone surrogates, other systems' placeholders): tokens are inside the text, match it, come
-  in order, nest or stay apart, and are the same every time;
-- malformed text parses to `formats.invalid-catalog`, never a crash.
+- **each message's shape:** forms, when present, aren't empty and start with the text; the marks
+  are what they say (text, a boolean, text flags); and a target's message with forms has one per
+  plural form of its locale;
+- **plural forms**, for each locale, new file and existing: whole numbers, never empty, none in
+  two forms, the same every time;
+- **writing only what changed**, on each target locale's file (never a source: Paper Lion doesn't
+  write one), for its first and last message: setting it to its own text, or removing a key the
+  file lacks, changes nothing, except that a message needing review loses that mark; setting it
+  changes only that message (its other plural forms and notes kept, its review mark gone), and
+  setting it back gives what setting it to its own text gave; removing it removes its translation
+  (gettext may keep an emptied entry); a message added back goes after the nearest message before
+  it in the source, or fills its kept entry; a new file (for the fixture's first target locale)
+  has its messages in source order, plural forms included;
+- **scanning** every message and plural form in the fixture (with its message), and a set of tricky
+  texts (unbalanced syntax, nesting, lone surrogates, other systems' placeholders): tokens are
+  inside the text, match it, come in order, nest or stay apart, and are the same every time;
+- every file reads as its role (source, target, documentation), and malformed text parses to
+  `formats.invalid-catalog` in each role, never a crash.
 
 The kit itself is tested against deliberately broken plugins (`testing/plugin-contract.test.ts`),
 with `fakeCatalogPlugin` (a `key=value` line format, in `#domain-testing/formats`) as the
-well-behaved catalog plugin. Adding a check means adding a broken-plugin case for it.
+well-behaved catalog plugin: it has plural forms (`key[]=one|other`), review marks
+(`?(old source)key=…`), and files that say their role (`# role: source`), so reading one as
+another fails. Adding a check means adding a broken-plugin case for it, and a check that could be
+too strict gets a well-behaved variant that must still pass (a template with more forms than a
+translation, an emptied entry kept on removal, a plugin that refuses to write a source).
 
 ## Extracting a plugin into a package (when it's needed)
 

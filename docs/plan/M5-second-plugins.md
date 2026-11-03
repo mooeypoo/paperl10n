@@ -362,6 +362,51 @@ VitePress first: it's small, and it shows quickly whether the document contract 
       locale keys, and `siteDir` still reading the config): each got a test.
 - **G1, the contract:** API v4 (`Message` fields, `parse` role, `scan` context, plural forms),
   the kit's new checks, and `catalog-banana` moved over.
+  - *Done-notes:* plugin API version 4 (`SUPPORTED_API_VERSIONS` is `[4]`; every built-in plugin
+    moved), described in [the formats doc](../domains/formats.md#catalogformat).
+    - **The contract:** `parse(text, role)` (`'source' | 'target' | 'documentation'`),
+      `scan(text, message?)`, optional `pluralForms(locale, target)` giving each form's sample
+      numbers (`PluralForm`), `CatalogEdit.locale`, and `forms` on a `set` change. `Message`
+      gains optional `forms`, `documentation`, `needsReview`, `previousSource`, and `flags`.
+      Setting a message always clears its review mark, even to the same text.
+    - **Two refinements to the plan:** plural forms are on the format, not the layout (they need
+      a locale and maybe its file, not the project). And `CatalogEdit` carries the target's
+      locale, which the plan missed: a new `.po` file's header needs `Language` and
+      `Plural-Forms`.
+    - **The registry's guarded view** always has `pluralForms` (none without the plugin's) and
+      passes the role and the message through.
+    - **The workspace** reads each file as its role (`readParsedCatalog` and `readCatalogFile`
+      take it) and scans each text as a text of its source message (a message the source doesn't
+      have, by itself). `saveCatalog` passes the locale. Nothing uses the new `Message` fields
+      yet: that's G3.
+    - **`catalog-banana`** needed no code change (its `parse` and `scan` ignore the new
+      arguments, and its messages have none of the new fields), only its manifest.
+    - **The kit:** two new checks (each message's shape, with one form per plural form of its
+      locale; plural forms by whole numbers, none in two forms, stable). The edit checks now
+      cover forms and review marks, compare translated messages only (gettext keeps emptied
+      entries), write only into target files, and write a new file for the fixture's first
+      target locale. Scanning passes each message, and every role is tried with malformed text.
+    - **The fake catalog plugin** has plural forms (`key[]=one|other`), review marks
+      (`?(old)key=…`), two plural forms for every locale, and files that can say their role
+      (`# role: source`) and read as malformed in another. The workspace tests and the kit's
+      tree carry role lines, so a file read in the wrong role fails a test.
+    - Tests: 14 new broken plugins (shapes, plural forms, review marks kept, other forms dropped,
+      plural forms flattened in a new file, a scanner that crashes given a message, a target
+      that fails to parse, documentation that throws), four well-behaved variants that must pass
+      (`needsReview: false`, a template with more forms, an emptied entry kept, a plugin that
+      refuses to write a source), `messageProblems` and `pluralFormProblems` table-driven, the
+      registry passing the role, message, and plural forms through (and guarding
+      `pluralForms`), and the roles, messages, and locale in `readCatalog`, `checkMessage`, and
+      `saveCatalog`.
+    - Mutation checks: 24 on the kit, 14 on the workspace's wiring (each role, the locale, the
+      scanned message), and 3 on the kit's own reading roles; each fails tests in the end.
+      Survivors at first, each resolved: four kit lines were redundant and removed (a filter for
+      `undefined` fields, which the strict optional types rule out; a plural fallback that can't
+      apply; a forms branch of `isTranslated`; an "others untouched" assertion that "set back"
+      already makes); four kit choices that could be too strict got well-behaved variants; three
+      got broken plugins or direct tests; and six role swaps in `keepMessagesUpToDate`,
+      `listCatalogs`, and `markExistingUpToDate` went unnoticed until the fake learned to read
+      its role.
 - **G2, the plugin:** `catalog-gettext` (detection, layouts, locale names, the `.po` reader and
   patcher, flags-aware scanning, the plural formula evaluator) with fixtures.
 - **G3, the domain and main:** documentation per message, forms in pairing, checks and saving,

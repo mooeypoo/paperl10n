@@ -6,7 +6,7 @@
 // catalog plugins the catalog checks.
 import { basename } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { messageKey, type MessageKey, type PlaceholderToken } from '#domains/catalog';
+import { messageKey, type Message, type MessageKey, type PlaceholderToken } from '#domains/catalog';
 import { localeId, type LocaleId } from '#kernel/locale-id';
 import type { ProjectPath } from '#kernel/project-path';
 import type { Result } from '#kernel/result';
@@ -20,8 +20,10 @@ import {
   type RegisteredFormat,
 } from '../application/format-registry.ts';
 import type {
+  CatalogFileRole,
   MessageChange,
   ParsedCatalog,
+  PluralForm,
   SourceCatalog,
 } from '../application/ports/catalog-format.ts';
 import type { FormatError } from '../application/ports/plugin-error.ts';
@@ -70,7 +72,7 @@ function expectOk<T>(result: Result<T, FormatError>, what: string): T {
 }
 
 function registered(plugin: PluginModule): RegisteredFormat {
-  const registry = createFormatRegistry([plugin], { apiVersion: 3 });
+  const registry = createFormatRegistry([plugin], { apiVersion: 4 });
   if (!registry.ok) expect.fail(`registration failed: ${JSON.stringify(registry.error)}`);
   const [format] = [...registry.value.documentFormats, ...registry.value.catalogFormats];
   if (format === undefined) expect.fail('registration returned no plugin');
@@ -371,11 +373,13 @@ export function placeholderProblems(text: string, tokens: readonly PlaceholderTo
   return problems;
 }
 
-/** One existing file of a catalog, read and parsed. */
+/** One existing file of a catalog, read and parsed as its role. */
 interface CatalogFile {
   readonly path: ProjectPath;
   readonly parsed: ParsedCatalog;
-  readonly documentation: boolean;
+  readonly role: CatalogFileRole;
+  /** The locale it's for (the source's, for the source and the documentation). */
+  readonly locale: LocaleId;
 }
 
 interface ReadCatalog {
@@ -395,27 +399,37 @@ async function readCatalogs(
     ...subject,
     files: () => Promise.resolve(files),
   });
-  const read = async (path: ProjectPath, documentation: boolean): Promise<CatalogFile> => {
+  const read = async (
+    path: ProjectPath,
+    role: CatalogFileRole,
+    locale: LocaleId,
+  ): Promise<CatalogFile> => {
     const text = await files.readText(path);
     if (!text.ok) expect.fail(`reading ${path} failed: ${JSON.stringify(text.error)}`);
-    return { path, parsed: expectOk(format.parse(text.value), `parse ${path}`), documentation };
+    const parsed = expectOk(format.parse(text.value, role), `parse ${path} as ${role}`);
+    return { path, parsed, role, locale };
   };
   const catalogs: ReadCatalog[] = [];
   for (const catalog of expectOk(await layout.listCatalogs(), 'listCatalogs')) {
-    const source = await read(catalog.path, false);
+    const source = await read(catalog.path, 'source', catalog.locale);
     const others: CatalogFile[] = [];
     for (const locale of layout.locales) {
       const path = expectOk(layout.targetPathFor(catalog, locale), 'targetPathFor');
-      if (path !== catalog.path && (await files.exists(path))) others.push(await read(path, false));
+      if (path !== catalog.path && (await files.exists(path))) {
+        others.push(await read(path, 'target', locale));
+      }
     }
-    if (catalog.documentation !== undefined) others.push(await read(catalog.documentation, true));
+    if (catalog.documentation !== undefined) {
+      others.push(await read(catalog.documentation, 'documentation', catalog.locale));
+    }
     catalogs.push({ catalog, source: source.parsed, files: [source, ...others] });
   }
   return { format, catalogs };
 }
 
-/** Each locale's file of each catalog (not the documentation), with its catalog's source. */
-async function editableFiles(
+/** Each target locale's file of each catalog, with its catalog's source: the files Paper Lion
+ * writes (never a source or documentation file). */
+async function targetFiles(
   plugin: PluginModule,
   subject: FixtureUnderTest,
 ): Promise<{
@@ -424,7 +438,7 @@ async function editableFiles(
 }> {
   const { format, catalogs } = await readCatalogs(plugin, subject);
   const files = catalogs.flatMap(({ source, files }) =>
-    files.filter((file) => !file.documentation).map((file) => ({ ...file, source })),
+    files.filter((file) => file.role === 'target').map((file) => ({ ...file, source })),
   );
   return { format, files };
 }
@@ -434,6 +448,87 @@ function firstAndLast<T>(items: readonly T[]): T[] {
   const last = items[items.length - 1];
   if (first === undefined || last === undefined) return [];
   return first === last ? [first] : [first, last];
+}
+
+/** A message as plain data to compare: `needsReview: false` the same as no mark. */
+function plainMessage(message: Message): Message {
+  const { needsReview, ...rest } = message;
+  return needsReview === true ? { ...rest, needsReview } : rest;
+}
+
+/** Whether a message has a translation. An empty message reads as none (gettext keeps an
+ * untranslated entry as `msgstr ""`). */
+const isTranslated = (message: Message) => message.text !== '';
+
+const translatedOnly = (messages: readonly Message[]) =>
+  messages.filter(isTranslated).map(plainMessage);
+
+/** Setting `message` to `text` (its first form, when it has forms; the others stay). */
+function setTo(message: Message, text: string): MessageChange {
+  const { key, forms } = message;
+  return forms === undefined
+    ? { kind: 'set', key, text }
+    : { kind: 'set', key, text, forms: [text, ...forms.slice(1)] };
+}
+
+/** What `message` reads as after being set to `text`: the new text, and no review mark. */
+function afterSet(message: Message, text: string): Message {
+  const { key, forms, documentation, flags } = message;
+  return {
+    key,
+    text,
+    ...(forms === undefined ? {} : { forms: [text, ...forms.slice(1)] }),
+    ...(documentation === undefined ? {} : { documentation }),
+    ...(flags === undefined ? {} : { flags }),
+  };
+}
+
+/** Problems with a parsed message's shape (empty when it holds to the contract). */
+export function messageProblems(message: Message): string[] {
+  const problems: string[] = [];
+  const at = `message ${JSON.stringify(message.key)}`;
+  if (message.forms !== undefined) {
+    if (message.forms.length === 0) problems.push(`${at}: forms is empty`);
+    else if (message.forms[0] !== message.text) problems.push(`${at}: text isn't its first form`);
+  }
+  const strings = { documentation: message.documentation, previousSource: message.previousSource };
+  for (const [field, value] of Object.entries(strings)) {
+    if (value !== undefined && typeof value !== 'string')
+      problems.push(`${at}: ${field} isn't text`);
+  }
+  if (message.needsReview !== undefined && typeof message.needsReview !== 'boolean') {
+    problems.push(`${at}: needsReview isn't a boolean`);
+  }
+  if (message.flags !== undefined && message.flags.some((flag) => typeof flag !== 'string')) {
+    problems.push(`${at}: a flag isn't text`);
+  }
+  return problems;
+}
+
+/** Problems with a locale's plural forms (empty when they're valid; none is valid). */
+export function pluralFormProblems(forms: readonly PluralForm[]): string[] {
+  const problems: string[] = [];
+  const seen = new Set<number>();
+  forms.forEach((form, index) => {
+    const at = `form ${String(index)}`;
+    if (form.samples.length === 0) problems.push(`${at}: no sample numbers`);
+    for (const sample of form.samples) {
+      if (!Number.isInteger(sample) || sample < 0) {
+        problems.push(`${at}: ${String(sample)} isn't a whole number`);
+      } else if (seen.has(sample)) {
+        problems.push(`${at}: ${String(sample)} is in another form too`);
+      }
+      seen.add(sample);
+    }
+  });
+  return problems;
+}
+
+/** The locale a new file is written for: the fixture's first target locale. */
+function newFileLocale(subject: FixtureUnderTest): LocaleId {
+  const [first] = subject.fixture.targetLocales;
+  if (first === undefined) throw new Error('kit: a catalog fixture needs a target locale');
+  return parseLocale(first);
 }
 
 /** Checks run against each fixture of a catalog plugin. */
@@ -500,39 +595,84 @@ export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
     async (plugin, subject) => {
       const { format, catalogs } = await readCatalogs(plugin, subject);
       for (const { source, files } of catalogs) {
-        for (const { path, parsed } of files) {
+        for (const { path, parsed, locale } of files) {
           const keys = parsed.messages.map((m) => m.key);
           expect(new Set(keys).size, `${path}: unique keys`).toBe(keys.length);
-          const written = format.serialize({ source, target: parsed, changes: [] });
+          const written = format.serialize({ locale, source, target: parsed, changes: [] });
           expect(expectOk(written, `serialize ${path}`), path).toBe(parsed.text);
         }
       }
     },
+  "reads each message's forms and marks as the contract shapes them, as many forms as its locale has":
+    async (plugin, subject) => {
+      const { format, catalogs } = await readCatalogs(plugin, subject);
+      for (const { files } of catalogs) {
+        for (const { path, parsed, role, locale } of files) {
+          for (const message of parsed.messages) {
+            expect(messageProblems(message), path).toEqual([]);
+          }
+          if (role !== 'target') continue;
+          const count = expectOk(format.pluralForms(locale, parsed), 'pluralForms').length;
+          for (const message of parsed.messages) {
+            if (message.forms === undefined) continue;
+            expect(message.forms.length, `${path}, ${message.key}: one per plural form`).toBe(
+              count,
+            );
+          }
+        }
+      }
+    },
+  'describes each plural form by whole numbers, none in two forms, the same every time': async (
+    plugin,
+    subject,
+  ) => {
+    const { format, catalogs } = await readCatalogs(plugin, subject);
+    const layout = await openCatalogLayout(plugin, subject);
+    const locales = new Set([...layout.locales, ...subject.fixture.targetLocales.map(parseLocale)]);
+    const targets = catalogs.flatMap(({ files }) => files.filter((f) => f.role === 'target'));
+    const cases: [LocaleId, ParsedCatalog | null, string][] = [
+      ...[...locales].map((l): [LocaleId, null, string] => [l, null, `${l}, a new file`]),
+      ...targets.map((f): [LocaleId, ParsedCatalog, string] => [f.locale, f.parsed, f.path]),
+    ];
+    for (const [locale, target, at] of cases) {
+      const forms = expectOk(format.pluralForms(locale, target), `pluralForms ${at}`);
+      expect(expectOk(format.pluralForms(locale, target), 'pluralForms'), at).toEqual(forms);
+      expect(pluralFormProblems(forms), at).toEqual([]);
+    }
+  },
   'changes only the messages it is told to, and only where they are': async (plugin, subject) => {
-    const { format, files } = await editableFiles(plugin, subject);
+    const { format, files } = await targetFiles(plugin, subject);
     const absent = keyOf('paperl10n-contract-kit-absent-key');
-    for (const { path, parsed, source } of files) {
+    for (const { path, parsed, source, locale } of files) {
       const write = (target: ParsedCatalog, changes: readonly MessageChange[]) =>
-        expectOk(format.serialize({ source, target, changes }), `serialize ${path}`);
+        expectOk(format.serialize({ locale, source, target, changes }), `serialize ${path}`);
       const reparse = (text: string) =>
-        expectOk(format.parse(text), `parse ${path} after a change`);
+        expectOk(format.parse(text, 'target'), `parse ${path} after a change`);
       expect(write(parsed, [{ kind: 'remove', key: absent }]), `${path}: removing nothing`).toBe(
         parsed.text,
       );
       for (const message of firstAndLast(parsed.messages)) {
         const { key, text } = message;
         const at = `${path}, ${key}`;
-        expect(write(parsed, [{ kind: 'set', key, text }]), `${at}: set to the same`).toBe(
-          parsed.text,
+        const same = write(parsed, [setTo(message, text)]);
+        if (message.needsReview === true) {
+          // Seen by the translator: the mark goes (and "set back" below shows nothing else changed).
+          const reviewed = reparse(same).messages;
+          const seen = reviewed.find((m) => m.key === key);
+          expect(seen && plainMessage(seen), `${at}: set to the same`).toEqual(
+            afterSet(message, text),
+          );
+        } else {
+          expect(same, `${at}: set to the same`).toBe(parsed.text);
+        }
+        const changed = reparse(write(parsed, [setTo(message, SAMPLE_TEXT)]));
+        expect(changed.messages.map(plainMessage), `${at}: set`).toEqual(
+          parsed.messages.map((m) => (m.key === key ? afterSet(m, SAMPLE_TEXT) : plainMessage(m))),
         );
-        const changed = reparse(write(parsed, [{ kind: 'set', key, text: SAMPLE_TEXT }]));
-        expect(changed.messages, `${at}: set`).toEqual(
-          parsed.messages.map((m) => (m.key === key ? { key, text: SAMPLE_TEXT } : m)),
-        );
-        expect(write(changed, [{ kind: 'set', key, text }]), `${at}: set back`).toBe(parsed.text);
+        expect(write(changed, [setTo(message, text)]), `${at}: set back`).toBe(same);
         const removed = reparse(write(parsed, [{ kind: 'remove', key }]));
-        expect(removed.messages, `${at}: removed`).toEqual(
-          parsed.messages.filter((m) => m.key !== key),
+        expect(translatedOnly(removed.messages), `${at}: removed`).toEqual(
+          translatedOnly(parsed.messages.filter((m) => m.key !== key)),
         );
       }
     }
@@ -541,20 +681,26 @@ export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
     plugin,
     subject,
   ) => {
-    const { format, files } = await editableFiles(plugin, subject);
-    for (const { path, parsed, source } of files) {
-      const has = new Set(parsed.messages.map((m) => m.key));
+    const { format, files } = await targetFiles(plugin, subject);
+    for (const { path, parsed, source, locale } of files) {
+      const has = new Set(parsed.messages.filter(isTranslated).map((m) => m.key));
       const sourceKeys = source.messages.map((m) => m.key);
       for (const key of firstAndLast(sourceKeys.filter((k) => has.has(k)))) {
         const at = `${path}, ${key}`;
+        const message = parsed.messages.find((m) => m.key === key);
+        if (message === undefined) continue;
         const write = (target: ParsedCatalog, changes: readonly MessageChange[]) =>
-          expectOk(format.serialize({ source, target, changes }), `serialize ${at}`);
-        const without = expectOk(format.parse(write(parsed, [{ kind: 'remove', key }])), at);
-        const added = expectOk(
-          format.parse(write(without, [{ kind: 'set', key, text: SAMPLE_TEXT }])),
-          at,
-        );
+          expectOk(format.serialize({ locale, source, target, changes }), `serialize ${at}`);
+        const read = (text: string) => expectOk(format.parse(text, 'target'), at);
+        const without = read(write(parsed, [{ kind: 'remove', key }]));
+        const added = read(write(without, [setTo(message, SAMPLE_TEXT)]));
         const keys = added.messages.map((m) => m.key);
+        const kept = without.messages.some((m) => m.key === key);
+        if (kept) {
+          // The file keeps an emptied entry (gettext): adding it back fills it where it is.
+          expect(keys, `${at}: in its place`).toEqual(without.messages.map((m) => m.key));
+          continue;
+        }
         expect(
           keys.filter((k) => k !== key),
           `${at}: the others stay in order`,
@@ -570,44 +716,68 @@ export const catalogFixtureChecks: Readonly<Record<string, FixtureCheck>> = {
   },
   'writes a new file with its messages in source order': async (plugin, subject) => {
     const { format, catalogs } = await readCatalogs(plugin, subject);
+    const locale = newFileLocale(subject);
+    const count = expectOk(format.pluralForms(locale, null), 'pluralForms').length;
     for (const { catalog, source } of catalogs) {
-      const at = `a new file for ${catalog.key}`;
+      const at = `a new ${locale} file for ${catalog.key}`;
       const create = (changes: readonly MessageChange[]) =>
         expectOk(
-          format.parse(expectOk(format.serialize({ source, target: null, changes }), at)),
+          format.parse(
+            expectOk(format.serialize({ locale, source, target: null, changes }), at),
+            'target',
+          ),
           at,
         );
-      expect(create([]).messages, `${at}, with nothing`).toEqual([]);
-      const translated = source.messages.map((m) => ({
-        key: m.key,
-        text: `${SAMPLE_TEXT} ${m.key}`,
-      }));
-      const changes = translated.map(({ key, text }) => ({ kind: 'set' as const, key, text }));
-      expect(create(changes.reverse()).messages, at).toEqual(translated);
+      expect(translatedOnly(create([]).messages), `${at}, with nothing`).toEqual([]);
+      const changes = source.messages.map((m): MessageChange => {
+        const text = `${SAMPLE_TEXT} ${m.key}`;
+        if (m.forms === undefined) return { kind: 'set', key: m.key, text };
+        // A source with plural forms has a plugin that says how many a locale has.
+        const forms = Array.from({ length: count }, (_, i) =>
+          i === 0 ? text : `${text} ${String(i)}`,
+        );
+        return { kind: 'set', key: m.key, text, forms };
+      });
+      const shape = (m: { key: MessageKey; text: string; forms?: readonly string[] }) =>
+        m.forms === undefined
+          ? { key: m.key, text: m.text }
+          : { key: m.key, text: m.text, forms: m.forms };
+      const created = create([...changes].reverse())
+        .messages.filter(isTranslated)
+        .map(shape);
+      expect(created, at).toEqual(changes.flatMap((c) => (c.kind === 'set' ? [shape(c)] : [])));
     }
   },
   'scans every message into tokens in order, inside the text, nested or apart, the same every time':
     async (plugin, subject) => {
       const { format, catalogs } = await readCatalogs(plugin, subject);
-      const texts = [
-        ...SCAN_SAMPLES,
-        SAMPLE_TEXT,
-        ...catalogs.flatMap((c) => c.files.flatMap((f) => f.parsed.messages.map((m) => m.text))),
+      const texts: [string, Message | undefined][] = [
+        ...[...SCAN_SAMPLES, SAMPLE_TEXT].map((text): [string, undefined] => [text, undefined]),
+        ...catalogs.flatMap((c) =>
+          c.files.flatMap((f) =>
+            f.parsed.messages.flatMap((m) =>
+              [m.text, ...(m.forms ?? [])].map((text): [string, Message] => [text, m]),
+            ),
+          ),
+        ),
       ];
-      for (const text of texts) {
-        const tokens = expectOk(format.scanPlaceholders(text), `scan ${JSON.stringify(text)}`);
-        expect(expectOk(format.scanPlaceholders(text), 'scan')).toEqual(tokens);
+      for (const [text, message] of texts) {
+        const at = `scan ${JSON.stringify(text)}`;
+        const tokens = expectOk(format.scanPlaceholders(text, message), at);
+        expect(expectOk(format.scanPlaceholders(text, message), at)).toEqual(tokens);
         expect(placeholderProblems(text, tokens), JSON.stringify(text)).toEqual([]);
       }
     },
   'reads malformed text as formats.invalid-catalog, never a crash': (plugin) => {
     const format = registeredCatalog(plugin);
     for (const text of MALFORMED_SAMPLES) {
-      const parsed = format.parse(text);
-      expect(parsed.ok ? 'ok' : parsed.error.code, JSON.stringify(text)).not.toBe(
-        'formats.plugin-failed',
-      );
-      if (!parsed.ok) expect(parsed.error.code).toBe('formats.invalid-catalog');
+      for (const role of ['source', 'target', 'documentation'] as const) {
+        const parsed = format.parse(text, role);
+        expect(parsed.ok ? 'ok' : parsed.error.code, JSON.stringify(text)).not.toBe(
+          'formats.plugin-failed',
+        );
+        if (!parsed.ok) expect(parsed.error.code).toBe('formats.invalid-catalog');
+      }
     }
     return Promise.resolve();
   },

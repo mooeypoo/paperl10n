@@ -19,7 +19,7 @@ import { createStatusUpdates } from './translation-status.ts';
 
 async function catalogOnly() {
   const registry = createFormatRegistry([fakeCatalogPlugin('catalog-fake', detects('likely'))], {
-    apiVersion: 3,
+    apiVersion: 4,
   });
   if (!registry.ok) throw new Error('test setup');
   const sessions = new InMemoryProjectSessions(randomUUID);
