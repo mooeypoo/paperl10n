@@ -10,6 +10,12 @@ export const fixtureProjects: Fixtures = fixturesFrom({
     import: 'default',
     eager: true,
   }),
+  // Dot-folders are left out unless named: a VitePress site's config is in `.vitepress/`.
+  ...import.meta.glob<string>('../plugins/*/fixtures/**/.vitepress/**/*', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }),
   ...import.meta.glob<string>('../../examples/*/**/*', {
     query: '?raw',
     import: 'default',

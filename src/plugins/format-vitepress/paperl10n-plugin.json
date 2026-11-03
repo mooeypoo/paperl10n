@@ -1,0 +1,15 @@
+{
+  "manifestVersion": 1,
+  "id": "format-vitepress",
+  "packageName": "@paperl10n/format-vitepress",
+  "kind": "document",
+  "apiVersion": 3,
+  "version": "0.1.0",
+  "displayName": "VitePress",
+  "description": "VitePress sites: Markdown pages in the site's source folder, one folder per locale, with the root locale at the top.",
+  "license": "GPL-3.0-or-later",
+  "author": { "name": "Moriel", "url": "https://moriel.tech" },
+  "builtIn": true,
+  "capabilities": [],
+  "externalDependencies": []
+}

@@ -326,6 +326,40 @@ VitePress first: it's small, and it shows quickly whether the document contract 
       a colon) and Starlight choosing the first `locales` *object*: each got a test.
 - **V2, the plugin:** `format-vitepress` (detection, layout, links) with fixtures and the
   contract kit. Registered in `app/plugins.ts`, and opened in the UI harness.
+  - *Done-notes:* `src/plugins/format-vitepress/`, described in its
+    [README](../../src/plugins/format-vitepress/README.md), registered in `app/plugins.ts`.
+    - **Finding the site (V5), refined:** "one level down" became a list of usual folder names
+      (the project itself, `docs/`, `doc/`, `website/`, `site/`, `documentation/`) with
+      `.vitepress/config.*` or `.vitepress/config/index.*`. `ProjectFiles` can only list a folder
+      recursively, so searching every top-level folder would read the whole project on each
+      detection. A site elsewhere sets `siteDir` (and pins the format).
+    - **Locales from the config:** the shallowest `locales` (the search options have their own,
+      deeper in). Every key names a folder, even when its entry is built with a spread, as
+      VitePress's own docs do; its locale is a plain-string `lang`, else the key. A spread among
+      the keys, or `locales` built in code, falls back to Starlight's conventions.
+    - **`srcDir`** from the option, else the config's when it's a plain string, else the site's
+      folder. Pages are `.md` files outside dot-folders and outside `public/` at the source root.
+    - **Links (V4)** as Starlight's, with `.md` and `.html` suffixes kept as written (dropping
+      the locale's segment is enough for both).
+    - **VitePress's Markdown (V3):** the `root-locale` fixture's guide has every row of the
+      table, and its home page is all frontmatter. A new integration test
+      (`tests/integration/fixture-pages.test.ts`) parses every Markdown page in every plugin's
+      fixtures with the real parser: each is kept exactly and satisfies every invariant (49
+      pages). No dialect change was needed.
+    - **The UI harness** now bundles `.vitepress/` folders from fixtures (Vite's glob skips
+      dot-folders unless they're named; only this one is, so fixtures' `.paperl10n/` status
+      files stay out as before), and opens `format-vitepress/root-locale`.
+    - The root README says Paper Lion works with VitePress, and links the plugin.
+    - Tests: the contract kit on six fixtures (root locale, a site in `docs/` with `srcDir` and
+      spreads, a folder per locale, locales built in code with cased folders, a config that
+      never names VitePress, no config with `siteDir`), detection (each config name and folder,
+      the root first, nothing deeper), listing, locales, target paths, links, options and each
+      error, and `srcDir` forms; the harness opening the site; and the fixture pages.
+    - Mutation checks (19), each failing tests in the end. Survivors at first, each resolved:
+      three were redundant and removed (`projectPath` already reads `./src`, `src/`, and `.`;
+      `root` isn't a locale id, so a separate check for it repeated `localeId`; swapping the
+      source's own folder for itself changed nothing). Two were untested (a spread among the
+      locale keys, and `siteDir` still reading the config): each got a test.
 - **G1, the contract:** API v4 (`Message` fields, `parse` role, `scan` context, plural forms),
   the kit's new checks, and `catalog-banana` moved over.
 - **G2, the plugin:** `catalog-gettext` (detection, layouts, locale names, the `.po` reader and

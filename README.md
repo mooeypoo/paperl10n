@@ -28,8 +28,9 @@ It runs on your computer, needs no account and no internet connection, and sends
 anywhere.
 
 > **Status: early, and not downloadable yet.** Paper Lion works for documentation sites built with
-> Astro Starlight and for interface strings in banana-i18n (MediaWiki, jQuery.i18n). There's no
-> installer yet: for now it runs from the source code (see [For developers](#for-developers)).
+> Astro Starlight or VitePress, and for interface strings in banana-i18n (MediaWiki,
+> jQuery.i18n). There's no installer yet: for now it runs from the source code (see
+> [For developers](#for-developers)).
 > Paper Lion's name is a pun: *l10n* is short for "localization", and reads as "lion".
 
 ## What it does
@@ -82,8 +83,7 @@ project, so the whole team shares it through the project's usual tools.
 
 ### What's next
 
-Support for [VitePress](https://vitepress.dev/) sites and gettext (`.po`) catalogs is planned,
-and then an installer. Each kind of project is a plugin, so adding one doesn't change the rest of
+Support for gettext (`.po`) catalogs is planned, and then an installer. Each kind of project is a plugin, so adding one doesn't change the rest of
 the app. The full plan is in the [product requirements](docs/PRD.md).
 
 Found a problem or have an idea? [Open an issue](https://github.com/mooeypoo/paperl10n/issues).
@@ -100,7 +100,8 @@ architecture tests enforce these boundaries.
 
 Every supported system is a **format plugin** in [`src/plugins/`](src/plugins/), written as if it
 were already its own package: [`format-starlight`](src/plugins/format-starlight/README.md) for
-Astro Starlight docs, [`catalog-banana`](src/plugins/catalog-banana/README.md) for banana-i18n
+Astro Starlight docs, [`format-vitepress`](src/plugins/format-vitepress/README.md) for VitePress
+sites, [`catalog-banana`](src/plugins/catalog-banana/README.md) for banana-i18n
 message files, and `format-stub` (a plain folder per locale). Core code never names a plugin.
 
 The renderer is sandboxed (`contextIsolation`, no Node integration) and reaches main only through

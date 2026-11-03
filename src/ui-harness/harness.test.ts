@@ -96,6 +96,21 @@ describe('the UI harness', () => {
     expect(element.querySelector('.catalog-orphans li bdi')?.textContent).toBe('example-removed');
   });
 
+  it('opens a VitePress site, its config read from .vitepress/', async () => {
+    expect(fixtureProjects.get('format-vitepress/root-locale')).toHaveProperty([
+      '.vitepress/config.mts',
+    ]);
+    const element = await openWith('format-vitepress/root-locale');
+    expect(element.querySelector('.header-project')?.textContent).toContain('VitePress');
+    const pages = [...element.querySelectorAll('nav .pages-list bdi')].map(
+      (item) => item.textContent,
+    );
+    // Not `public/notes.md` or `.vitepress/theme/notes.md`, nor the Hebrew or Portuguese pages.
+    expect(pages).toEqual(['guide/getting-started', 'index', 'reference/api']);
+    const [, target] = [...element.querySelectorAll('section[lang]')];
+    expect([target?.getAttribute('lang'), target?.getAttribute('dir')]).toEqual(['he', 'rtl']);
+  });
+
   it('shows the real error for an unknown fixture', async () => {
     const element = await openWith('format-stub/nope');
     expect(element.querySelector('[role="alert"]')).not.toBeNull();
