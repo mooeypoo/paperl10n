@@ -1,6 +1,6 @@
 # M5 discussion: second plugins (VitePress and gettext)
 
-Status: **decided (2026-11-03): every question as recommended.** See [Decided](#decided). The
+Status: **decided (2026-11-03): every question as recommended; done (V1–V2, G1–G5).** See [Decided](#decided). The
 discussion follows, for context.
 
 PRD M5: "VitePress + gettext `.po`, to prove the plugin contracts hold." Each contract has one
@@ -555,6 +555,13 @@ VitePress first: it's small, and it shows quickly whether the document contract 
       tokens from main, numbered labels, no review without a mark, and a second edit after a
       save keeping the saved forms as its base.
 - **G5, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
+  - *Done-notes:* the PRD's summary and glossary (a gettext domain as a catalog key, what a
+    message may keep, tokens found by flags, "needs review"); §7.3 (finding gettext catalogs,
+    plural form fields and their labels, needs review with the change marked, context, checking
+    forms, keeping clearing the mark, writing `.po` files as `msgmerge` does); §8 (the static
+    config reader, the v4 catalog contract, the built-in plugins); M5 marked done in §10; and in
+    §11, crediting translators widened to gettext's header, and two new open questions: a gettext
+    domain with only its translations, and updating `.po` files from a changed template.
 
 ## Open questions for the maintainer
 
