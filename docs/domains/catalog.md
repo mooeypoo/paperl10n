@@ -39,6 +39,7 @@ domain's.
    in is a translation whose first form may be empty.
 7. **A translation's review mark** comes along (gettext's `fuzzy`), with the source it was made
    for (`#|`) only when it's marked.
+8. **A source message's context** comes along (gettext's `msgctxt`): which use of a text it is.
 
 ### Checking a translation (`checkMessage`)
 

@@ -22,6 +22,7 @@ const paired = (
 ) => ({
   key,
   source: sourceText,
+  context: null,
   sourceForms: null,
   documentation,
   translation,
@@ -134,6 +135,15 @@ describe('pairCatalog', () => {
       [true, null],
       [false, null],
     ]);
+  });
+
+  it('pairs a source message’s context', () => {
+    const result = pairCatalog(
+      [message('menu\u0004Open', 'Open', { context: 'menu' })],
+      null,
+      null,
+    );
+    expect(result.messages[0]?.context).toBe('menu');
   });
 
   it('pairs an empty source', () => {

@@ -133,6 +133,9 @@ export interface CatalogMessageDto {
   readonly key: string;
   /** The source text (its first form, with forms). */
   readonly source: string;
+  /** Which use of a text this is, when the same text is used in more than one place (gettext's
+   * `msgctxt`); `null`: none. */
+  readonly context: string | null;
   /** What the developers say about it (`qqq`, or the message's own notes); `null`: nothing. */
   readonly documentation: string | null;
   /** `null`: not translated (or translated empty). Its first form, with forms. */

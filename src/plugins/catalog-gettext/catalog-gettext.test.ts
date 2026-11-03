@@ -247,6 +247,13 @@ describe('catalog-gettext reading', () => {
       ['%d lamp is lit', '%d lamp is lit', ['%d lamp is lit', '%d lamps are lit']],
     ]);
     expect(source.messages[2]?.documentation).toBe('Shown in the menu bar and in a button.');
+    expect(source.messages.map((m) => m.context)).toEqual([
+      undefined,
+      undefined,
+      'menu',
+      undefined,
+      undefined,
+    ]);
     expect(source.messages[1]?.flags).toEqual(['c-format']);
   });
 

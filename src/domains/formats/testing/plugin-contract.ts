@@ -491,7 +491,11 @@ export function messageProblems(message: Message): string[] {
     if (message.forms.length === 0) problems.push(`${at}: forms is empty`);
     else if (message.forms[0] !== message.text) problems.push(`${at}: text isn't its first form`);
   }
-  const strings = { documentation: message.documentation, previousSource: message.previousSource };
+  const strings = {
+    context: message.context,
+    documentation: message.documentation,
+    previousSource: message.previousSource,
+  };
   for (const [field, value] of Object.entries(strings)) {
     if (value !== undefined && typeof value !== 'string')
       problems.push(`${at}: ${field} isn't text`);

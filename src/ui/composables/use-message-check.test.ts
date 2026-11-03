@@ -73,8 +73,40 @@ describe('useMessageCheck', () => {
     expect(state.check.value).toEqual({
       key: 'greeting',
       text: '$1 שלום',
+      formTexts: null,
       ...checked(1),
     });
+  });
+
+  it('sends the open message’s plural forms, and keeps the forms it checked', async () => {
+    const { client, requests } = pending();
+    const open = ref<string | null>(null);
+    const forms = ref<readonly string[] | null>(['קובץ', '%d קבצים']);
+    const scope = effectScope();
+    const state = scope.run(() =>
+      useMessageCheck(client, ref('p-1'), ref('i18n'), open, () => 'קובץ', {
+        currentForms: () => forms.value,
+      }),
+    );
+    open.value = 'files';
+    await nextTick();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(requests[0]?.request).toEqual({
+      projectId: 'p-1',
+      catalog: 'i18n',
+      key: 'files',
+      text: 'קובץ',
+      forms: ['קובץ', '%d קבצים'],
+    });
+    requests[0]?.answer({ ok: true, value: { ...checked(0), forms: [] } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(state?.check.value?.formTexts).toEqual(['קובץ', '%d קבצים']);
+    // A message without forms sends none.
+    forms.value = null;
+    state?.refresh();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(requests[1]?.request).not.toHaveProperty('forms');
+    scope.stop();
   });
 
   it('checks again 0.2 s after the last change', async () => {

@@ -245,6 +245,7 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         messages: read.messages.map((message) => ({
           key: message.key,
           source: message.source,
+          context: message.context,
           documentation: message.documentation,
           translation: message.translation,
           status: message.status,

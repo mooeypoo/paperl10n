@@ -50,6 +50,7 @@ const message = (
   status,
   sourceTokens: [],
   translationTokens: [],
+  context: null,
   sourceForms: null,
   translationForms: null,
   needsReview: false,
@@ -62,6 +63,7 @@ const items = message('app-items', 'translated', 'יש לך $1 פריטים', {
   documentation: 'How many items the cart has.\n$1: the number',
   sourceTokens: [{ kind: 'parameter', start: 9, end: 11 }],
   translationTokens: [{ kind: 'parameter', start: 6, end: 8 }],
+  context: null,
   sourceForms: null,
   translationForms: null,
   needsReview: false,
@@ -91,7 +93,11 @@ function detail(key: string, list: CatalogMessageDto[] = messages): CatalogDetai
   };
 }
 
-type Check = (request: { key: string; text: string }) => Promise<Result<MessageCheckDto, ErrorDto>>;
+type Check = (request: {
+  key: string;
+  text: string;
+  forms?: readonly string[];
+}) => Promise<Result<MessageCheckDto, ErrorDto>>;
 /** Main's answer with no warnings, and each `$n` a token (as the real scanner finds them). */
 const noWarnings: Check = ({ text }) =>
   Promise.resolve({
@@ -133,13 +139,17 @@ async function opened(
       Object.entries(catalogs).map(([key, value]) => [key, { ok: true as const, value }]),
     ),
   });
-  const asked: { key: string; text: string }[] = [];
+  const asked: { key: string; text: string; forms?: readonly string[] }[] = [];
   const check = options.check ?? noWarnings;
   const checking: PaperLionApi = {
     ...client,
     checkMessage: (request) => {
       calls.push(`checkMessage:${request.catalog}:${request.key}`);
-      asked.push({ key: request.key, text: request.text });
+      asked.push({
+        key: request.key,
+        text: request.text,
+        ...(request.forms === undefined ? {} : { forms: request.forms }),
+      });
       return check(request);
     },
   };
@@ -489,6 +499,7 @@ describe('the plural and gender preview', () => {
   const plural = message('app-pages', 'translated', 'יש {{PLURAL:$1|דף אחד|שני דפים|$1 דפים}}', {
     source: 'There {{PLURAL:$1|is one page|are $1 pages}}',
     translationTokens: [{ kind: 'plural', start: 3, end: 37 }],
+    context: null,
     sourceForms: null,
     translationForms: null,
     needsReview: false,
@@ -549,6 +560,221 @@ describe('the plural and gender preview', () => {
     expect(preview(element)).toEqual([]);
     expect(element.querySelector('tr[data-open] .message-preview')?.textContent).toContain(
       "No preview: banana-i18n can't read this translation as it's written.",
+    );
+  });
+});
+
+describe('plural forms, review marks, and context', () => {
+  const lamps = message('%d lamp', 'translated', 'מנורה', {
+    source: '%d lamp',
+    sourceTokens: [{ kind: 'parameter', start: 0, end: 2 }],
+    sourceForms: [
+      { text: '%d lamp', tokens: [{ kind: 'parameter', start: 0, end: 2 }] },
+      { text: '%d lamps', tokens: [{ kind: 'parameter', start: 0, end: 2 }] },
+    ],
+    translationForms: [
+      { text: 'מנורה', tokens: [] },
+      { text: 'שתי מנורות', tokens: [] },
+      { text: '%d מנורות', tokens: [{ kind: 'parameter', start: 0, end: 2 }] },
+    ],
+  });
+  const fuzzy = message('Lantern', 'outdated', 'פנסים', {
+    source: 'Lantern',
+    needsReview: true,
+    previousSource: 'Lanterns',
+  });
+  const marked = message('Dim', 'outdated', 'עמעום', { source: 'Dim', needsReview: true });
+  const open = message('menu\u0004Open', 'missing', null, { source: 'Open', context: 'menu' });
+  const gettext: CatalogDetailDto = {
+    ...detail('po', [lamps, fuzzy, marked, open]),
+    pluralForms: [{ samples: [1] }, { samples: [2] }, { samples: [0, 3, 4, 5] }],
+  };
+  /** Main's answer for forms: each `%d` a token, and the last form warned when no form has one. */
+  const formsCheck: Check = ({ forms }) =>
+    Promise.resolve({
+      ok: true,
+      value: {
+        tokens: [],
+        // As main answers: the text's check is the first form's (shown under it, not again).
+        warnings:
+          forms === undefined ? [] : [{ kind: 'unbalanced' as const, brackets: '{}' as const }],
+        forms:
+          forms?.map((form, index) => ({
+            tokens: [...form.matchAll(/%d/g)].map((m) => ({
+              kind: 'parameter' as const,
+              start: m.index,
+              end: m.index + 2,
+            })),
+            warnings:
+              index === forms.length - 1 && !forms.some((f) => f.includes('%d'))
+                ? [{ kind: 'missing' as const, token: 'parameter' as const, value: '%d' }]
+                : [],
+          })) ?? null,
+      },
+    });
+  const forms = (element: Element) =>
+    [...element.querySelectorAll('tr[data-open] .catalog-form')].map((form) => {
+      const content = form
+        .querySelector('.message-editor')
+        ?.shadowRoot?.querySelector<HTMLElement>('.cm-content');
+      const view =
+        content === null || content === undefined ? null : EditorView.findFromDOM(content);
+      return {
+        label: form.querySelector('.catalog-form-label')?.textContent.trim(),
+        text: view?.state.doc.toString(),
+        name: view?.contentDOM.getAttribute('aria-label'),
+        warnings: [...form.querySelectorAll('.catalog-form-warnings li')].map((li) =>
+          li.textContent.trim(),
+        ),
+        view,
+      };
+    });
+
+  it('opens a plural with a field per form of the language, each labeled by its counts', async () => {
+    const { element } = await opened({ check: formsCheck, catalogs: { po: gettext } });
+    row(element, '%d lamp').click();
+    await settle();
+    expect(forms(element).map(({ label, text, name }) => [label, text, name])).toEqual([
+      ['For ⁨1⁩', 'מנורה', 'Translation of %d lamp, For ⁨1⁩'],
+      ['For ⁨2⁩', 'שתי מנורות', 'Translation of %d lamp, For ⁨2⁩'],
+      ['For ⁨0, 3, 4, 5…⁩', '%d מנורות', 'Translation of %d lamp, For ⁨0, 3, 4, 5…⁩'],
+    ]);
+    // The first form takes the focus; there's no single editor besides.
+    expect(focused.at(-1)).toBe(forms(element)[0]?.view);
+    expect(element.querySelectorAll('tr[data-open] .message-editor')).toHaveLength(3);
+    const source = [...element.querySelectorAll('tr[data-open] .catalog-source-forms > div')].map(
+      (form) => [
+        form.querySelector('dt')?.textContent.trim(),
+        form.querySelector('dd')?.textContent,
+      ],
+    );
+    expect(source).toEqual([
+      ['Singular', '%d lamp'],
+      ['Plural', '%d lamps'],
+    ]);
+  });
+
+  it('checks every form as one is written, shows each form’s warnings, and saves them all', async () => {
+    const { element, asked, calls } = await opened({
+      check: formsCheck,
+      catalogs: { po: gettext },
+    });
+    row(element, '%d lamp').click();
+    await settle();
+    expect(asked.at(-1)).toEqual({
+      key: '%d lamp',
+      text: 'מנורה',
+      forms: ['מנורה', 'שתי מנורות', '%d מנורות'],
+    });
+    const last = forms(element)[2]?.view;
+    last?.dispatch({ changes: { from: 0, to: last.state.doc.length, insert: 'הרבה מנורות' } });
+    await vi.advanceTimersByTimeAsync(200);
+    await settle();
+    expect(asked.at(-1)?.forms).toEqual(['מנורה', 'שתי מנורות', 'הרבה מנורות']);
+    expect(forms(element).map((form) => form.warnings)).toEqual([
+      [],
+      [],
+      ['A parameter only in the source: ⁨%d⁩'],
+    ]);
+    // A form's tokens marked from main's answer for its text.
+    const first = forms(element)[0]?.view;
+    first?.dispatch({ changes: { from: 0, insert: '%d ' } });
+    await vi.advanceTimersByTimeAsync(200);
+    await settle();
+    expect(first?.contentDOM.querySelector('.cm-msg-isolate')?.textContent).toBe('%d');
+    first?.dispatch({ changes: { from: 0, to: 3, insert: '' } });
+    await vi.advanceTimersByTimeAsync(200);
+    await settle();
+    // Only the plural's own warnings, under each form: none for the message as a whole.
+    expect(element.querySelector('tr[data-open] .catalog-warnings')).toBeNull();
+    element.querySelector<HTMLButtonElement>('.catalog-save button')?.click();
+    await settle();
+    const saved = calls.find((call) => call.startsWith('saveCatalog:'));
+    expect(saved).toContain(
+      JSON.stringify([
+        {
+          key: '%d lamp',
+          text: 'מנורה',
+          forms: ['מנורה', 'שתי מנורות', 'הרבה מנורות'],
+          base: 'מנורה',
+          baseForms: ['מנורה', 'שתי מנורות', '%d מנורות'],
+          source: '%d lamp',
+        },
+      ]),
+    );
+  });
+
+  it('gives a plural as many fields as its language has forms, and a single message one editor', async () => {
+    const untranslated = message('%d file', 'missing', null, {
+      source: '%d file',
+      sourceForms: [
+        { text: '%d file', tokens: [] },
+        { text: '%d files', tokens: [] },
+      ],
+    });
+    const { element } = await opened({
+      check: formsCheck,
+      catalogs: { po: { ...gettext, messages: [untranslated, fuzzy] } },
+    });
+    row(element, '%d file').click();
+    await settle();
+    expect(forms(element).map((form) => form.text)).toEqual(['', '', '']);
+    row(element, 'Lantern').click();
+    await settle();
+    expect(forms(element)).toEqual([]);
+    expect(element.querySelectorAll('tr[data-open] .message-editor')).toHaveLength(1);
+  });
+
+  it('numbers the forms when the language’s aren’t known', async () => {
+    const { element } = await opened({
+      check: formsCheck,
+      catalogs: { po: { ...gettext, pluralForms: [] } },
+    });
+    row(element, '%d lamp').click();
+    await settle();
+    expect(forms(element).map((form) => form.label)).toEqual(['Form 1', 'Form 2', 'Form 3']);
+    // A translation without a review mark has no review.
+    expect(element.querySelector('tr[data-open] .catalog-review')).toBeNull();
+  });
+
+  it('counts forms written back as the file’s as no edit', async () => {
+    const { element } = await opened({ check: formsCheck, catalogs: { po: gettext } });
+    row(element, '%d lamp').click();
+    await settle();
+    const second = forms(element)[1]?.view;
+    second?.dispatch({ changes: { from: 0, insert: 'x' } });
+    await settle();
+    expect(row(element, '%d lamp').querySelector('.catalog-edited')).toBeNull();
+    expect(element.querySelector('.catalog-save-status')?.textContent).not.toBe('');
+    second?.dispatch({ changes: { from: 0, to: 1, insert: '' } });
+    await settle();
+    expect(element.querySelector('.catalog-save-status')?.textContent).toBe('');
+  });
+
+  it('says a translation needs review, with what changed in its source when known', async () => {
+    const { element } = await opened({ check: formsCheck, catalogs: { po: gettext } });
+    row(element, 'Lantern').click();
+    await settle();
+    const review = element.querySelector('tr[data-open] .catalog-review');
+    expect(review?.querySelector('h3')?.textContent.trim()).toBe(
+      'Needs review: the source changed since this was translated',
+    );
+    expect(review?.querySelector('del')?.textContent).toBe('Removed:Lanterns');
+    expect(review?.querySelector('ins')?.textContent).toBe('Added:Lantern');
+    expect(button(element, 'Keep as up to date')).toBeDefined();
+    row(element, 'Dim').click();
+    await settle();
+    expect(
+      element.querySelector('tr[data-open] .catalog-review .catalog-note')?.textContent,
+    ).toContain('Its file marks this translation as needing review.');
+  });
+
+  it('shows a message’s context, and its key’s control characters as symbols', async () => {
+    const { element } = await opened({ check: formsCheck, catalogs: { po: gettext } });
+    const key = row(element, 'menu\u0004Open').querySelector('th');
+    expect(key?.querySelector('bdi')?.textContent).toBe('menu␄Open');
+    expect(key?.querySelector('.catalog-context')?.textContent.replace(/\s+/g, ' ').trim()).toBe(
+      'Context: menu',
     );
   });
 });

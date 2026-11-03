@@ -6,6 +6,8 @@ import { computed, onScopeDispose, shallowRef, watch, type ComputedRef, type Ref
 export interface MessageCheckAnswer extends MessageCheckDto {
   readonly key: string;
   readonly text: string;
+  /** The plural forms it checked (`null`: none); `forms` has each one's tokens and warnings. */
+  readonly formTexts: readonly string[] | null;
 }
 
 export interface MessageCheckState {
@@ -29,7 +31,11 @@ export function useMessageCheck(
   open: Readonly<Ref<string | null>>,
   /** The open message's text now, or `null` when none is open. */
   currentText: () => string | null,
-  options: { readonly delay?: number } = {},
+  options: {
+    readonly delay?: number;
+    /** The open message's plural forms now, when it has them (`null`: none). */
+    readonly currentForms?: () => readonly string[] | null;
+  } = {},
 ): MessageCheckState {
   const latest = shallowRef<MessageCheckAnswer | null>(null);
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -43,6 +49,7 @@ export function useMessageCheck(
     const key = open.value;
     const text = currentText();
     if (project === null || catalogKey === null || key === null || text === null) return;
+    const forms = options.currentForms?.() ?? null;
     const request = ++asked;
     try {
       const result = await client.checkMessage({
@@ -50,9 +57,10 @@ export function useMessageCheck(
         catalog: catalogKey,
         key,
         text,
+        ...(forms === null ? {} : { forms: [...forms] }),
       });
       if (request !== asked || !result.ok) return;
-      latest.value = { key, text, ...result.value };
+      latest.value = { key, text, formTexts: forms === null ? null : [...forms], ...result.value };
     } catch {
       // Warnings are information: a failed check leaves the last one (or none) showing.
     }

@@ -116,6 +116,7 @@ interface Message {                                                     // in `c
   readonly key: MessageKey;
   readonly text: string;                                                // the first form, with forms
   readonly forms?: readonly string[];                                   // gettext's msgstr[n]
+  readonly context?: string;                                            // gettext's msgctxt
   readonly documentation?: string;                                      // gettext's `#.`
   readonly needsReview?: boolean;                                       // gettext's `fuzzy`
   readonly previousSource?: string;                                     // gettext's `#|`
@@ -154,7 +155,9 @@ documentation. banana-i18n reads every file the same way.
 
 **What a message may carry** beyond its key and text is optional, and the plugin fills in what
 its system keeps: plural forms kept apart (`forms`, with `text` the first; a source's are
-`msgid` and `msgid_plural`), the developers' notes kept with the message (`documentation`;
+`msgid` and `msgid_plural`), which use of a text this is (`context`, gettext's `msgctxt`, shown
+with the key; added within v4 in M5's G4, an optional field), the developers' notes kept with the
+message (`documentation`;
 banana-i18n keeps those in `qqq.json` instead), a mark that the translation needs review
 (`needsReview`, gettext's `fuzzy`) and the source it was made for (`previousSource`, `#|`), and
 the system's own markers the plugin reads back (`flags`). **Setting a message always clears its
@@ -291,7 +294,7 @@ reads what it can statically and never runs it.
   `formats.invalid-catalog` error. Version 4 (M5) reshaped it for gettext: `parse` takes the
   file's role, `scan` the message, `CatalogEdit` the locale, a `set` change plural forms, and
   `Message` optional forms, documentation, review marks, and flags; `pluralForms` is new and
-  optional. No plugins outside this repository existed yet, so none kept the older version.
+  optional. (`Message.context` came later within v4, optional and not breaking.) No plugins outside this repository existed yet, so none kept the older version.
 - Adding an optional capability, or a field to `PluginHost`, is not breaking: plugins keep
   working. (M3 added `DocumentLayout.sourceLinkTarget` this way, within version 2.) Removing or changing anything a plugin can see is breaking, needs a new `apiVersion`,
   and shows up as a diff in the frozen export list (`plugin-api.test.ts`).

@@ -34,6 +34,9 @@ export interface Message {
    * inside one text (`{{PLURAL:…}}`), so its messages have no forms.
    */
   readonly forms?: readonly string[];
+  /** Which use of a text this is, when the same text is used in more than one place (gettext's
+   * `msgctxt`): shown with the key. */
+  readonly context?: string;
   /** What the developers say about it, kept with the message (gettext's `#.` comments). */
   readonly documentation?: string;
   /** The system marks its translation as needing review (gettext's `fuzzy`). */

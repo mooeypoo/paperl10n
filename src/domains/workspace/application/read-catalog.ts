@@ -32,6 +32,8 @@ export interface ScannedForm {
 export interface CatalogMessageEntry {
   readonly key: string;
   readonly source: string;
+  /** Which use of a text this is (gettext's `msgctxt`); `null`: the source doesn't say. */
+  readonly context: string | null;
   /** What the documentation says about it; `null`: nothing. */
   readonly documentation: string | null;
   /** `null`: not translated (or translated empty). */
@@ -163,6 +165,7 @@ export function createReadCatalog(deps: {
       messages: paired.messages.map((message) => ({
         key: message.key,
         source: message.source,
+        context: message.context,
         documentation: message.documentation,
         translation: message.translation,
         status: messageStatus(

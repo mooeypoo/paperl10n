@@ -13,6 +13,7 @@ const message: CatalogMessageDto = {
   status: 'missing',
   sourceTokens: [],
   translationTokens: [],
+  context: null,
   sourceForms: null,
   translationForms: null,
   needsReview: false,

@@ -512,6 +512,48 @@ VitePress first: it's small, and it shows quickly whether the document contract 
         whose text matches and forms don't, the text's check being the first form's, another
         message's review mark, and keeping a plural's forms.
 - **G4, the UI:** forms in the editor, "Needs review" with the old source, and context.
+  - *Done-notes:*
+    - **Plural forms:** an open message whose catalog keeps forms apart has a field per plural
+      form of the target language (as many as the file's translation, or its source, when the
+      language's aren't known), each labeled by the first counts that take it ("For 1",
+      "For 0, 3, 4, 5…", the counts isolated so they read left to right in Hebrew), else
+      numbered. Each field's accessible name says which form. The first takes the focus; the
+      keys move between messages from any of them. The source shows its forms too (singular and
+      plural).
+    - **Checks per form:** every form is checked together as one is written (main's
+      `checkForms`), and each form's warnings show under it; the message has no warnings list
+      of its own then. Each form's tokens are marked from main's answer for its text.
+    - **Edits and saving:** `useMessageEdits` keeps a plural's forms, and the forms it started
+      from (`baseForms`) for the save's conflict check; forms written back as the file's are no
+      edit. A save that a later edit outran keeps the edit, starting from the saved forms.
+    - **Needs review:** an open message its file marks as needing review says so; when the file
+      kept the source it was made for, the words removed and added since are marked (`<del>`,
+      `<ins>`, each with a visually hidden "Removed:" or "Added:" for screen readers;
+      `diffWords`, a word-level longest common subsequence). Its status is outdated, so "Keep as
+      up to date" is offered as for any outdated message, and now clears the mark (G3b).
+    - **Context:** `Message` gained an optional `context` (gettext's `msgctxt`), filled by the
+      plugin and carried to the row, which shows it under the key ("Context: menu"). It's an
+      optional field, so the plugin API stays v4 (as `sourceLinkTarget` did in M3). The UI never
+      reads a key's parts: control characters in any key are shown as their visible symbols
+      (`visibleKey`: `menu␄Open`), so a key never reads as two words run together.
+    - The root README says gettext works.
+    - New messages (en, he, qqq): context, the source's singular and plural, a form's label and
+      field name, needing review (with and without the old source), and the hidden diff labels.
+    - Checked in Chromium (a harness on its own port, the gettext fixture, English light and
+      Hebrew dark): the review with the change marked, three labeled fields for Hebrew, typing
+      into a form, the context under the key, and no console errors.
+    - Tests: `diffWords` (table-driven, each text joining back from its segments), `visibleKey`,
+      the edits' forms (padding, no edit when the file's, the base kept across edits and saves),
+      the check sending forms and keeping what it checked, and through the real entry point:
+      fields and labels per form, numbered labels, a field per form of the language for an
+      untranslated plural, one editor for a single message, the source's forms, checks and
+      warnings per form, tokens marked per form, saving every form with its base, forms set
+      back as no edit, the review (with and without the old source), and the context and key.
+    - Mutation checks (26), each failing tests in the end. Survivors at first, each resolved by
+      a test: more forms in the language than the translation, a single message in a catalog
+      with plural forms, the first form's warnings not shown for the whole message, a form's
+      tokens from main, numbered labels, no review without a mark, and a second edit after a
+      save keeping the saved forms as its base.
 - **G5, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 ## Open questions for the maintainer

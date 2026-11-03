@@ -11,6 +11,8 @@ import { computed, nextTick, ref, toRef, useTemplateRef, watch } from 'vue';
 import { useClient } from '../client';
 import { filterMessages, needsWork, type StatusFilter } from '../catalog/message-filter';
 import { stepTo, type Step } from '../catalog/message-navigation';
+import { visibleKey } from '../catalog/visible-key';
+import { diffWords } from '../catalog/word-diff';
 import { useMessageCheck } from '../composables/use-message-check';
 import type { CatalogSaveStatus } from '../composables/use-catalog-saving';
 import type { MessageEdits } from '../composables/use-message-edits';
@@ -80,17 +82,69 @@ const openIndex = computed(() => {
 const openMessage = computed(() =>
   openIndex.value === null ? null : (shown.value[openIndex.value] ?? null),
 );
+/**
+ * How many plural forms a message's translation has fields for: the target language's (none
+ * when its catalog keeps no forms apart), else as many as it or its source has.
+ */
+const formCount = (message: CatalogMessageDto) =>
+  message.sourceForms === null && message.translationForms === null
+    ? 0
+    : (props.detail?.pluralForms.length ?? 0) ||
+      (message.translationForms?.length ?? 0) ||
+      (message.sourceForms?.length ?? 0);
 const checking = useMessageCheck(
   useClient(),
   toRef(props, 'projectId'),
   computed(() => props.detail?.key ?? null),
   editing.open,
   () => (openMessage.value === null ? null : editing.textOf(openMessage.value)),
+  {
+    currentForms: () => {
+      const message = openMessage.value;
+      const count = message === null ? 0 : formCount(message);
+      return message === null || count === 0 ? null : editing.formsOf(message, count);
+    },
+  },
 );
 watch(checking.check, (answer) => {
   if (answer !== null) editing.remember(answer.key, answer.text, answer.tokens);
 });
-const warnings = computed(() => checking.check.value?.warnings ?? []);
+/** The open message's warnings, when it has no forms (a plural's are under each form). */
+const warnings = computed(() =>
+  checking.check.value?.forms === null ? checking.check.value.warnings : [],
+);
+/** A plural form's warnings, as main last found them. */
+const formWarnings = (index: number) => checking.check.value?.forms?.[index]?.warnings ?? [];
+
+/** A form's tokens and the text they're for: main's answer for it, else the file's. */
+function formTokens(message: CatalogMessageDto, index: number) {
+  const answer = checking.check.value;
+  const checked = answer?.forms?.[index];
+  const text = answer?.formTexts?.[index];
+  if (checked !== undefined && text !== undefined) return { text, tokens: checked.tokens };
+  return message.translationForms?.[index] ?? null;
+}
+
+/** What a plural form is for: the first counts that take it ("For 0, 3, 4, 5…"), else its number. */
+function formLabel(index: number): string {
+  const samples = props.detail?.pluralForms[index]?.samples ?? [];
+  if (samples.length === 0) return t('paperl10n-message-form-numbered', index + 1);
+  const counts = samples.join(', ') + (samples.length > 1 ? '…' : '');
+  return t('paperl10n-message-form', isolated(counts));
+}
+
+/** A source form's name: a singular and a plural (gettext's `msgid`, `msgid_plural`), else its number. */
+const sourceFormLabel = (index: number, count: number) =>
+  count === 2
+    ? t(index === 0 ? 'paperl10n-message-source-singular' : 'paperl10n-message-source-plural')
+    : t('paperl10n-message-form-numbered', index + 1);
+
+function onEditForm(message: CatalogMessageDto, index: number, text: string): void {
+  const forms = editing.formsOf(message, formCount(message));
+  forms[index] = text;
+  editing.editForms(message, forms);
+  checking.refresh();
+}
 
 /** A row's height before one is rendered to measure: `--catalog-row-height` at 16 px per rem. */
 const ROW_HEIGHT_FALLBACK = 72;
@@ -134,6 +188,8 @@ let openEditor: { focus(): void } | null = null;
 const setEditor = (component: unknown) => {
   openEditor = component as { focus(): void } | null;
 };
+/** A later plural form's editor: the first one takes the focus. */
+const noRef = () => undefined;
 
 /** What the last move between messages found: nothing further that way, or `null`. */
 const moveNote = ref<string | null>(null);
@@ -359,13 +415,58 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
                   :aria-expanded="message.key === editing.open.value"
                   @click.stop="toggle(index, message.key)"
                 >
-                  <bdi dir="ltr" class="catalog-clamp">{{ message.key }}</bdi>
+                  <bdi dir="ltr" class="catalog-clamp">{{ visibleKey(message.key) }}</bdi>
                 </button>
+                <span v-if="message.context !== null" class="catalog-context">
+                  {{ t('paperl10n-message-context') }}
+                  <bdi dir="auto">{{ message.context }}</bdi>
+                </span>
               </th>
               <td :lang="sourceLocale.id" :dir="sourceLocale.direction">
-                <span :class="{ 'catalog-clamp': message.key !== editing.open.value }">
+                <dl
+                  v-if="message.key === editing.open.value && message.sourceForms !== null"
+                  class="catalog-source-forms"
+                >
+                  <div v-for="(form, at) in message.sourceForms" :key="at">
+                    <dt :lang="uiLocale" :dir="uiDirection">
+                      {{ sourceFormLabel(at, message.sourceForms.length) }}
+                    </dt>
+                    <dd><MessageText :text="form.text" :tokens="form.tokens" /></dd>
+                  </div>
+                </dl>
+                <span v-else :class="{ 'catalog-clamp': message.key !== editing.open.value }">
                   <MessageText :text="message.source" :tokens="message.sourceTokens" />
                 </span>
+                <!-- What changed since the translation was made, when its file kept the source
+                     it was made for (gettext's `#|`): removed and added words marked. -->
+                <section
+                  v-if="message.key === editing.open.value && message.needsReview"
+                  class="catalog-review"
+                >
+                  <h3 :lang="uiLocale" :dir="uiDirection">
+                    {{ t('paperl10n-message-needs-review') }}
+                  </h3>
+                  <p v-if="message.previousSource !== null" class="catalog-review-diff">
+                    <template
+                      v-for="(part, at) in diffWords(message.previousSource, message.source)"
+                      :key="at"
+                      ><del v-if="part.kind === 'removed'"
+                        ><span class="visually-hidden" :lang="uiLocale">{{
+                          t('paperl10n-message-removed-words')
+                        }}</span
+                        >{{ part.text }}</del
+                      ><ins v-else-if="part.kind === 'added'"
+                        ><span class="visually-hidden" :lang="uiLocale">{{
+                          t('paperl10n-message-added-words')
+                        }}</span
+                        >{{ part.text }}</ins
+                      ><template v-else>{{ part.text }}</template></template
+                    >
+                  </p>
+                  <p v-else class="catalog-note" :lang="uiLocale" :dir="uiDirection">
+                    {{ t('paperl10n-message-needs-review-note') }}
+                  </p>
+                </section>
                 <!-- Documentation is about the source, in its direction; only its title and the
                      note that there's none are interface text. -->
                 <section v-if="message.key === editing.open.value" class="catalog-documentation">
@@ -386,13 +487,53 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
               </td>
               <td :lang="targetLocale.id" :dir="targetLocale.direction">
                 <template v-if="message.key === editing.open.value">
+                  <div
+                    v-for="(form, at) in editing.formsOf(message, formCount(message))"
+                    :key="`${message.key}\n${String(at)}`"
+                    class="catalog-form"
+                  >
+                    <span class="catalog-form-label" :lang="uiLocale" :dir="uiDirection">
+                      {{ formLabel(at) }}
+                    </span>
+                    <MessageEditor
+                      :ref="at === 0 ? setEditor : noRef"
+                      :text="form"
+                      :tokens="formTokens(message, at)"
+                      :locale="targetLocale"
+                      :label="
+                        t(
+                          'paperl10n-message-form-editor-label',
+                          visibleKey(message.key),
+                          formLabel(at),
+                        )
+                      "
+                      :placeholder="t('paperl10n-message-editor-placeholder')"
+                      @change="(text: string) => onEditForm(message, at, text)"
+                      @next="move(1, false)"
+                      @previous="move(-1, false)"
+                      @next-needing-work="move(1, true)"
+                      @previous-needing-work="move(-1, true)"
+                      @close="close"
+                    />
+                    <ul
+                      v-if="formWarnings(at).length > 0"
+                      class="catalog-form-warnings"
+                      :lang="uiLocale"
+                      :dir="uiDirection"
+                    >
+                      <li v-for="(warning, w) in formWarnings(at)" :key="w">
+                        {{ warningMessage(warning, t) }}
+                      </li>
+                    </ul>
+                  </div>
                   <MessageEditor
+                    v-if="formCount(message) === 0"
                     :key="message.key"
                     :ref="setEditor"
                     :text="editing.textOf(message)"
                     :tokens="startTokens(message)"
                     :locale="targetLocale"
-                    :label="t('paperl10n-message-editor-label', message.key)"
+                    :label="t('paperl10n-message-editor-label', visibleKey(message.key))"
                     :placeholder="t('paperl10n-message-editor-placeholder')"
                     @change="(text: string) => onEdit(message, text)"
                     @next="move(1, false)"
@@ -758,6 +899,96 @@ const filters: readonly { readonly value: StatusFilter; readonly name: string }[
   font-family: var(--pl-font-ui);
   font-size: var(--pl-text-sm);
   font-weight: 600;
+}
+
+/* A message's context (gettext's msgctxt), under its key. */
+.catalog-context {
+  display: block;
+  margin-block-start: var(--pl-space-1);
+  color: var(--pl-color-muted);
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+}
+
+/* The source's plural forms, and the translation's fields, each with its label. */
+.catalog-source-forms {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--pl-space-1) var(--pl-space-3);
+  margin: 0;
+}
+
+.catalog-source-forms > div {
+  display: contents;
+}
+
+.catalog-source-forms dt,
+.catalog-form-label {
+  color: var(--pl-color-muted);
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+}
+
+.catalog-source-forms dd {
+  margin: 0;
+}
+
+.catalog-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+}
+
+.catalog-form + .catalog-form {
+  margin-block-start: var(--pl-space-3);
+}
+
+.catalog-form-warnings {
+  margin: 0;
+  padding-inline-start: var(--pl-space-4);
+  border-inline-start: 3px solid var(--pl-color-warn);
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+}
+
+/* A translation its file marks as needing review, with what changed in the source since. */
+.catalog-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-1);
+  margin-block-start: var(--pl-space-3);
+  padding: var(--pl-space-3);
+  border-inline-start: 3px solid var(--pl-color-warn);
+  border-radius: var(--pl-radius-sm);
+  background: var(--pl-color-warn-surface);
+}
+
+.catalog-review h3 {
+  margin: 0;
+  font-family: var(--pl-font-ui);
+  font-size: var(--pl-text-sm);
+  font-weight: 600;
+}
+
+.catalog-review-diff {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.catalog-review-diff del {
+  color: var(--pl-color-danger);
+}
+
+/* A word replaced: the old and the new apart, not run together. */
+.catalog-review-diff del + ins {
+  margin-inline-start: 0.3em;
+}
+
+.catalog-review-diff ins {
+  background: var(--pl-color-surface);
+  color: var(--pl-color-ok);
+  text-decoration-thickness: 2px;
 }
 
 .catalog-documentation-text {

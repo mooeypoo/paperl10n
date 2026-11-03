@@ -8,6 +8,8 @@ export interface CatalogMessage {
   readonly key: MessageKey;
   /** The source text (its first form, when it has plural forms). */
   readonly source: string;
+  /** Which use of a text this is (gettext's `msgctxt`); `null`: the source doesn't say. */
+  readonly context: string | null;
   /** Every plural form of the source (gettext's `msgid` and `msgid_plural`); `null`: none. */
   readonly sourceForms: readonly string[] | null;
   /** What the developers say about it: the documentation file's (`qqq`), else the source
@@ -59,6 +61,7 @@ export function pairCatalog(
       return {
         key: message.key,
         source: message.text,
+        context: message.context ?? null,
         sourceForms: message.forms ?? null,
         documentation: nonEmpty(docs.get(message.key)) ?? nonEmpty(message.documentation),
         translation: translation?.text ?? null,

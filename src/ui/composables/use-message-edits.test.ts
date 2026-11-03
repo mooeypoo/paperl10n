@@ -12,6 +12,7 @@ const translated: CatalogMessageDto = {
   status: 'translated',
   sourceTokens: [{ kind: 'parameter', start: 6, end: 8 }],
   translationTokens: [{ kind: 'parameter', start: 5, end: 7 }],
+  context: null,
   sourceForms: null,
   translationForms: null,
   needsReview: false,
@@ -23,6 +24,7 @@ const missing: CatalogMessageDto = {
   translation: null,
   status: 'missing',
   translationTokens: [],
+  context: null,
   sourceForms: null,
   translationForms: null,
   needsReview: false,
@@ -119,6 +121,67 @@ describe('useMessageEdits', () => {
     edits.edit(translated, 'חדש');
     edits.saved(removing);
     expect(edits.pending()[0]?.base).toBeNull();
+  });
+
+  it('keeps a plural’s forms as written, with the forms it started from, until they match the file again', () => {
+    const plural: CatalogMessageDto = {
+      ...translated,
+      key: 'files',
+      translation: 'קובץ',
+      translationForms: [
+        { text: 'קובץ', tokens: [] },
+        { text: '$1 קבצים', tokens: [token(0, 2)] },
+      ],
+    };
+    const edits = useMessageEdits(shallowRef(catalog('i18n')));
+    // Padded to the language's forms; the file's when not edited.
+    expect(edits.formsOf(plural, 3)).toEqual(['קובץ', '$1 קבצים', '']);
+    expect(edits.formsOf(missing, 2)).toEqual(['', '']);
+    edits.editForms(plural, ['קובץ', '$1 קבצים', 'עוד']);
+    edits.editForms(plural, ['קבץ', '$1 קבצים', 'עוד']);
+    expect(edits.pending()).toEqual([
+      {
+        key: 'files',
+        text: 'קבץ',
+        forms: ['קבץ', '$1 קבצים', 'עוד'],
+        base: 'קובץ',
+        baseForms: ['קובץ', '$1 קבצים'],
+        source: 'Hello $1',
+      },
+    ]);
+    expect(edits.formsOf(plural, 3)).toEqual(['קבץ', '$1 קבצים', 'עוד']);
+    edits.editForms(plural, ['קובץ', '$1 קבצים']);
+    expect(edits.isEdited('files')).toBe(false);
+    // An untranslated plural left empty is no edit.
+    edits.editForms(missing, ['', '']);
+    expect(edits.isEdited('farewell')).toBe(false);
+    edits.editForms(missing, ['', 'x']);
+    expect(edits.pending()[0]).toMatchObject({ text: '', forms: ['', 'x'], baseForms: null });
+  });
+
+  it('forgets a saved plural only when its forms were saved; one typed into since starts from them', () => {
+    const plural: CatalogMessageDto = { ...missing, key: 'files', sourceForms: [] };
+    const edits = useMessageEdits(shallowRef(catalog('i18n')));
+    edits.editForms(plural, ['א', 'ב']);
+    const [sent] = edits.pending();
+    if (sent === undefined) throw new Error('test setup');
+    edits.editForms(plural, ['א', 'בב']);
+    edits.saved([sent]);
+    expect(edits.pending()).toEqual([
+      {
+        key: 'files',
+        text: 'א',
+        forms: ['א', 'בב'],
+        base: 'א',
+        baseForms: ['א', 'ב'],
+        source: 'Hello $1',
+      },
+    ]);
+    // Edited again: still from what was saved, not from the file as first read.
+    edits.editForms(plural, ['א', 'בבב']);
+    expect(edits.pending()[0]?.baseForms).toEqual(['א', 'ב']);
+    edits.saved(edits.pending());
+    expect(edits.count.value).toBe(0);
   });
 
   it('drops every edit when they’re discarded', () => {

@@ -123,8 +123,9 @@ describe('the UI harness', () => {
     expect(rows.map((row) => row.querySelector('bdi')?.textContent)).toEqual([
       'Lantern',
       'Light %s',
-      'menu\u0004Open',
-      'Lantern lights up your documents. Press the switch to turn a lamp on, and press it again to turn it off.\nLamps stay lit until you close the window.',
+      // Its context's separator shown, not hidden.
+      'menu␄Open',
+      'Lantern lights up your documents. Press the switch to turn a lamp on, and press it again to turn it off.␊Lamps stay lit until you close the window.',
       '%d lamp is lit',
     ]);
     // The flag says `%s` is a placeholder: marked in the source and the translation.

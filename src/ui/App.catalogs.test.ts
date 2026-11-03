@@ -202,6 +202,7 @@ const message = (
   status,
   sourceTokens: tokens.source ?? [],
   translationTokens: tokens.translation ?? [],
+  context: null,
   sourceForms: null,
   translationForms: null,
   needsReview: false,

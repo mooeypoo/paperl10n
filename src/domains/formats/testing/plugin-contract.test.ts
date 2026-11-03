@@ -969,6 +969,7 @@ describe('messageProblems', () => {
     ['empty forms', { forms: [] }, 'forms is empty'],
     ['a first form that is not the text', { forms: ['other', 'B'] }, "text isn't its first form"],
     ['documentation that is not text', { documentation: 3 }, "documentation isn't text"],
+    ['a context that is not text', { context: [] }, "context isn't text"],
     ['a previous source that is not text', { previousSource: false }, "previousSource isn't text"],
     ['a review mark that is not a boolean', { needsReview: 'yes' }, "needsReview isn't a boolean"],
     ['a flag that is not text', { flags: ['ok', 1] }, "a flag isn't text"],

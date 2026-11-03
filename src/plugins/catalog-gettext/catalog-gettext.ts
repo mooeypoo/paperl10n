@@ -274,6 +274,7 @@ function parse(text: string, role: CatalogFileRole): Result<ParsedCatalog, Plugi
       key: key.value,
       text: forms?.[0] ?? (role === 'source' ? entry.msgid : (entry.msgstr[0] ?? '')),
       ...(forms === undefined ? {} : { forms }),
+      ...(entry.msgctxt === undefined ? {} : { context: entry.msgctxt }),
       ...(entry.extractedComments.length === 0
         ? {}
         : { documentation: entry.extractedComments.join('\n') }),

@@ -23,6 +23,9 @@ export interface MessageEdits {
   readonly changes: Ref<number>;
   /** A message's translation as it's being written: its edit, else the file's (`''`: none). */
   textOf(message: CatalogMessageDto): string;
+  /** A plural message's forms as they're being written (its edit's, else the file's), `count` of
+   * them (missing ones empty). */
+  formsOf(message: CatalogMessageDto, count: number): string[];
   isEdited(key: string): boolean;
   /**
    * Records a message's text as written, with the translation and source it started from (kept
@@ -30,6 +33,9 @@ export interface MessageEdits {
    * edit.
    */
   edit(message: CatalogMessageDto, text: string): void;
+  /** Records a plural message's forms as written, as `edit` does its text (the first form is its
+   * text). Forms that say what the file does are no edit. */
+  editForms(message: CatalogMessageDto, forms: readonly string[]): void;
   /** Remembers the tokens main found in a message's text, for its row. */
   remember(key: string, text: string, tokens: readonly PlaceholderTokenDto[]): void;
   /** The translation a row shows (its edit, if any), with tokens when known; `null`: none. */
@@ -77,6 +83,11 @@ export function useMessageEdits(detail: Readonly<Ref<CatalogDetailDto | null>>):
 
   const textOf = (message: CatalogMessageDto) =>
     edits.value.get(message.key)?.text ?? message.translation ?? '';
+  /** The file's forms of a message (none: an untranslated or a single message). */
+  const fileForms = (message: CatalogMessageDto) =>
+    message.translationForms?.map((form) => form.text) ?? null;
+  const sameForms = (a: readonly string[], b: readonly string[]) =>
+    a.length === b.length && a.every((form, index) => form === b[index]);
 
   return {
     open,
@@ -84,6 +95,29 @@ export function useMessageEdits(detail: Readonly<Ref<CatalogDetailDto | null>>):
     changes,
     textOf,
     isEdited: (key) => edits.value.has(key),
+    formsOf: (message, count) => {
+      const forms = edits.value.get(message.key)?.forms ?? fileForms(message) ?? [];
+      return Array.from({ length: Math.max(count, forms.length) }, (_, i) => forms[i] ?? '');
+    },
+    editForms: (message, forms) => {
+      const next = new Map(edits.value);
+      const started = edits.value.get(message.key);
+      const inFile = fileForms(message);
+      const asInFile =
+        inFile === null ? forms.every((form) => form === '') : sameForms(forms, inFile);
+      if (asInFile) next.delete(message.key);
+      else {
+        next.set(message.key, {
+          key: message.key,
+          text: forms[0] ?? '',
+          forms: [...forms],
+          base: started?.base ?? message.translation,
+          baseForms: started === undefined ? inFile : (started.baseForms ?? null),
+          source: started?.source ?? message.source,
+        });
+      }
+      changed(next);
+    },
     edit: (message, text) => {
       const next = new Map(edits.value);
       const started = edits.value.get(message.key);
@@ -115,11 +149,20 @@ export function useMessageEdits(detail: Readonly<Ref<CatalogDetailDto | null>>):
     pending: () => [...edits.value.values()],
     saved: (messages) => {
       const next = new Map(edits.value);
-      for (const { key, text } of messages) {
+      for (const { key, text, forms } of messages) {
         const now = next.get(key);
         if (now === undefined) continue;
-        if (now.text === text) next.delete(key);
-        else next.set(key, { ...now, base: text === '' ? null : text });
+        const same = now.text === text && sameForms(now.forms ?? [], forms ?? []);
+        if (same) next.delete(key);
+        else {
+          // Typed into during the save: still an edit, starting from what was saved.
+          const emptied = forms === undefined || forms.every((form) => form === '');
+          next.set(key, {
+            ...now,
+            base: text === '' ? null : text,
+            ...(now.forms === undefined ? {} : { baseForms: emptied ? null : forms }),
+          });
+        }
       }
       edits.value = next;
     },
