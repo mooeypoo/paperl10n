@@ -276,6 +276,25 @@ per plugin, reading each manifest (`scripts/eslint/architecture.ts`), so a plugi
 can always move out together. [`src/plugins/format-stub/`](../../src/plugins/format-stub/) is the
 reference plugin; read its README and `format-stub.ts` first.
 
+### Reading a system's config (`findStaticProperties`)
+
+Many systems keep their settings in JavaScript or TypeScript (`astro.config.mjs`,
+`.vitepress/config.ts`), and a plugin never runs project code. `findStaticProperties(text, name)`
+finds every property with that name (`locales: …`, the key bare or quoted, where a property can
+be: after `{` or `,`), outside strings and comments, in order, with how deeply it's nested and its
+value read statically as a `StaticValue`:
+
+- plain literals: strings (escapes decoded, templates without `${…}`), numbers, booleans, `null`;
+- objects (`properties`, a `Map`) and arrays (`items`), with `complete: false` when a part can't
+  be read (a spread, a computed key, a method), alongside what could be;
+- `dynamic` for anything else: a variable, a call, an operator, an interpolated template.
+
+It's a reader for the plain configs sites write, not a JavaScript parser. What it doesn't
+recognize comes back as dynamic, never as a wrong value. The plugin decides what a dynamic or
+incomplete value means: Starlight gives up on its locales, so the folder conventions apply.
+Several properties can share a name (VitePress's `locales`, and its search's `locales` deeper
+in), which is what `depth` is for.
+
 ### The plugin contract kit
 
 Every plugin's test file calls it once:

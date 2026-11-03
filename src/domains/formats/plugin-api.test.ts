@@ -29,6 +29,7 @@ describe('#plugin-api', () => {
       'catalogKey',
       'documentKey',
       'err',
+      'findStaticProperties',
       'localeId',
       'messageKey',
       'ok',

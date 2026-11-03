@@ -22,6 +22,13 @@ export {
   type PlaceholderToken,
 } from '#domains/catalog';
 
+// Helpers every plugin may need: reading a system's JS or TS config without running it
+export {
+  findStaticProperties,
+  type StaticProperty,
+  type StaticValue,
+} from './domain/static-config.ts';
+
 // The contracts plugins implement, and what they receive
 export type { Detection, DetectionConfidence } from './domain/detection.ts';
 export type { FileAccessError, ProjectFiles } from './application/ports/project-files.ts';

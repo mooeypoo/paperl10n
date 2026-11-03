@@ -48,6 +48,15 @@ describe('readStarlightLocales', () => {
       config(`locales: { root: { label: 'English', meta: { lang: 'xx' }, lang: 'en' } }`),
       [{ folder: '', lang: 'en' }],
     ],
+    [
+      "Starlight's locales after Astro's own i18n array",
+      `export default defineConfig({ i18n: { defaultLocale: 'en', locales: ['en', 'he'] },
+        integrations: [starlight({ locales: { root: { lang: 'en' }, he: { lang: 'he' } } })] });`,
+      [
+        { folder: '', lang: 'en' },
+        { folder: 'he', lang: 'he' },
+      ],
+    ],
   ])('reads %s', (_description, text, expected) => {
     expect(readStarlightLocales(text)).toEqual(expected);
   });

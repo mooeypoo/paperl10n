@@ -300,6 +300,30 @@ VitePress first: it's small, and it shows quickly whether the document contract 
 
 - **V1, the config reader:** moved into `#plugin-api`, with Starlight using it (no behavior change;
   its tests unchanged).
+  - *Done-notes:* `findStaticProperties(text, name)` in `formats/domain/static-config.ts`,
+    exported from `#plugin-api` with `StaticValue` and `StaticProperty` (the frozen export list
+    gains it), and described in [the formats doc](../domains/formats.md).
+    - **A value tree, not Starlight's rules.** Starlight's reader looked for the first
+      `locales: {` and only a `lang` string inside. VitePress needs more: its own docs build
+      locale entries with spreads (`{ label: 'English', ...en }`), and its search options carry
+      another `locales` deeper in. So the reader returns every property with the name and how
+      deeply it's nested, and reads values into a tree: literals, objects and arrays marked
+      incomplete when a part can't be read, and `dynamic` for the rest. Each plugin decides what
+      a dynamic or incomplete value means.
+    - **Starlight** (`astro-config.ts`) now uses it: the first `locales` object, which must be
+      complete, each locale an object, and `lang` a string when present. Its tests are unchanged,
+      plus one: Starlight's locales after Astro's own `i18n.locales` array. Two small differences:
+      a `lang` with escapes is now decoded rather than refused, and a `locales:` that isn't in a
+      property position (a ternary, a `case`) is no longer matched.
+    - Tests: 42, table-driven: each kind of literal and escape, what's dynamic, what's
+      incomplete, objects and arrays that never close, finding by name and depth, quoted keys,
+      and what isn't a property (strings, comments, values, members, longer names, conditionals,
+      shorthands).
+    - Mutation checks (23), each failing tests in the end. Survivors at first, each resolved: a
+      spread guard that repeated the key reader (a spread never reads as a key): removed. Six
+      were untested (a line break in a quoted string, an escape past U+10FFFF, a template as a
+      key, numeric keys as JavaScript names them, an object ending after a comma, a name without
+      a colon) and Starlight choosing the first `locales` *object*: each got a test.
 - **V2, the plugin:** `format-vitepress` (detection, layout, links) with fixtures and the
   contract kit. Registered in `app/plugins.ts`, and opened in the UI harness.
 - **G1, the contract:** API v4 (`Message` fields, `parse` role, `scan` context, plural forms),
