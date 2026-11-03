@@ -5,6 +5,8 @@ import type { MarkdownParser } from '#domains/document';
 import { createFormatRegistry, type PluginModule, type RegistryError } from '#domains/formats';
 import {
   createCheckMessage,
+  createDiscardCatalogDraft,
+  createSaveCatalogDraft,
   createKeepMessagesUpToDate,
   createSaveCatalog,
   createCheckTranslation,
@@ -38,6 +40,8 @@ export interface AppDependencies {
   readonly sessions: ProjectSessions;
   /** Where unsaved edits are kept: the app's data folder (Electron), or memory (the harness). */
   readonly drafts: DraftStore;
+  /** Catalogs' drafts: a store of their own (catalog-drafts.ts). */
+  readonly catalogDrafts: DraftStore;
   readonly parser: MarkdownParser;
   readonly plugins: readonly PluginModule[];
   readonly onUnexpected: OnUnexpected;
@@ -61,8 +65,14 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
       drafts: deps.drafts,
       parser: deps.parser,
     }),
-    listCatalogs: createListCatalogs({ sessions: deps.sessions }),
-    readCatalog: createReadCatalog({ sessions: deps.sessions }),
+    listCatalogs: createListCatalogs({
+      sessions: deps.sessions,
+      catalogDrafts: deps.catalogDrafts,
+    }),
+    readCatalog: createReadCatalog({
+      sessions: deps.sessions,
+      catalogDrafts: deps.catalogDrafts,
+    }),
     readDocumentPair: createReadDocumentPair({
       sessions: deps.sessions,
       parser: deps.parser,
@@ -78,7 +88,19 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
     markExistingUpToDate: createMarkExistingUpToDate(marking),
     checkTranslation: createCheckTranslation({ sessions: deps.sessions, parser: deps.parser }),
     checkMessage: createCheckMessage({ sessions: deps.sessions }),
-    saveCatalog: createSaveCatalog({ sessions: deps.sessions, updates: statusUpdates }),
+    saveCatalog: createSaveCatalog({
+      sessions: deps.sessions,
+      catalogDrafts: deps.catalogDrafts,
+      updates: statusUpdates,
+    }),
+    saveCatalogDraft: createSaveCatalogDraft({
+      sessions: deps.sessions,
+      catalogDrafts: deps.catalogDrafts,
+    }),
+    discardCatalogDraft: createDiscardCatalogDraft({
+      sessions: deps.sessions,
+      catalogDrafts: deps.catalogDrafts,
+    }),
     keepMessagesUpToDate: createKeepMessagesUpToDate({
       sessions: deps.sessions,
       updates: statusUpdates,

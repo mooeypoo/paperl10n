@@ -214,6 +214,26 @@ well formed (`documentKey`), not listed: checking the listing would read the pro
 autosave. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 `workspace.unknown-document` (a malformed key), `workspace.draft-unwritable`.
 
+### Catalog drafts: `saveCatalogDraft(projectId, { catalog, messages })`, `discardCatalogDraft(projectId, catalog)`
+
+`createSaveCatalogDraft` and `createDiscardCatalogDraft` (`{ sessions, catalogDrafts }`, M4). A
+catalog's unsaved edits are its draft: each edited message as it would be saved (`MessageSave`:
+text, base, and the source shown), replacing the last draft; no messages forget it. Catalog
+drafts use the same `DraftStore` port as pages, in **a store of their own** (`catalogDrafts`,
+`userData/catalog-drafts/` in Electron), keyed by project location, target locale, and catalog
+key; a draft's text holds the messages as JSON. So the port, its adapters, and page drafts don't
+change, and a catalog key can never be mistaken for a page key.
+
+- `readCatalog` returns the draft (`draft`), without the messages whose draft says what the file
+  does (saved since, or set back), which are forgotten from the store too; a draft left with none
+  is forgotten. A stored draft that can't be read as one counts as none.
+- `listCatalogs` says which catalogs have one (`hasDraft`).
+- `saveCatalog` forgets the saved messages from the draft (those saved with the draft's text).
+- Drafts that can't be read never stop a catalog from opening or saving.
+
+Errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-catalog` (a
+malformed key; as for pages, the key isn't listed on every autosave), `workspace.draft-unwritable`.
+
 ### Status
 
 A target language's **status file** is `.paperl10n/status/<locale>.json` in the project,
@@ -293,7 +313,7 @@ the two files is workspace's job: it holds the open project's files and layout.
 |---|---|---|
 | `FolderPicker` | `createDialogFolderPicker` (`#adapters/workspace/dialog-folder-picker`, with Electron's dialog injected) | `pick(): Promise<string \| null>`; contract: `describeFolderPickerContract` |
 | `ProjectFilesOpener` | `nodeProjectOpener` (`app/node/`, wraps `openNodeProjectFiles`); the UI harness's `fixtureOpener` | returns the files, a `ProjectWriter`, the folder's display name, and its `location` (its real path, the same every time it opens); contract: `describeProjectFilesOpenerContract` |
-| `DraftStore` | `nodeDraftStore(folder)` (`#adapters/workspace/node-draft-store`, `userData/drafts/` in Electron); `InMemoryDraftStore` (tests, UI harness) | `get`, `put`, `remove`, `documents(project, locale)`. On disk: one JSON file per draft, named by a SHA-256 of its key, written atomically, folder `0700` and files `0600`. A file that isn't a draft for the key asked for (corrupt, another version, a collision) counts as none. Contract: `describeDraftStoreContract` |
+| `DraftStore` | `nodeDraftStore(folder)` (`#adapters/workspace/node-draft-store`, `userData/drafts/` in Electron, and `userData/catalog-drafts/` for catalogs); `InMemoryDraftStore` (tests, UI harness) | `get`, `put`, `remove`, `documents(project, locale)`. On disk: one JSON file per draft, named by a SHA-256 of its key, written atomically, folder `0700` and files `0600`. A file that isn't a draft for the key asked for (corrupt, another version, a collision) counts as none. Contract: `describeDraftStoreContract` |
 | `ProjectWriter` | `nodeProjectWriter` (`#adapters/workspace/node-project-writer`); `InMemoryProjectFiles` (tests, UI harness) | `writeText(path, text, { createFolders })`, atomic: a temporary file next to the target, flushed, then renamed over it. Writes through a symlink only to a file inside the project; keeps an existing file's permissions. With `createFolders`, missing folders are created one at a time, each checked to be a real folder inside the project (`files.not-a-directory` when a file is in the way). Only the app writes; plugins only read. Contract: `describeProjectWriterContract` |
 | `ProjectSessions` | `InMemoryProjectSessions` (`#adapters/workspace/in-memory-project-sessions`) | random UUID ids; `update` replaces a stored project (choosing a target); contract: `describeProjectSessionsContract` |
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import type {
   CatalogReadError,
+  CatalogDraftError,
   CheckMessageError,
   KeepMessagesError,
   SaveCatalogError,
@@ -31,7 +32,8 @@ export type AppError =
   | MarkUpToDateError
   | CheckMessageError
   | SaveCatalogError
-  | KeepMessagesError;
+  | KeepMessagesError
+  | CatalogDraftError;
 
 /** Turns a use-case error into the plain DTO the UI shows a message for. Exhaustive by lint. */
 export function toErrorDto(error: AppError): ErrorDto {

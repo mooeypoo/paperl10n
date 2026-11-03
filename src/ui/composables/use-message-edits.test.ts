@@ -29,6 +29,7 @@ const catalog = (key: string): CatalogDetailDto => ({
   messages: [translated, missing],
   notInSource: [],
   documentationProblem: null,
+  draft: null,
   statusFile: { exists: true, problem: null },
 });
 const token = (start: number, end: number) => ({ kind: 'parameter' as const, start, end });

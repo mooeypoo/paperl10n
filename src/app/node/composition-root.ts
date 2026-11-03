@@ -22,6 +22,8 @@ export interface ElectronRootDependencies {
   readonly showFolderDialog: ShowFolderDialog;
   /** Where drafts live: a folder in the app's data (`userData`), never in a project. */
   readonly draftsFolder: string;
+  /** Where catalogs' drafts live: another folder in the app's data. */
+  readonly catalogDraftsFolder: string;
   readonly onUnexpected: OnUnexpected;
 }
 
@@ -33,6 +35,7 @@ export function createElectronAppApi(
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(() => randomUUID()),
     drafts: nodeDraftStore(deps.draftsFolder),
+    catalogDrafts: nodeDraftStore(deps.catalogDraftsFolder),
     parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: deps.onUnexpected,

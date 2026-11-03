@@ -151,6 +151,8 @@ export function fakeClient(
     saveCatalog?: Result<CatalogSaveDto, ErrorDto>;
     /** The answer to keeping messages up to date (default: each up to date). */
     keepMessages?: Result<readonly SavedMessageDto[], ErrorDto>;
+    /** The answer to keeping a catalog's draft (default: kept). */
+    saveCatalogDraft?: Result<null, ErrorDto>;
   } = {},
 ) {
   const open = [...(answers.open ?? [])];
@@ -281,6 +283,14 @@ export function fakeClient(
           },
         ),
       );
+    },
+    saveCatalogDraft: ({ projectId, catalog, messages }) => {
+      calls.push(`saveCatalogDraft:${projectId}:${catalog}:${JSON.stringify(messages)}`);
+      return Promise.resolve(answers.saveCatalogDraft ?? { ok: true, value: null });
+    },
+    discardCatalogDraft: ({ projectId, catalog }) => {
+      calls.push(`discardCatalogDraft:${projectId}:${catalog}`);
+      return Promise.resolve({ ok: true, value: null });
     },
     markUpToDate: ({ projectId, key, sourceFingerprint, sections }) => {
       calls.push(

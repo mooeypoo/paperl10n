@@ -44,6 +44,10 @@ export function guardApi(api: PaperLionApi, onUnexpected: OnUnexpected): PaperLi
     saveCatalog: (request) => guard('saveCatalog', onUnexpected, () => api.saveCatalog(request)),
     keepMessagesUpToDate: (request) =>
       guard('keepMessagesUpToDate', onUnexpected, () => api.keepMessagesUpToDate(request)),
+    saveCatalogDraft: (request) =>
+      guard('saveCatalogDraft', onUnexpected, () => api.saveCatalogDraft(request)),
+    discardCatalogDraft: (request) =>
+      guard('discardCatalogDraft', onUnexpected, () => api.discardCatalogDraft(request)),
     markUpToDate: (request) => guard('markUpToDate', onUnexpected, () => api.markUpToDate(request)),
     markExistingUpToDate: (request) =>
       guard('markExistingUpToDate', onUnexpected, () => api.markExistingUpToDate(request)),

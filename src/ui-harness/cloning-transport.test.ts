@@ -70,6 +70,8 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
         value: { path: 'p', written: true, messages: [], statusProblem: null },
       }),
     keepMessagesUpToDate: () => Promise.resolve({ ok: true, value: [] }),
+    saveCatalogDraft: () => Promise.resolve({ ok: true, value: null }),
+    discardCatalogDraft: () => Promise.resolve({ ok: true, value: null }),
     markUpToDate: () =>
       Promise.resolve({
         ok: true,

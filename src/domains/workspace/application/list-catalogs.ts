@@ -5,6 +5,7 @@ import { emptyStatusFile, messageStatus, type MessageStatus } from '#domains/tra
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import { readCatalogFile, type CatalogReadError } from './catalog-files.ts';
+import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import { readStatusFile, type StatusReadError } from './translation-status.ts';
 
@@ -23,6 +24,8 @@ export interface CatalogEntry {
   /** Where the target language's file lives (or will live). */
   readonly targetPath: ProjectPath;
   readonly targetExists: boolean;
+  /** It has unsaved edits kept as a draft (drafts that can't be listed count as none). */
+  readonly hasDraft: boolean;
   /** `null` when the source or target file can't be read; `problem` says why. */
   readonly progress: CatalogProgress | null;
   readonly problem: CatalogReadError | null;
@@ -66,7 +69,10 @@ export function catalogProgress(
  * A project without catalogs lists none. A catalog whose files can't be read still lists, with
  * the problem; a status file that can't be read counts as empty.
  */
-export function createListCatalogs(deps: { readonly sessions: ProjectSessions }): ListCatalogs {
+export function createListCatalogs(deps: {
+  readonly sessions: ProjectSessions;
+  readonly catalogDrafts: DraftStore;
+}): ListCatalogs {
   return async (projectId) => {
     const project = deps.sessions.get(projectId);
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
@@ -75,6 +81,8 @@ export function createListCatalogs(deps: { readonly sessions: ProjectSessions })
 
     const read = await readStatusFile(project, target.id);
     const file = read.ok ? read.value.file : emptyStatusFile;
+    const drafted = await deps.catalogDrafts.documents(project.location, target.id);
+    const withDrafts = new Set<string>(drafted.ok ? drafted.value : []);
     const entries: CatalogEntry[] = [];
     if (project.catalogs !== null) {
       const { format, layout } = project.catalogs;
@@ -88,6 +96,7 @@ export function createListCatalogs(deps: { readonly sessions: ProjectSessions })
           sourcePath: catalog.path,
           targetPath: targetPath.value,
           targetExists: await project.files.exists(targetPath.value),
+          hasDraft: withDrafts.has(catalog.key),
         };
         const source = await readCatalogFile(project, format, catalog.path);
         if (!source.ok) {

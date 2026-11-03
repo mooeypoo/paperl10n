@@ -5,7 +5,14 @@ import { emptyStatusFile, messageStatus, type MessageStatus } from '#domains/tra
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import { readCatalogFile, scanText, type CatalogReadError } from './catalog-files.ts';
+import {
+  catalogDraftKey,
+  keepDraftMessages,
+  readCatalogDraft,
+  type CatalogDraft,
+} from './catalog-drafts.ts';
 import { findCatalog } from './find-catalog.ts';
+import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import { readStatusFile, type StatusReadError } from './translation-status.ts';
 
@@ -43,6 +50,11 @@ export interface ReadCatalogResult {
   readonly notInSource: readonly NotInSourceEntry[];
   /** Why the documentation can't be read: the messages then show none, and still translate. */
   readonly documentationProblem: CatalogReadError | null;
+  /**
+   * The catalog's unsaved edits, kept as a draft (`null`: none). Messages whose draft says what
+   * the file already does are dropped from it (and forgotten), so it holds only real edits.
+   */
+  readonly draft: CatalogDraft | null;
   /** The target language's status file, as for pages. */
   readonly statusFile: { readonly exists: boolean; readonly problem: StatusReadError | null };
 }
@@ -64,7 +76,10 @@ export type ReadCatalog = (
  * status, and tokens, and the translation's messages the source no longer has. The source and
  * target files must read; the documentation may not (it's help, not the work).
  */
-export function createReadCatalog(deps: { readonly sessions: ProjectSessions }): ReadCatalog {
+export function createReadCatalog(deps: {
+  readonly sessions: ProjectSessions;
+  readonly catalogDrafts: DraftStore;
+}): ReadCatalog {
   return async (projectId, key) => {
     const project = deps.sessions.get(projectId);
     if (project === undefined) return err({ code: 'workspace.unknown-project' });
@@ -87,6 +102,22 @@ export function createReadCatalog(deps: { readonly sessions: ProjectSessions }):
       if (read.ok) documentation = read.value;
       else documentationProblem = read.error;
     }
+
+    // A draft message that says what the file does is no edit: it was saved, or set back.
+    const draftKey = catalogDraftKey(project, catalog.key);
+    const stored = await readCatalogDraft(deps.catalogDrafts, draftKey);
+    const inFile = new Map<string, string>(
+      (translation.value ?? []).map((message) => [message.key, message.text]),
+    );
+    const draft =
+      stored === null
+        ? null
+        : await keepDraftMessages(
+            deps.catalogDrafts,
+            draftKey,
+            stored,
+            (message) => message.text !== (inFile.get(message.key) ?? ''),
+          );
 
     const status = await readStatusFile(project, target.id);
     const record = (status.ok ? status.value.file : emptyStatusFile).catalogs.get(catalog.key);
@@ -113,6 +144,7 @@ export function createReadCatalog(deps: { readonly sessions: ProjectSessions }):
         tokens: scanText(format, message.text),
       })),
       documentationProblem,
+      draft,
       statusFile: {
         exists: status.ok && status.value.exists,
         problem: status.ok ? null : status.error,

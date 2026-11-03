@@ -94,6 +94,7 @@ function rendererApi(
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(randomUUID),
     drafts: nodeDraftStore(drafts),
+    catalogDrafts: nodeDraftStore(`${drafts}-catalogs`),
     parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: (method, thrown) => {
@@ -199,6 +200,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
             sourcePath: 'i18n/en.json',
             targetPath: 'i18n/he.json',
             targetExists: true,
+            hasDraft: false,
             progress: {
               total: 5,
               byStatus: { missing: 2, draft: 1, translated: 1, outdated: 1 },
@@ -211,6 +213,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
             sourcePath: 'i18n/api/en.json',
             targetPath: 'i18n/api/he.json',
             targetExists: false,
+            hasDraft: false,
             progress: {
               total: 2,
               byStatus: { missing: 2, draft: 0, translated: 0, outdated: 0 },
@@ -519,6 +522,73 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
         params: { file: 'i18n/he.json' },
         details: ['example-count'],
       },
+    });
+  },
+  saveCatalogDraft: async () => {
+    const folder = await copyOfExtension();
+    const drafts = await draftsFolder();
+    const first = rendererApi(folder, drafts).api;
+    const opened = await first.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    const count = {
+      key: 'example-count',
+      text: 'יש {{PLURAL:$1|דוגמה|$1 דוגמאות}}.',
+      base: null,
+      source: 'There {{PLURAL:$1|is one example|are $1 examples}}.',
+    };
+    // A message set to what the file says is no edit: it's dropped when the catalog is read.
+    const last = {
+      key: 'example-last',
+      text: 'הודעה אחרונה',
+      base: 'הודעה אחרונה',
+      source: 'Last message',
+    };
+    expect(
+      await first.saveCatalogDraft({
+        projectId: opened.value.projectId,
+        catalog: 'i18n',
+        messages: [count, last],
+      }),
+    ).toEqual({ ok: true, value: null });
+
+    // After a restart: the catalog lists with a draft, and reads with its real edits.
+    const { api } = rendererApi(folder, drafts);
+    const again = await api.openProject();
+    if (!again.ok || again.value === null) throw new Error(JSON.stringify(again));
+    const { projectId } = again.value;
+    const listed = await api.listCatalogs({ projectId });
+    expect(listed.ok && listed.value.catalogs.map((c) => [c.key, c.hasDraft])).toEqual([
+      ['i18n', true],
+      ['i18n/api', false],
+    ]);
+    const read = await api.readCatalog({ projectId, key: 'i18n' });
+    expect(read.ok && read.value.draft).toEqual({ messages: [count] });
+
+    // Saving the message forgets it from the draft, and so the draft.
+    await api.saveCatalog({ projectId, catalog: 'i18n', messages: [count] });
+    const saved = await api.readCatalog({ projectId, key: 'i18n' });
+    expect(saved.ok && saved.value.draft).toBeNull();
+  },
+  discardCatalogDraft: async () => {
+    const folder = await copyOfExtension();
+    const { api } = rendererApi(folder, await draftsFolder());
+    const opened = await api.openProject();
+    if (!opened.ok || opened.value === null) throw new Error(JSON.stringify(opened));
+    const { projectId } = opened.value;
+    const edit = { key: 'example-count', text: 'יש', base: null, source: 'There' };
+    await api.saveCatalogDraft({ projectId, catalog: 'i18n', messages: [edit] });
+    expect(await api.discardCatalogDraft({ projectId, catalog: 'i18n' })).toEqual({
+      ok: true,
+      value: null,
+    });
+    const read = await api.readCatalog({ projectId, key: 'i18n' });
+    expect(read.ok && read.value.draft).toBeNull();
+    expect(
+      await api.saveCatalogDraft({ projectId: 'nope', catalog: 'i18n', messages: [edit] }),
+    ).toEqual({ ok: false, error: { code: 'workspace.unknown-project', params: {}, details: [] } });
+    expect(await api.discardCatalogDraft({ projectId, catalog: '' })).toMatchObject({
+      ok: false,
+      error: { code: 'internal.invalid-request' },
     });
   },
   keepMessagesUpToDate: async () => {

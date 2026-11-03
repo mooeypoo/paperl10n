@@ -29,6 +29,7 @@ export function createHarnessApi(fixtures: Fixtures, fixture: string): PaperLion
     sessions: new InMemoryProjectSessions(() => crypto.randomUUID()),
     // Drafts last until the page reloads (the harness never writes to disk).
     drafts: new InMemoryDraftStore(),
+    catalogDrafts: new InMemoryDraftStore(),
     parser: createLezerMarkdownParser(),
     plugins: builtInPlugins,
     onUnexpected: (method, thrown) => {

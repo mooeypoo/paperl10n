@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C6 and C7a done, C7b next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C6, C7a, and C7b done, C7c next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -610,6 +610,36 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         new folder, an empty translation in the file, `written` and `statusProblem` over IPC):
         each got a test.
   - **C7b, drafts (main):** a catalog's unsaved edits kept in app data, as a page's are.
+    - *Done-notes:* the rules are in [the workspace doc](../domains/workspace.md) ("Catalog
+      drafts").
+      - **A store of their own, not a new port:** catalog drafts use the `DraftStore` port in a
+        second store (`userData/catalog-drafts/`), keyed by the catalog's key, with the edited
+        messages as JSON in the draft's text. The port, both adapters, their contract, and page
+        drafts are untouched, and a catalog key can't collide with a page key (both can be
+        `index`, say).
+      - **A draft holds what saving needs:** each message's text, base, and the source shown
+        (`MessageSave`), so a restored draft saves with the same conflict check and recording.
+      - **Only real edits stay:** reading the catalog drops (and forgets) draft messages that say
+        what the file does; saving forgets the messages it saved with the draft's text.
+        `listCatalogs` gains `hasDraft`, `readCatalog` gains `draft`. A draft that can't be read
+        never blocks opening or saving.
+      - `saveCatalogDraft` (no messages: forget it) and `discardCatalogDraft` over IPC.
+      - Tests: keeping and reading back (another catalog's apart), replacing, forgetting (no
+        edits, discarded), dropping messages the file has (in the store too), saving forgets
+        (only the saved text), eleven malformed stored drafts, an unavailable store (opening and
+        saving still work; keeping and forgetting report it), each error; validation of each
+        argument; and end to end over IPC: a draft kept, then listed and read back after a
+        "restart" (a new app session over the same drafts folder), a set-back message dropped,
+        saving forgetting it; discarding.
+      - Mutation checks, each failing tests (24): each field the decoder checks, a list of
+        messages, a `null` message, keeping only real edits (in the store too, and forgetting an
+        empty draft), the key check, no edits forgetting, reading decoding, discarding, reading
+        dropping the file's text, `hasDraft`, saving forgetting (only the saved text), validation
+        allowing no messages, the handler, the preload, and the wiring of the right store.
+        Survivors at first, each resolved: the decoder checked fields twice (simplified to one
+        read of each field; a `null` message, which would have thrown, got a test), and three
+        untested (no edits forgetting the listed draft, saving forgetting before the next read,
+        a draft error over IPC): each got a test.
   - **C7c, saving in the UI:** Ctrl/Cmd+S, the unsaved-changes question, "Keep as up to date",
     removing messages the source no longer has, and the rows' status after a save.
 - **C7d, existing translations:** the one-time "Mark all existing translations up to date" offer

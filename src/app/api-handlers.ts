@@ -5,6 +5,8 @@ import type { Locale } from '#domains/locale';
 import type { PreservationHint, Section, SectionPairing } from '#domains/translation';
 import type {
   CheckMessage,
+  DiscardCatalogDraft,
+  SaveCatalogDraft,
   KeepMessagesUpToDate,
   SaveCatalog,
   SavedMessage,
@@ -60,6 +62,8 @@ export interface UseCases {
   readonly checkMessage: CheckMessage;
   readonly saveCatalog: SaveCatalog;
   readonly keepMessagesUpToDate: KeepMessagesUpToDate;
+  readonly saveCatalogDraft: SaveCatalogDraft;
+  readonly discardCatalogDraft: DiscardCatalogDraft;
 }
 
 function toTokenDto(token: PlaceholderToken): PlaceholderTokenDto {
@@ -188,6 +192,7 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
           sourcePath: entry.sourcePath,
           targetPath: entry.targetPath,
           targetExists: entry.targetExists,
+          hasDraft: entry.hasDraft,
           progress:
             entry.progress === null
               ? null
@@ -231,6 +236,17 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
         })),
         documentationProblem:
           read.documentationProblem === null ? null : toErrorDto(read.documentationProblem),
+        draft:
+          read.draft === null
+            ? null
+            : {
+                messages: read.draft.messages.map(({ key, text, base, source }) => ({
+                  key,
+                  text,
+                  base,
+                  source,
+                })),
+              },
         statusFile: {
           exists: read.statusFile.exists,
           problem: read.statusFile.problem === null ? null : toErrorDto(read.statusFile.problem),
@@ -347,6 +363,16 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
     async keepMessagesUpToDate({ projectId, catalog, messages }) {
       const result = await useCases.keepMessagesUpToDate(projectId, { catalog, messages });
       return result.ok ? ok(result.value.map(toSavedDto)) : err(toErrorDto(result.error));
+    },
+
+    async saveCatalogDraft({ projectId, catalog, messages }) {
+      const result = await useCases.saveCatalogDraft(projectId, { catalog, messages });
+      return result.ok ? ok(null) : err(toErrorDto(result.error));
+    },
+
+    async discardCatalogDraft({ projectId, catalog }) {
+      const result = await useCases.discardCatalogDraft(projectId, catalog);
+      return result.ok ? ok(null) : err(toErrorDto(result.error));
     },
 
     async chooseTargetLocale({ projectId, language }) {

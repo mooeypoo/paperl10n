@@ -83,6 +83,25 @@ export const argumentValidators: Readonly<
         (message.base === null || isMessageText(message.base)) &&
         (message.source === null || isMessageText(message.source)),
     ),
+  saveCatalogDraft: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'catalog', 'messages']) &&
+    isProjectId(request.projectId) &&
+    isKey(request.catalog) &&
+    isMessageList(
+      request.messages,
+      ['key', 'text', 'base', 'source'],
+      (message) =>
+        isMessageText(message.text) &&
+        (message.base === null || isMessageText(message.base)) &&
+        (message.source === null || isMessageText(message.source)),
+      { allowEmpty: true },
+    ),
+  discardCatalogDraft: ([request, ...rest]) =>
+    rest.length === 0 &&
+    hasExactly(request, ['projectId', 'catalog']) &&
+    isProjectId(request.projectId) &&
+    isKey(request.catalog),
   keepMessagesUpToDate: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'catalog', 'messages']) &&
@@ -142,14 +161,16 @@ function isMessageText(value: unknown): value is string {
 
 /**
  * Messages of one catalog, each with exactly `fields` (a `key` among them) and passing `valid`:
- * at least one, not absurdly many, and no key twice.
+ * at least one (unless `allowEmpty`), not absurdly many, and no key twice.
  */
 function isMessageList<K extends string>(
   value: unknown,
   fields: readonly ('key' | K)[],
   valid: (message: Record<'key' | K, unknown>) => boolean,
+  { allowEmpty = false } = {},
 ): boolean {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 100_000) return false;
+  if (!Array.isArray(value) || value.length > 100_000) return false;
+  if (value.length === 0 && !allowEmpty) return false;
   const keys = new Set<unknown>();
   return value.every((message: unknown) => {
     if (!hasExactly(message, fields) || !isKey(message.key) || keys.has(message.key)) return false;
@@ -314,6 +335,30 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
         catalog: request.catalog,
         messages: request.messages.map(({ key, source }) => ({ key, source })),
       });
+    }
+    case 'saveCatalogDraft': {
+      // checked by argumentValidators
+      const [request] = args as [
+        {
+          projectId: string;
+          catalog: string;
+          messages: { key: string; text: string; base: string | null; source: string | null }[];
+        },
+      ];
+      return api.saveCatalogDraft({
+        projectId: request.projectId,
+        catalog: request.catalog,
+        messages: request.messages.map(({ key, text, base, source }) => ({
+          key,
+          text,
+          base,
+          source,
+        })),
+      });
+    }
+    case 'discardCatalogDraft': {
+      const [request] = args as [{ projectId: string; catalog: string }]; // checked by argumentValidators
+      return api.discardCatalogDraft({ projectId: request.projectId, catalog: request.catalog });
     }
     case 'discardDraft': {
       const [request] = args as [{ projectId: string; key: string }]; // checked by argumentValidators

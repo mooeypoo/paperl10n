@@ -13,6 +13,7 @@ describe('createElectronAppApi', () => {
     const api = createElectronAppApi({
       showFolderDialog: () => Promise.resolve({ canceled: false, filePaths: [fixture] }),
       draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
+      catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),
       onUnexpected: (method, thrown) => {
         throw new Error(`unexpected in ${method}: ${String(thrown)}`);
       },
@@ -35,6 +36,7 @@ describe('createElectronAppApi', () => {
     const api = createElectronAppApi({
       showFolderDialog: () => Promise.resolve({ canceled: true, filePaths: [] }),
       draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
+      catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),
       onUnexpected: () => undefined,
     });
     expect(api.ok && (await api.value.openProject())).toEqual({ ok: true, value: null });

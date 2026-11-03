@@ -10,6 +10,7 @@ import {
   type FileTree,
 } from '#domain-testing/formats';
 import { err } from '#kernel/result';
+import { InMemoryDraftStore } from '../adapters/in-memory-draft-store.ts';
 import { InMemoryProjectSessions } from '../adapters/in-memory-project-sessions.ts';
 import { FakeFolderPicker, FakeProjectFilesOpener } from '../testing/fakes.ts';
 import { createOpenProject } from './open-project.ts';
@@ -45,7 +46,7 @@ async function open(files: FileTree, plugins?: PluginModule[]) {
     sessions,
   })();
   if (!opened.ok || opened.value === null) throw new Error(`test setup: ${JSON.stringify(opened)}`);
-  const read = createReadCatalog({ sessions });
+  const read = createReadCatalog({ sessions, catalogDrafts: new InMemoryDraftStore() });
   const projectId = opened.value.projectId;
   return (key = 'i18n') => read(projectId, key);
 }
@@ -105,6 +106,7 @@ describe('readCatalog', () => {
         },
       ],
       documentationProblem: null,
+      draft: null,
       statusFile: { exists: true, problem: null },
     });
   });
@@ -235,7 +237,10 @@ describe('readCatalog', () => {
 
   it('reports an unknown project and a project without a target language', async () => {
     expect(
-      await createReadCatalog({ sessions: new InMemoryProjectSessions(randomUUID) })('x', 'i18n'),
+      await createReadCatalog({
+        sessions: new InMemoryProjectSessions(randomUUID),
+        catalogDrafts: new InMemoryDraftStore(),
+      })('x', 'i18n'),
     ).toEqual({ ok: false, error: { code: 'workspace.unknown-project' } });
     const read = await open({ ...tree, 'paperl10n.config.json': config({}) });
     expect(await read()).toEqual({ ok: false, error: { code: 'workspace.no-target-locale' } });
