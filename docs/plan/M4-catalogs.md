@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C7 done, C8 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); C1–C8 done, C9 next.** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -761,6 +761,42 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
         record repeated the status file's own rule: removed; marking nothing was untested: a
         test added.
 - **C8, previews:** plural and gender (question 7).
+  - *Done-notes:*
+    - **The preview** (`catalog/message-preview.ts`, `MessagePreview.vue`): under the open
+      message's warnings, the translation rendered by banana-i18n for each plural category the
+      target language has (in banana-i18n's order, as MediaWiki's forms are: zero, one, two, few,
+      many, other), each with a sample number, and for each gender (male, female, unknown). Plural
+      rows take the unknown gender, gender rows the "other" form's number; other parameters show
+      as written (`$3`). Links and tags read as their text (banana-i18n's HTML is read through
+      `DOMParser`, never put into the page). Text in the target's language and direction; each
+      label is interface text, its number and CLDR category isolated.
+    - **Which parameters vary** comes from main's tokens: a plural's or gender's parameter is the
+      `$n` before its first `|`. A gender without one (`{{GENDER:|…}}`, the current user's) is
+      given a parameter of its own, so it varies too. A choice on anything else (another template)
+      isn't varied. No plural or gender among the tokens: no preview.
+    - **It follows main's answer** (the text its tokens are for), so it lags typing by the check's
+      0.2 s pause; before the first answer, the tokens as read (or as last found for an edit).
+      Text banana-i18n can't parse (an unclosed `{{`) says so instead of rows.
+    - **Sample numbers:** the first of 1–200, then 0, 1,000 … 1,000,000, then 0.5, 1.5, 2.5 in
+      each category (1 before 0, so English "other" shows 2 rather than an explicit `0=` form;
+      French "many" needs a million, Russian "other" a fraction). Every category of all 2,095
+      codes in the bundled language data is reached.
+    - New messages (en, he, qqq): the title, a plural row's label, the three genders, and the
+      unreadable note.
+    - Checked in Chromium (the harness, the MediaWiki fixture, English light and Hebrew dark): the
+      gender preview on opening, a plural typed in and previewed with it after the pause, links
+      as text, and no console errors.
+    - Tests: the sample numbers (table-driven over en, he, ja, fr, ar, ru), each plural form, each
+      gender, a gender without a parameter, both together with another parameter, an explicit
+      form, links, tags and escaped text, a choice on another template, nothing to preview, and
+      unreadable text; through the real entry point: the preview on opening (before main
+      answers, in the target's language and direction), following main's answer and not before
+      it, nothing without a plural or gender, and the unreadable note.
+    - Mutation checks (22), each failing tests except two fallbacks no locale reaches (a category
+      without a sample number, a language without "other"), kept for an ICU that changes. Two
+      survivors were redundant, removed: a filter for tokens outside the text (the preview always
+      gets tokens with the text they're for) and checking the answer's message key
+      (`useMessageCheck` already drops the answer when another message opens).
 - **C9, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 
 Round-trip rule throughout: a catalog that wasn't edited is never rewritten, and an edited one
