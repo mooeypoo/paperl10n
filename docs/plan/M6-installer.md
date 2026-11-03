@@ -1,8 +1,7 @@
 # M6 discussion: installers, releases, and update notices
 
-Status: **open for discussion.** The maintainer's first decisions are in the table below; the
-questions after it each have a recommendation. Answers go into the "Decided" table, as in M4 and
-M5.
+Status: **decided (2026-11-03): the same as Plot Device**, with the differences below. The
+discussion follows, for context.
 
 Goal: a translator downloads Paper Lion and opens it like any other app, with no Node, pnpm, or
 clone, and the app tells them when a newer version is out. Today it runs only from source
@@ -14,12 +13,24 @@ first release and update notices), so the two apps release and update the same w
 
 ## Decided (2026-11-03)
 
+The maintainer: **do what Plot Device does** (its Milestones 7 and 15, and the fixes after them),
+for packaging, releasing, and update notices alike.
+
 | Topic | Decision |
 |---|---|
 | Platforms | **Linux first, Windows second, macOS planned** (not built in M6). |
-| Linux formats | **A `.deb` and an AppImage**, unless there's an issue with that (there is one, for the AppImage on Ubuntu: question 3). |
+| Linux formats | **A `.deb` and an AppImage.** A downloaded AppImage must be made executable once (`chmod +x`, or Files → Properties → "Executable as Program"); the install docs say so, as Plot Device's do (question 3). |
 | Signing | **None for now.** Signing Windows and macOS builds is a later decision, for Paper Lion and Plot Device together. |
-| Updates | **Update notices as in Plot Device:** a `latest.json` attached to each GitHub release, read from the address that always points to the newest published release, `https://github.com/mooeypoo/paperl10n/releases/latest/download/latest.json`. The app says a newer version is out and links to it; it doesn't install anything itself. |
+| Updates | **Update notices as in Plot Device:** a `latest.json` attached to each GitHub release, read from the address that always points to the newest published release, `https://github.com/mooeypoo/paperl10n/releases/latest/download/latest.json`. The app says a newer version is out and links to it; it doesn't install anything itself (question 6). |
+| Releasing | **Automated as in Plot Device:** `pnpm release <version>` checks that main is ready, sets the version, writes the changelog section from the commits since the last release, and opens a pull request where the notes are edited for translators; merging it tags the release, and the tag builds a **draft** GitHub release that the maintainer publishes (question 8). |
+| Commit messages | **Plot Device's prefixes from now on** (`feat`, `fix`, `perf`, `docs`, `test`, `ci`, `build`, `style`, `dev`, `refactor`, `chore`, `release`), checked by CI on each pull request: `feat:`, `fix:`, and `perf:` lines become release notes, so they're written for translators (question 10). |
+| Documentation site | **Coming soon** (not in M6). Until it exists, `latest.json`'s links point to the GitHub release; then the next `latest.json` points to the site's pages. The links live in the file, not the app, so copies already installed follow. |
+
+Taken as recommended unless the maintainer says otherwise, each matching Plot Device: the
+release identity (question 1), electron-builder (question 2), Windows as an early beta in
+releases (question 4), update checking in a small `updates` domain with an ADR (question 6), an
+About window with the generated licence list (question 7), and "Open with" for folders later
+(question 9).
 
 ## Where M5 left us
 
@@ -64,23 +75,21 @@ Paper Lion always runs its renderer in Chromium's sandbox (ADR 0006), and Ubuntu
 the sandbox for a program without an AppArmor profile (`docs/development/linux-sandbox.md`).
 Chromium then stops rather than run unsandboxed.
 
-- **The `.deb` is fine.** It installs the app in `/opt`, where it can use Chromium's setuid
-  sandbox helper (`chrome-sandbox`, made setuid root on install) or an AppArmor profile installed
-  with the package. Which of the two electron-builder's `.deb` sets up today is the first thing to
-  verify in step I1; either way, the sandbox stays on.
-- **The AppImage has a real problem on Ubuntu 23.10+.** It runs from a temporary mount point, so
-  an AppArmor profile can't name it, and it can't make its helper setuid. On Ubuntu, a downloaded
-  AppImage would stop at launch. On other distributions (Fedora, Arch, Debian) it works. Plot
-  Device's tests sidestep this (`--no-sandbox` locally, the restriction lifted in CI), but a user
-  can't.
+- **The `.deb`** installs the app in `/opt`, with Chromium's sandbox helper set up by the package,
+  as Plot Device's does. What it sets up is checked in step I1; the sandbox stays on.
+- **The AppImage** runs as it is once it's made executable, as Plot Device's does on the
+  maintainer's Ubuntu (decided 2026-11-03). The install docs say how: `chmod +x`, or Files →
+  Properties → "Executable as Program", once per download.
+- **Like Plot Device's AppImage after its fix,** it registers itself on each start: its own desktop
+  entry and icon under `$XDG_DATA_HOME` (or `~/.local/share`), pointing at wherever the AppImage
+  is, so GNOME on Wayland shows its icon in the taskbar and it's in the applications menu. It
+  never replaces an entry it didn't write, writes nothing when the entry is current, and the
+  entry's `TryExec` hides it once the AppImage is deleted. The window's app id is set explicitly
+  (`desktopName`), for the `.deb` as well.
+- The packaged-app tests add `--no-sandbox` only where the test machine restricts the sandbox,
+  as Plot Device's do; CI lifts the restriction instead, so the sandbox stays on there.
 
-| Option | Notes |
-|---|---|
-| **A. Build both; the `.deb` for Ubuntu and Debian, the AppImage for other distributions** (recommended) | The release notes and README say so plainly. The AppImage's launcher (its `AppRun`) checks for the restriction first and, if it's on, shows a short message (a dialog when it can, else the terminal) pointing to the `.deb`, instead of failing silently. The sandbox is never turned off. |
-| B. Build both, and have the AppImage turn the sandbox off on Ubuntu | It would start everywhere, but with the renderer unsandboxed, which ADR 0006 rules out: a document is untrusted input. |
-| C. The `.deb` only | Simple, but nothing for Fedora or Arch users. |
-
-**Recommendation: A.**
+**Decided:** both, as above.
 
 ### 4. Windows
 
@@ -123,6 +132,8 @@ As in Plot Device (its Milestone 15), with Paper Lion's addresses:
 - **Privacy:** a plain request with nothing about the user: no identifier, no version in the
   address, no cookies. Redirects are followed by hand and only to GitHub's hosts; a size limit and
   a timeout. The setting's description says what's sent.
+- **Download links** go to the GitHub release until the documentation site exists, then to its
+  install page.
 - **Where it lives** (**question**): checking for updates isn't translation work, so it doesn't
   belong in the existing domains. AGENTS.md asks for an ADR before a new domain.
 
@@ -140,20 +151,29 @@ and **Check for updates**. In English and Hebrew. Reached from the header's menu
 
 ### 8. Releasing
 
-As in Plot Device, scaled down:
+As in Plot Device (decided):
 
-- **Every push:** CI builds the Linux packages (and the Windows installer) and keeps them as
-  build artifacts for a while, so any commit can be tried.
-- **A tag `v0.1.0`:** a workflow builds everything, then creates a **draft** GitHub release with
-  the AppImage, the `.deb`, the Windows installer, a `SHA256SUMS` file, `latest.json`, and the
-  release notes. Nothing is public until you download the draft's files, try them, and click
-  **Publish**; that moment is also when update notices start.
-- **Release notes** (**question**):
-
-  | Option | Notes |
-  |---|---|
-  | **A. A `CHANGELOG.md` written by hand per release**, checked by CI (the tagged version has a section, with no placeholder left) (recommended for now) | This repository's commit subjects (`ui: …`, `formats: …`) are written for developers, so generating notes from them would read poorly for translators. |
-  | B. Generated from commits, as Plot Device does (`pnpm release <version>` opens a pull request with the notes to edit) | Less to write, but needs commit prefixes like `feat:`/`fix:` from now on. |
+- **Every push:** CI builds the Linux packages and the Windows installer and keeps them as build
+  artifacts for 14 days, so any commit can be tried.
+- **`pnpm release 0.2.0`** (or `--dry-run`, to see the notes without changing anything) refuses,
+  in plain words, when main isn't ready: not on main, uncommitted changes, behind GitHub, not a
+  newer version, CI failed or still running, nothing changed. Otherwise it sets the version
+  everywhere (`package.json`, the AppStream metadata's releases), writes the changelog section
+  from the commits since the last release (`feat:`, `fix:`, `perf:` lines, grouped, prefixes
+  removed, repeats once, with a summary placeholder), and opens a pull request.
+- **In that pull request** you write the summary and reword the notes for translators. CI refuses
+  to release while any `<!-- comment -->` placeholder is left. Merging it means "these notes are
+  right": a workflow tags the merge commit.
+- **The tag** builds everything and creates a **draft** GitHub release with the AppImage, the
+  `.deb`, the Windows installer, one `SHA256SUMS` for every file, `latest.json`, and the notes.
+  You download the draft's files, try them, and click **Publish**; that moment is when update
+  notices start. Releases are never marked "Pre-release".
+- **The first release, `0.1.0`:** the commits before M6 don't have the prefixes, so its notes are
+  written by hand (what Paper Lion does, for translators), and generated from commits from then
+  on.
+- **Tooling** (in `scripts/`, as here): the changelog and release-notes logic as pure functions
+  with tests (the rules without git or GitHub), and thin commands around them, as Plot Device's
+  `tooling/changelog.mjs`, `release.mjs`, and `release-notes.mjs`.
 
 ### 9. Opening a project from the file manager
 
@@ -161,6 +181,14 @@ Plot Device registers "Open with" for folders and opens a folder passed on the c
 the running app, if there is one). **Recommendation:** later, not in M6: Paper Lion opens one
 project at a time through its own picker today, and a single-instance hand-off is its own piece
 of work.
+
+### 10. Commit messages
+
+As in Plot Device (decided): every commit starts with a prefix, `feat`, `fix`, `perf`, `docs`,
+`test`, `ci`, `build`, `style`, `dev`, `refactor`, `chore`, or `release`, and CI checks a pull
+request's commits. `feat:`, `fix:`, and `perf:` lines go into the changelog as written, so they're
+written for translators ("feat: preview a message's plural forms", not "feat: add MessagePreview
+component"). AGENTS.md says so. This starts with M6's own commits.
 
 ## Tests
 
@@ -188,15 +216,16 @@ of work.
 - **I3, update notices:** the ADR and the `updates` domain, the fetch in main, the IPC methods,
   the header notice, About's check, and the setting.
 - **I4, CI and releasing:** builds on every push (Linux and Windows), install and uninstall
-  tests, the packaged end-to-end tests on both, draft releases on tags with `SHA256SUMS` and
-  `latest.json`, the changelog check; the dry run.
-- **I5, docs and the PRD:** an install section in the README (Linux and its two formats, Windows'
-  warning, macOS planned), releasing in the development docs, and the PRD (its own PR, for
-  approval). Then tagging `v0.1.0` is yours.
+  tests, the packaged end-to-end tests on both; the commit-prefix check; `pnpm release`, the
+  changelog from commits, tagging on merge, and draft releases with `SHA256SUMS` and
+  `latest.json`; the dry run on a throwaway tag.
+- **I5, docs and the PRD:** an install section in the README (Linux and its two formats, making
+  the AppImage executable, Windows' warning, macOS planned), releasing and commit messages in the
+  development docs and AGENTS.md, and the PRD (its own PR, for approval). Then `pnpm release
+  0.1.0`, the notes, and publishing are yours.
 
 ## Open questions for the maintainer
 
-- The questions marked above: Windows in releases (4), where update checking lives (6), and
-  release notes (8).
+- Anything in "taken as recommended" to change.
 - Whether the first release should wait for anything else in the product (the PRD's milestones
   are all done).
