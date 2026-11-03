@@ -1,6 +1,6 @@
 # M4 discussion: banana-i18n catalogs
 
-Status: **decided (2026-10-31); C1–C8 done, C9 next.** See [Decided](#decided). The discussion follows, for
+Status: **decided (2026-10-31); done (C1–C9).** See [Decided](#decided). The discussion follows, for
 context.
 
 PRD M4: "banana-i18n. Catalog list, split message editor, `qqq` docs, and validation." PRD §7.3
@@ -798,6 +798,13 @@ The project's progress line counts both ("Up to date: 12 of 40 pages, 310 of 420
       gets tokens with the text they're for) and checking the answer's message key
       (`useMessageCheck` already drops the answer when another message opens).
 - **C9, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
+  - *Done-notes:* the PRD's glossary (a catalog's key, tokens, how a message is marked up to
+    date, the status file's catalogs, catalog drafts), §7.1 (formats per kind, the "Messages"
+    group), §7.3 rewritten from what was built (finding catalogs, the list, keys not in the
+    source, the editor and its keys, validation, the preview, status, saving), §7.4 (catalog
+    drafts, the per-message conflict check), §8 (the `CatalogFormat` contract as reshaped in
+    C1), M4 marked done in §10, and §11: message status decided; crediting translators in
+    `@metadata.authors` and editing `qqq` left open. The README mentions the preview.
 
 Round-trip rule throughout: a catalog that wasn't edited is never rewritten, and an edited one
 changes only where it was edited.
