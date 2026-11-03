@@ -1,0 +1,4 @@
+[
+  { "name": "electron", "version": "45.0.0", "license": "MIT", "homepage": "https://www.electronjs.org" },
+  { "name": "vue", "version": "3.5.44", "license": "MIT", "homepage": null }
+]

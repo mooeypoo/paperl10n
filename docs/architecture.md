@@ -94,7 +94,10 @@ that imports concrete adapters (`#adapters/<domain>/<file>`) and plugins.
 The renderer and main share one typed contract, `#ipc-contract`: plain DTOs, error codes, and
 `PaperLionApi`. The renderer never sends file paths; it gets an opaque project id
 ([ADR 0006](adr/0006-process-model-and-ipc.md)). `src/app/` is pure and shared by every
-composition root. Electron's (`src/app/node/`) passes in the real disk and the native dialog.
+composition root. Electron's (`src/app/node/`) passes in the real disk, the native dialog, and
+the About window's files (the licence and the open-source components list, beside the app). Main
+opens only a few allowed pages in the browser, such as About's links (`main/external-links.ts`);
+every other link or window is refused.
 
 The renderer also parses Markdown, so the editor sees the same blocks as the reading model: both
 use the Lezer configuration in `#markdown-syntax`

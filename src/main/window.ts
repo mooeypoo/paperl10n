@@ -2,6 +2,7 @@
 // Window and session hardening. Pure functions over minimal interfaces, so they're unit-tested
 // without starting Electron. See docs/adr/0006-process-model-and-ipc.md.
 import type { BrowserWindowConstructorOptions } from 'electron';
+import { isAllowedExternalLink } from './external-links.ts';
 
 export const WINDOW_TITLE = 'Paper Lion';
 
@@ -60,12 +61,22 @@ export interface HardenableContents {
   setWindowOpenHandler(handler: (details: { url: string }) => { action: 'deny' }): void;
 }
 
-/** The app never navigates away from its own page and never opens windows. */
-export function hardenContents(contents: HardenableContents, appUrl: string): void {
+/**
+ * The app never navigates away from its own page and never opens windows. A link to one of the
+ * few allowed pages (external-links.ts) opens in the user's browser instead.
+ */
+export function hardenContents(
+  contents: HardenableContents,
+  appUrl: string,
+  openExternal: (url: string) => void,
+): void {
   contents.on('will-navigate', (event) => {
     if (!isAppUrl(event.url, appUrl)) event.preventDefault();
   });
-  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  contents.setWindowOpenHandler(({ url }) => {
+    if (isAllowedExternalLink(url)) openExternal(url);
+    return { action: 'deny' };
+  });
 }
 
 /** The parts of `Session` hardening needs. */

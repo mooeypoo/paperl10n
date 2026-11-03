@@ -246,6 +246,27 @@ component"). AGENTS.md says so. This starts with M6's own commits.
       check's new rule; the AppImage entry (quoting, a path with a line break, writing, nothing
       when current, following a move, leaving another entry alone, the data folder).
 - **I2, the About window and the licence list.**
+  - *Done-notes:*
+    - **About** opens from an ⓘ button at the end of the header (Paper Lion has no menu): the
+      name and version, what it's for, who made it (a link to moriel.tech), the GPL in plain
+      words, "your translations are yours", the source code, the coffee line, then the
+      open-source components and the full licence, each folded. English and Hebrew; the licence
+      stays left to right. Its contents render only while it's open. I3 adds "Check for updates".
+    - **One IPC method, `getAbout`.** The composition root reads `LICENSE` and the components
+      list from beside the app (`resources/` when packaged, the repository otherwise), never
+      failing: a missing file shows nothing in its place (`src/app/node/about-files.ts`).
+    - **The components list** (46 entries now) is written by every `pnpm build` into
+      `build/third-party-licenses.json`, as in Plot Device: `pnpm licenses list --prod`, Electron,
+      and also the two bundled data files' sources (Wikimedia's language data, CLDR's plural
+      rules via php-gettext/Languages), with the date they were generated as their version.
+    - **Links open in the browser** for the few pages allowed, the same list as Plot Device's
+      (moriel.tech, the project's GitHub and future docs site, the coffee page); every other link
+      and window stays refused (`src/main/external-links.ts`).
+    - Tests: the list's building and parsing (table-driven, malformed input); the composable;
+      the dialog in both languages, its error, closing, and asking main once; the IPC method end
+      to end; the allow-list, including look-alikes; in Electron, a coffee-link click reaching
+      `shell.openExternal` with no new window; in the packaged app, About reading the shipped
+      files. Mutations of each new rule were caught.
 - **I3, update notices:** the ADR and the `updates` domain, the fetch in main, the IPC methods,
   the header notice, About's check, and the setting.
 - **I4, CI and releasing:** builds on every push (Linux and Windows), install and uninstall

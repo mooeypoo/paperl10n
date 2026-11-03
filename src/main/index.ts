@@ -3,7 +3,7 @@
 // window.ts, ipc.ts, and the app's composition root.
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, session } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import { createElectronAppApi } from '#app/node/composition-root';
 import { dataHome, integrateAppImage } from './appimage-desktop.ts';
 import { registerApi, trustedSenderCheck } from './ipc.ts';
@@ -36,7 +36,9 @@ function createWindow(): void {
   const window = new BrowserWindow(
     createWindowOptions(join(import.meta.dirname, '../preload/index.cjs'), iconPath),
   );
-  hardenContents(window.webContents, appUrl);
+  hardenContents(window.webContents, appUrl, (url) => {
+    void shell.openExternal(url);
+  });
   window.once('ready-to-show', () => {
     window.show();
   });
@@ -53,7 +55,18 @@ async function start(): Promise<void> {
   // macOS shows the dock icon, not the window's.
   app.dock?.setIcon(iconPath);
 
+  // A release keeps the licence and the components list beside the app (electron-builder's
+  // extraResources); from the repository they're its LICENSE and what `pnpm build` wrote.
+  const aboutFolder = app.isPackaged ? process.resourcesPath : app.getAppPath();
   const api = createElectronAppApi({
+    about: {
+      name: app.getName(),
+      version: app.getVersion(),
+      licenseFile: join(aboutFolder, 'LICENSE'),
+      componentsFile: app.isPackaged
+        ? join(aboutFolder, 'third-party-licenses.json')
+        : join(aboutFolder, 'build/third-party-licenses.json'),
+    },
     showFolderDialog: async () => {
       const options = { properties: ['openDirectory' as const], title: 'Open project folder' };
       return mainWindow === null

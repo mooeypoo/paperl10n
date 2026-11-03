@@ -15,4 +15,5 @@ src/plugins/*/fixtures/
 # Build output and reports
 out/
 dist/
+build/
 coverage/

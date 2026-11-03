@@ -7,6 +7,8 @@ node_modules/
 # Build output
 out/
 dist/
+# Written by every build (scripts/write-third-party-licenses.ts).
+build/
 
 # Tool caches and reports
 .eslintcache

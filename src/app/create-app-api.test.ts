@@ -39,6 +39,8 @@ function appWith(
   plugins: readonly PluginModule[] = builtInPlugins,
 ): PaperLionApi {
   const api = createAppApi({
+    readAbout: () =>
+      Promise.resolve({ name: 'Paper Lion', version: '1.0.0', licenseText: '', components: [] }),
     folderPicker: new FakeFolderPicker(answer),
     opener: new FakeProjectFilesOpener(folders),
     drafts: new InMemoryDraftStore(),
@@ -208,6 +210,8 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
 
   it('refuses to start with a broken plugin set', () => {
     const result = createAppApi({
+      readAbout: () =>
+        Promise.resolve({ name: 'Paper Lion', version: '1.0.0', licenseText: '', components: [] }),
       folderPicker: new FakeFolderPicker(null),
       opener: new FakeProjectFilesOpener({}),
       drafts: new InMemoryDraftStore(),

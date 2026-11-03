@@ -3,6 +3,7 @@
 import type { ErrorDto } from '#ipc-contract';
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
 import { useClient } from './client';
+import AboutDialog from './components/AboutDialog.vue';
 import AppHeader from './components/AppHeader.vue';
 import CatalogView from './components/CatalogView.vue';
 import ConflictDialog from './components/ConflictDialog.vue';
@@ -243,6 +244,7 @@ const statusProblemText = computed(() => {
 });
 
 const { preferences } = useEnvironment();
+const aboutOpen = ref(false);
 const pickerOpen = ref(false);
 const chooseError = shallowRef<ErrorDto | null>(null);
 
@@ -272,7 +274,14 @@ async function chooseTarget(tag: string): Promise<void> {
 
 <template>
   <div class="app">
-    <AppHeader :summary="summary" :busy="busy" @open="open" @choose-language="guard(openPicker)" />
+    <AppHeader
+      :summary="summary"
+      :busy="busy"
+      @open="open"
+      @choose-language="guard(openPicker)"
+      @about="aboutOpen = true"
+    />
+    <AboutDialog :open="aboutOpen" @close="aboutOpen = false" />
     <UnsavedChangesDialog
       :open="pendingLeave !== null"
       :page-key="leavingKey"

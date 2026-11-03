@@ -17,6 +17,10 @@ describe('guardApi', () => {
     const { calls, onUnexpected } = recorder();
     const api = guardApi(
       {
+        getAbout: () =>
+          Promise.resolve(
+            ok({ name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] }),
+          ),
         openProject: () => Promise.resolve(ok(null)),
         listSourceDocuments: ({ projectId }) =>
           Promise.resolve(
@@ -189,6 +193,9 @@ describe('guardApi', () => {
     expect(
       await api.searchTargetLanguages({ projectId: 'p', query: 'x', uiLanguage: 'en' }),
     ).toEqual({ ok: true, value: [{ tag: 'x', name: 'x', autonym: null, direction: 'ltr' }] });
+    expect(await api.getAbout()).toEqual(
+      ok({ name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] }),
+    );
     expect(await api.chooseTargetLocale({ projectId: 'p', language: 'he' })).toEqual({
       ok: true,
       value: { id: 'he', direction: 'rtl' },
@@ -232,6 +239,9 @@ describe('guardApi', () => {
     [
       'throws',
       {
+        getAbout: () => {
+          throw new Error('sync boom');
+        },
         openProject: () => {
           throw new Error('sync boom');
         },
@@ -294,6 +304,7 @@ describe('guardApi', () => {
     [
       'rejects',
       {
+        getAbout: () => Promise.reject(new Error('async boom')),
         openProject: () => Promise.reject(new Error('async boom')),
         listSourceDocuments: () => Promise.reject(new Error('async boom')),
         listCatalogs: () => Promise.reject(new Error('async boom')),
@@ -322,6 +333,7 @@ describe('guardApi', () => {
       ok: false,
       error: { code: 'internal.unexpected', params: {}, details: [] },
     };
+    expect(await api.getAbout()).toEqual(unexpected);
     expect(await api.openProject()).toEqual(unexpected);
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual(unexpected);
     expect(await api.listCatalogs({ projectId: 'p' })).toEqual(unexpected);
@@ -365,6 +377,7 @@ describe('guardApi', () => {
     );
     expect(await api.discardCatalogDraft({ projectId: 'p', catalog: 'c' })).toEqual(unexpected);
     expect(calls.map(([method]) => method)).toEqual([
+      'getAbout',
       'openProject',
       'listSourceDocuments',
       'listCatalogs',

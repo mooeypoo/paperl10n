@@ -221,5 +221,18 @@
   "paperl10n-keep-message": "Keep",
   "paperl10n-remove-message-label": "Remove $1",
   "paperl10n-keep-message-label": "Keep $1",
-  "paperl10n-removed-not-saved": "Removed when you save"
+  "paperl10n-removed-not-saved": "Removed when you save",
+  "paperl10n-about": "About",
+  "paperl10n-about-version": "Version $1",
+  "paperl10n-about-tagline": "Side-by-side translation for docs sites and app strings, with first-class right-to-left support.",
+  "paperl10n-about-made-by": "Made by",
+  "paperl10n-about-license": "Paper Lion is free software: you may use, study, share, and change it under the GNU General Public License, version 3 or later.",
+  "paperl10n-about-yours": "Your translations are yours, under your own copyright and your project's license. Paper Lion's license covers the program, never your work.",
+  "paperl10n-about-source": "Source code",
+  "paperl10n-about-coffee": "This lion runs on coffee. ☕ If Paper Lion helps you translate, you can $1.",
+  "paperl10n-about-coffee-link": "buy me one",
+  "paperl10n-about-credits": "Open-source components ($1)",
+  "paperl10n-about-full-license": "The full license (in English)",
+  "paperl10n-about-unavailable": "The app's details couldn't be read.",
+  "paperl10n-close": "Close"
 }

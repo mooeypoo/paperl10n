@@ -7,10 +7,17 @@ import { join } from 'node:path';
 import { createElectronAppApi } from './composition-root.ts';
 
 const fixture = new URL('../../plugins/format-stub/fixtures/basic', import.meta.url).pathname;
+const about = {
+  name: 'Paper Lion',
+  version: '1.2.3',
+  licenseFile: new URL('../../../LICENSE', import.meta.url).pathname,
+  componentsFile: join(tmpdir(), `paperl10n-no-components-${randomUUID()}.json`),
+};
 
 describe('createElectronAppApi', () => {
   it('opens a real folder on disk and lists its documents', async () => {
     const api = createElectronAppApi({
+      about,
       showFolderDialog: () => Promise.resolve({ canceled: false, filePaths: [fixture] }),
       draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
       catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),
@@ -34,11 +41,27 @@ describe('createElectronAppApi', () => {
 
   it('returns null when the dialog is cancelled', async () => {
     const api = createElectronAppApi({
+      about,
       showFolderDialog: () => Promise.resolve({ canceled: true, filePaths: [] }),
       draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
       catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),
       onUnexpected: () => undefined,
     });
     expect(api.ok && (await api.value.openProject())).toEqual({ ok: true, value: null });
+  });
+
+  it('reads About from the files it was given', async () => {
+    const api = createElectronAppApi({
+      about,
+      showFolderDialog: () => Promise.resolve({ canceled: true, filePaths: [] }),
+      draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
+      catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),
+      onUnexpected: () => undefined,
+    });
+    if (!api.ok) throw new Error('test setup');
+    const answer = await api.value.getAbout();
+    expect(answer.ok && answer.value.version).toBe('1.2.3');
+    expect(answer.ok && answer.value.licenseText).toMatch(/^\s*GNU GENERAL PUBLIC LICENSE/);
+    expect(answer.ok && answer.value.components).toEqual([]);
   });
 });

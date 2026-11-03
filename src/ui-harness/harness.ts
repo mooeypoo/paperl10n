@@ -24,6 +24,15 @@ export const DEFAULT_FIXTURE = 'examples/sample-docs';
 /** The real app API over fixtures, behind a transport that behaves like IPC. */
 export function createHarnessApi(fixtures: Fixtures, fixture: string): PaperLionApi {
   const api = createAppApi({
+    // Not a release: a short stand-in, so About has something to show.
+    readAbout: () =>
+      Promise.resolve({
+        name: 'Paper Lion',
+        version: 'harness',
+        licenseText:
+          'GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n\n(The harness shows no more.)\n',
+        components: [{ name: 'vue', version: '3', license: 'MIT', homepage: 'https://vuejs.org' }],
+      }),
     folderPicker: fixturePicker(fixture),
     opener: fixtureOpener(fixtures),
     sessions: new InMemoryProjectSessions(() => crypto.randomUUID()),

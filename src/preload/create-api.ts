@@ -25,6 +25,7 @@ function saveFields(message: MessageSaveDto): MessageSaveDto {
 
 export function createApi(invoke: Invoke): PaperLionApi {
   return {
+    getAbout: () => invoke(channelFor('getAbout')) as ReturnType<PaperLionApi['getAbout']>,
     openProject: () => invoke(channelFor('openProject')) as ReturnType<PaperLionApi['openProject']>,
     listSourceDocuments: (request) =>
       invoke(channelFor('listSourceDocuments'), { projectId: request.projectId }) as ReturnType<

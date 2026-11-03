@@ -29,6 +29,12 @@ function setup() {
     },
   };
   const api: PaperLionApi = {
+    getAbout: () => {
+      calls.push(['getAbout']);
+      return Promise.resolve(
+        ok({ name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] }),
+      );
+    },
     openProject: () => {
       calls.push(['openProject']);
       return Promise.resolve(ok(null));
@@ -162,6 +168,10 @@ describe('registerApi', () => {
 
   it('forwards valid requests from the app page to the API', async () => {
     const { calls, send } = setup();
+    expect(await send('getAbout', trusted)).toEqual({
+      ok: true,
+      value: { name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] },
+    });
     expect(await send('openProject', trusted)).toEqual({ ok: true, value: null });
     expect(await send('listSourceDocuments', trusted, { projectId: 'p1' })).toEqual({
       ok: true,
@@ -246,6 +256,7 @@ describe('registerApi', () => {
       value: { page: [], sections: null, length: { source: 3, translation: 2 } },
     });
     expect(calls).toEqual([
+      ['getAbout'],
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
       ['listCatalogs', { projectId: 'p1' }],
@@ -300,6 +311,13 @@ describe('registerApi', () => {
 describe('argumentValidators', () => {
   it('has a validator for every contract method', () => {
     expect(Object.keys(argumentValidators).sort()).toEqual([...apiMethods].sort());
+  });
+
+  it.each<[string, unknown[], boolean]>([
+    ['getAbout()', [], true],
+    ['getAbout(x)', [{}], false],
+  ])('getAbout: %s → %s', (_d, args, valid) => {
+    expect(argumentValidators.getAbout(args)).toBe(valid);
   });
 
   it.each<[string, unknown[], boolean]>([

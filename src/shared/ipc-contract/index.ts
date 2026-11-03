@@ -450,14 +450,38 @@ export interface ErrorDto {
   readonly details: readonly string[];
 }
 
-/** Everything the renderer can ask of the main process. One method = one IPC channel. */
 /** What marking existing translations marked: the pages' keys, and how many messages. */
 export interface MarkedExistingDto {
   readonly marked: readonly string[];
   readonly markedMessages: number;
 }
 
+/** An open-source component the app includes, with its licence (the About window's credits). */
+export interface ComponentDto {
+  readonly name: string;
+  /** A package's version, or the date a data file was generated. */
+  readonly version: string;
+  /** Usually an SPDX expression, e.g. "MIT" or "(MIT OR Apache-2.0)". */
+  readonly license: string;
+  readonly homepage: string | null;
+}
+
+/** What the About window shows. */
+export interface AboutDto {
+  /** The display name, "Paper Lion". */
+  readonly name: string;
+  readonly version: string;
+  /** The app's licence in full (the GPL); empty when it can't be read. */
+  readonly licenseText: string;
+  /** Sorted by name; empty when the list can't be read (e.g. running from the repository before
+   * a build). */
+  readonly components: readonly ComponentDto[];
+}
+
+/** Everything the renderer can ask of the main process. One method = one IPC channel. */
 export interface PaperLionApi {
+  /** The app's name, version, licence, and the open-source components it includes. */
+  getAbout(): Promise<Result<AboutDto, ErrorDto>>;
   /** Shows the folder picker, then opens the project. `null` means the user cancelled. */
   openProject(): Promise<Result<ProjectSummaryDto | null, ErrorDto>>;
   /** The project's pages, each with its translation's state and status. */
@@ -603,6 +627,7 @@ export interface PaperLionApi {
 export type ApiMethod = keyof PaperLionApi;
 
 export const apiMethods = [
+  'getAbout',
   'openProject',
   'listSourceDocuments',
   'listCatalogs',

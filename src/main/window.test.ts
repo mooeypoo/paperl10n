@@ -83,17 +83,20 @@ describe('hardenContents', () => {
 
   it('blocks navigation away from the app page, but not reloads of it', () => {
     const { contents, tryNavigate } = fakeContents();
-    hardenContents(contents, appUrl);
+    hardenContents(contents, appUrl, () => undefined);
     expect(tryNavigate('https://evil.example/')).toBe(true);
     expect(tryNavigate('file:///etc/passwd')).toBe(true);
     expect(tryNavigate('file:///app/index.html')).toBe(false);
   });
 
-  it('denies every new window', () => {
+  it('denies every new window, opening only allowed links in the browser', () => {
     const { contents, open } = fakeContents();
-    hardenContents(contents, appUrl);
+    const opened: string[] = [];
+    hardenContents(contents, appUrl, (url) => opened.push(url));
     expect(open('https://example.com/')).toEqual({ action: 'deny' });
     expect(open(appUrl)).toEqual({ action: 'deny' });
+    expect(open('https://buymeacoffee.com/mooeypoo')).toEqual({ action: 'deny' });
+    expect(opened).toEqual(['https://buymeacoffee.com/mooeypoo']);
   });
 });
 

@@ -38,6 +38,10 @@ export const icons = {
     mirrorsInRtl: false,
   },
   expand: { paths: ['M6 9l6 6 6-6'], mirrorsInRtl: false },
+  info: {
+    paths: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z', 'M12 11v6', 'M12 7.5v.01'],
+    mirrorsInRtl: false,
+  },
 } as const satisfies Record<string, IconDefinition>;
 
 export type IconName = keyof typeof icons;

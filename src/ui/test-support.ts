@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Shared fixtures for UI tests: a fake client with scripted answers.
 import type {
+  AboutDto,
   CatalogDetailDto,
   CatalogListDto,
   DocumentPairDto,
@@ -49,6 +50,16 @@ export const documents: readonly SourceDocumentDto[] = [
     status: 'draft',
   },
 ];
+
+export const about: AboutDto = {
+  name: 'Paper Lion',
+  version: '0.1.0',
+  licenseText: 'GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n',
+  components: [
+    { name: 'electron', version: '45.0.0', license: 'MIT', homepage: 'https://www.electronjs.org' },
+    { name: 'vue', version: '3.5.44', license: 'MIT', homepage: null },
+  ],
+};
 
 export function error(
   code: ErrorDto['code'],
@@ -121,6 +132,8 @@ const asList = (answer: ListAnswer): Result<SourceDocumentListDto, ErrorDto> =>
 /** A client whose answers are queued up front; it records what it was asked. */
 export function fakeClient(
   answers: {
+    /** The answer to asking for About's contents (default: `about`). */
+    about?: Result<AboutDto, ErrorDto>;
     open?: OpenAnswer[];
     list?: ListAnswer[];
     /** The answer to listing catalogs (default: none). */
@@ -162,6 +175,10 @@ export function fakeClient(
   const save = Array.isArray(answers.save) ? undefined : answers.save;
   const calls: string[] = [];
   const client: PaperLionApi = {
+    getAbout: () => {
+      calls.push('getAbout');
+      return Promise.resolve(answers.about ?? { ok: true, value: about });
+    },
     openProject: () => {
       calls.push('openProject');
       const next = open.shift();

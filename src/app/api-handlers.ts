@@ -33,6 +33,7 @@ import type {
   SuggestTargetLanguages,
 } from '#domains/workspace';
 import type {
+  AboutDto,
   DocumentStatusDto,
   DocumentTextDto,
   FormatDto,
@@ -50,6 +51,8 @@ import { err, ok } from '#kernel/result';
 import { toErrorDto } from './error-dto.ts';
 
 export interface UseCases {
+  /** Not a use case: what the composition root knows about the app itself. */
+  readonly readAbout: () => Promise<AboutDto>;
   readonly openProject: OpenProject;
   readonly listSourceDocuments: ListSourceDocuments;
   readonly listCatalogs: ListCatalogs;
@@ -168,6 +171,9 @@ function toSectionPairingDto(pairing: SectionPairing): SectionPairingDto {
 /** Implements the IPC contract on top of the use cases: domain results in, plain DTOs out. */
 export function createApiHandlers(useCases: UseCases): PaperLionApi {
   return {
+    async getAbout() {
+      return ok(await useCases.readAbout());
+    },
     async openProject() {
       const result = await useCases.openProject();
       if (!result.ok) return err(toErrorDto(result.error));

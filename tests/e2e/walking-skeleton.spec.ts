@@ -459,6 +459,27 @@ test('the renderer has no Node, and the preload exposes exactly the IPC contract
   expect(exposed).toEqual([...apiMethods].sort());
 });
 
+test('About opens its links in the browser, and nothing in the app window', async () => {
+  await app.evaluate(({ shell }) => {
+    const opened: string[] = [];
+    (globalThis as unknown as { opened: string[] }).opened = opened;
+    shell.openExternal = (url) => {
+      opened.push(url);
+      return Promise.resolve();
+    };
+  });
+  await page.getByRole('button', { name: 'About' }).click();
+  const about = page.getByRole('dialog', { name: 'Paper Lion' });
+  await expect(about.getByText('Your translations are yours', { exact: false })).toBeVisible();
+  await about.getByRole('link', { name: 'buy me one' }).click();
+  await expect
+    .poll(() => app.evaluate(() => (globalThis as unknown as { opened: string[] }).opened))
+    .toEqual(['https://buymeacoffee.com/mooeypoo']);
+  expect(app.windows()).toHaveLength(1);
+  await about.getByRole('button', { name: 'Close' }).click();
+  await expect(about).toBeHidden();
+});
+
 test('has the app icon: the mark, at 512 px', async () => {
   const icon = await app.evaluate(({ app: electronApp, nativeImage }) => {
     const image = nativeImage.createFromPath(

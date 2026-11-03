@@ -28,6 +28,9 @@ files:
 extraResources:
   - from: LICENSE
     to: LICENSE
+  # The About window's credits, written by `pnpm build` (scripts/write-third-party-licenses.ts).
+  - from: build/third-party-licenses.json
+    to: third-party-licenses.json
 npmRebuild: false
 publish: null
 win:

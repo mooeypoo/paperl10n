@@ -38,7 +38,7 @@
   },
   "scripts": {
     "dev": "node scripts/run-electron.ts electron-vite dev",
-    "build": "electron-vite build && node scripts/check-app-build.ts",
+    "build": "node scripts/write-third-party-licenses.ts && electron-vite build && node scripts/check-app-build.ts",
     "package": "pnpm build && electron-builder",
     "package:dir": "pnpm build && electron-builder --dir",
     "test:e2e:packaged": "node scripts/run-electron.ts playwright test --config playwright.packaged.config.ts",

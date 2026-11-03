@@ -111,3 +111,21 @@ test('opens a project and saves a translation, with the security policy holding'
   expect(readFileSync(join(project, 'he/guide/getting-started.md'), 'utf8')).toMatch(/^מתחילים /);
   expect(messages.filter((message) => /Content.Security.Policy/i.test(message))).toEqual([]);
 });
+
+test('About shows the version, the components it ships, and the full license', async () => {
+  const { version } = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
+    version: string;
+  };
+  const components = JSON.parse(
+    readFileSync(join(repoRoot, 'build/third-party-licenses.json'), 'utf8'),
+  ) as unknown[];
+  await page.getByRole('button', { name: 'About' }).click();
+  const about = page.getByRole('dialog', { name: 'Paper Lion' });
+  await expect(about.getByTestId('about-version')).toHaveText(`Version ${version}`);
+  // Read from the files beside the app (extraResources), not from the repository.
+  await expect(
+    about.getByText(`Open-source components (${String(components.length)})`),
+  ).toBeVisible();
+  await about.getByText('The full license (in English)').click();
+  await expect(about.locator('pre')).toContainText('GNU GENERAL PUBLIC LICENSE');
+});

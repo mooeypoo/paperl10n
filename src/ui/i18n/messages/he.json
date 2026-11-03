@@ -221,5 +221,18 @@
   "paperl10n-keep-message": "להשאיר",
   "paperl10n-remove-message-label": "להסיר את $1",
   "paperl10n-keep-message-label": "להשאיר את $1",
-  "paperl10n-removed-not-saved": "תוסר בשמירה"
+  "paperl10n-removed-not-saved": "תוסר בשמירה",
+  "paperl10n-about": "אודות",
+  "paperl10n-about-version": "גרסה $1",
+  "paperl10n-about-tagline": "תרגום זה לצד זה לאתרי תיעוד ולמחרוזות ממשק, עם תמיכה מלאה בכתיבה מימין לשמאל.",
+  "paperl10n-about-made-by": "נוצרה על ידי",
+  "paperl10n-about-license": "Paper Lion היא תוכנה חופשית: מותר להשתמש בה, ללמוד אותה, לשתף ולשנות אותה לפי הרישיון הציבורי הכללי של GNU, גרסה 3 ואילך.",
+  "paperl10n-about-yours": "התרגומים שייכים למתרגמים, בזכויות יוצרים משלהם וברישיון של הפרויקט שלהם. הרישיון של Paper Lion חל על התוכנה, לעולם לא על התרגום.",
+  "paperl10n-about-source": "קוד המקור",
+  "paperl10n-about-coffee": "האריה הזה רץ על קפה. ☕ אם Paper Lion עוזרת בתרגום, אפשר $1.",
+  "paperl10n-about-coffee-link": "לקנות לי כוס",
+  "paperl10n-about-credits": "רכיבי קוד פתוח ($1)",
+  "paperl10n-about-full-license": "הרישיון המלא (באנגלית)",
+  "paperl10n-about-unavailable": "לא ניתן היה לקרוא את פרטי האפליקציה.",
+  "paperl10n-close": "סגירה"
 }

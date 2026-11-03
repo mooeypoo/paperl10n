@@ -13,6 +13,7 @@ async function crossing<T>(call: () => Promise<T>): Promise<T> {
  */
 export function cloningTransport(api: PaperLionApi): PaperLionApi {
   return {
+    getAbout: () => crossing(() => api.getAbout()),
     openProject: () => crossing(() => api.openProject()),
     listSourceDocuments: (request) =>
       crossing(() => api.listSourceDocuments(structuredClone(request))),

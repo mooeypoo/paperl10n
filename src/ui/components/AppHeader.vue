@@ -9,7 +9,7 @@ import AppMark from './AppMark.vue';
 import ThemeSwitch from './ThemeSwitch.vue';
 
 const props = defineProps<{ summary: ProjectSummaryDto | null; busy: boolean }>();
-const emit = defineEmits<{ open: []; chooseLanguage: [] }>();
+const emit = defineEmits<{ open: []; chooseLanguage: []; about: [] }>();
 
 const { t, locale } = useI18n();
 const languages = Object.keys(uiLocales);
@@ -93,6 +93,16 @@ function onLanguageChange(event: Event): void {
       </select>
     </label>
     <ThemeSwitch />
+    <button
+      type="button"
+      class="pl-button header-about"
+      :title="t('paperl10n-about')"
+      aria-haspopup="dialog"
+      @click="emit('about')"
+    >
+      <AppIcon name="info" />
+      <span class="visually-hidden">{{ t('paperl10n-about') }}</span>
+    </button>
   </header>
 </template>
 
@@ -164,6 +174,14 @@ function onLanguageChange(event: Event): void {
   display: inline-flex;
   align-items: center;
   gap: var(--pl-space-2);
+}
+
+.header-about {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  padding: 0;
 }
 
 .header-language {

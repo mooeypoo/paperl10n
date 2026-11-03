@@ -221,5 +221,18 @@
   "paperl10n-keep-message": "Button next to a message marked for removal: keep it after all.",
   "paperl10n-remove-message-label": "Accessible name of the paperl10n-remove-message button. $1: the message's key, e.g. \"myext-old\".",
   "paperl10n-keep-message-label": "Accessible name of the paperl10n-keep-message button. $1: the message's key, e.g. \"myext-old\".",
-  "paperl10n-removed-not-saved": "Next to a message the source no longer has, once it's marked for removal: it's removed from the file when the catalog is saved."
+  "paperl10n-removed-not-saved": "Next to a message the source no longer has, once it's marked for removal: it's removed from the file when the catalog is saved.",
+  "paperl10n-about": "Header button that opens the About window (the app's version, license, and credits).",
+  "paperl10n-about-version": "In the About window, under the app's name. $1: the version number, e.g. \"0.1.0\".",
+  "paperl10n-about-tagline": "In the About window: what Paper Lion is for, in one sentence.",
+  "paperl10n-about-made-by": "In the About window, followed by the author's name (a link to their site).",
+  "paperl10n-about-license": "In the About window: the app's license, in plain words. \"Paper Lion\" is the app's name; keep it as is.",
+  "paperl10n-about-yours": "In the About window: what translators make with the app belongs to them (and their project), not to the app's license.",
+  "paperl10n-about-source": "Link in the About window to the app's source code on GitHub.",
+  "paperl10n-about-coffee": "In the About window: a light-hearted line asking for support. $1: a link whose text is {{msg-paperl10n|paperl10n-about-coffee-link}}. Place it where it reads naturally.",
+  "paperl10n-about-coffee-link": "The link text inside {{msg-paperl10n|paperl10n-about-coffee}}: it opens the author's Buy Me a Coffee page.",
+  "paperl10n-about-credits": "Expandable section in the About window listing the open-source components the app includes and their licenses. $1: how many there are.",
+  "paperl10n-about-full-license": "Expandable section in the About window with the full text of the GNU General Public License, which is only in English.",
+  "paperl10n-about-unavailable": "In the About window, when the app's version and license couldn't be read (a bug).",
+  "paperl10n-close": "Button that closes a window, e.g. the About window."
 }

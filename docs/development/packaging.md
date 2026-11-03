@@ -19,8 +19,12 @@ pnpm test:e2e:packaged # end-to-end tests against the unpacked app (after packag
   `app.asar`. Nothing from `node_modules`: electron-vite bundles main, the preload, and the
   renderer whole, and `pnpm build` fails if main or the preload would load a package at run time
   (`scripts/app-build.ts`).
-- **`LICENSE`**, beside it in `resources/`, and Electron's and Chromium's licences, which
-  electron-builder adds.
+- **`LICENSE`** and **`third-party-licenses.json`**, beside it in `resources/`, for the About
+  window; and Electron's and Chromium's licences, which electron-builder adds. The list of
+  open-source components is written by every `pnpm build` into `build/` (not committed), from
+  `pnpm licenses list --prod`, Electron's version, and the sources of the language data and the
+  gettext plural formulas (`scripts/write-third-party-licenses.ts`), so it's never out of date.
+  Running from the repository, About reads `LICENSE` and `build/` instead.
 - **Icons** for Linux's hicolor theme from `assets/icons/` (each file named by its size,
   `512x512.png`, as electron-builder reads them).
 - **AppStream metadata** for the `.deb`:

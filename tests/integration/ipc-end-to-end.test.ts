@@ -17,6 +17,7 @@ import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-s
 import type { ApiMethod, PaperLionApi } from '#ipc-contract';
 import { createAppApi } from '#app/create-app-api';
 import { builtInPlugins } from '#app/plugins';
+import { readAboutFiles } from '#app/node/about-files';
 import { nodeProjectOpener } from '#app/node/node-project-opener';
 import { createApi } from '../../src/preload/create-api.ts';
 import { registerApi, trustedSenderCheck, type IpcEvent } from '../../src/main/ipc.ts';
@@ -102,6 +103,15 @@ function rendererApi(
   drafts = join(tmpdir(), `paperl10n-ipc-unused-${randomUUID()}`),
 ): { api: PaperLionApi; rejections: string[] } {
   const app = createAppApi({
+    readAbout: () =>
+      readAboutFiles({
+        name: 'Paper Lion',
+        version: '1.2.3',
+        licenseFile: fileURLToPath(new URL('../fixtures/about/LICENSE', import.meta.url)),
+        componentsFile: fileURLToPath(
+          new URL('../fixtures/about/third-party-licenses.json', import.meta.url),
+        ),
+      }),
     folderPicker: new FakeFolderPicker(folder),
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(randomUUID),
@@ -146,6 +156,26 @@ async function openBasic(api: PaperLionApi): Promise<string> {
 
 // Keyed by ApiMethod: a new method is a compile error here until it has an end-to-end case.
 const cases: Record<ApiMethod, () => Promise<void>> = {
+  getAbout: async () => {
+    const { api } = rendererApi();
+    expect(await api.getAbout()).toEqual({
+      ok: true,
+      value: {
+        name: 'Paper Lion',
+        version: '1.2.3',
+        licenseText: 'A stand-in licence, for tests.\n',
+        components: [
+          {
+            name: 'electron',
+            version: '45.0.0',
+            license: 'MIT',
+            homepage: 'https://www.electronjs.org',
+          },
+          { name: 'vue', version: '3.5.44', license: 'MIT', homepage: null },
+        ],
+      },
+    });
+  },
   openProject: async () => {
     const { api } = rendererApi();
     expect(await api.openProject()).toEqual({

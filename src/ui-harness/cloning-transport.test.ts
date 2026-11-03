@@ -27,6 +27,11 @@ const listed = { documents, statusFile: { exists: true, problem: null } };
 
 function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
   return {
+    getAbout: () =>
+      Promise.resolve({
+        ok: true,
+        value: { name: 'Paper Lion', version: '1.0.0', licenseText: '', components: [] },
+      }),
     openProject: () => Promise.resolve({ ok: true, value: summary }),
     listSourceDocuments: () => Promise.resolve({ ok: true, value: listed }),
     listCatalogs: () =>

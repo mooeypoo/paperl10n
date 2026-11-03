@@ -15,6 +15,7 @@ import { err, type Result } from '#kernel/result';
 export const argumentValidators: Readonly<
   Record<ApiMethod, (args: readonly unknown[]) => boolean>
 > = {
+  getAbout: (args) => args.length === 0,
   openProject: (args) => args.length === 0,
   listSourceDocuments: ([request, ...rest]) =>
     rest.length === 0 && hasExactly(request, ['projectId']) && isProjectId(request.projectId),
@@ -256,6 +257,8 @@ function invalidRequest(): Result<never, ErrorDto> {
 /** Calls an API method with arguments that have already been validated. */
 function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): Promise<unknown> {
   switch (method) {
+    case 'getAbout':
+      return api.getAbout();
     case 'openProject':
       return api.openProject();
     case 'listSourceDocuments': {
