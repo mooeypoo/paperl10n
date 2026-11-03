@@ -1,0 +1,21 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: app 0.1\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#. A greeting on the start page.
+#: app.c:3
+msgid "Hello"
+msgstr ""
+
+#: app.c:9
+#, c-format
+msgid "%d file"
+msgid_plural "%d files"
+msgstr[0] ""
+msgstr[1] ""

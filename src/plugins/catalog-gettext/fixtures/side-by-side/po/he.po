@@ -1,0 +1,56 @@
+# Hebrew translation of Lantern.
+# Copyright (C) 2026 The Lantern authors
+# This file is distributed under the same license as the lantern package.
+# Moriel <moriel@example.org>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: lantern 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-01 12:00+0000\n"
+"PO-Revision-Date: 2026-10-02 09:30+0300\n"
+"Last-Translator: Moriel <moriel@example.org>\n"
+"Language-Team: Hebrew\n"
+"Language: he\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n == 1) ? 0 : ((n == 2) ? 1 : 2);\n"
+
+#. The window's title.
+#: src/main.c:20
+#, fuzzy
+#| msgid "Lanterns"
+msgid "Lantern"
+msgstr "פנסים"
+
+#: src/main.c:31
+#, c-format
+msgid "Light %s"
+msgstr "הדליקו את %s"
+
+# Kept from before the template dropped it.
+#: src/main.c:44
+msgid "Dim"
+msgstr "עמעום"
+
+#: src/help.c:7
+msgid ""
+"Lantern lights up your documents. Press the switch to turn a lamp on, and "
+"press it again to turn it off.\n"
+"Lamps stay lit until you close the window."
+msgstr ""
+"Lantern מאירה את המסמכים שלכם. לחצו על המתג כדי להדליק מנורה, ולחצו עליו שוב "
+"כדי לכבות אותה.\n"
+"המנורות דולקות עד שסוגרים את החלון."
+
+#: src/main.c:58
+#, c-format
+msgid "%d lamp is lit"
+msgid_plural "%d lamps are lit"
+msgstr[0] "מנורה אחת דולקת"
+msgstr[1] "שתי מנורות דולקות"
+msgstr[2] "%d מנורות דולקות"
+
+#~ msgid "Old switch"
+#~ msgstr "מתג ישן"

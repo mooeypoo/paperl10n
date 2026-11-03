@@ -1,0 +1,35 @@
+# SOME DESCRIPTIVE TITLE.
+# This file is distributed under the same license as the myshop package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: myshop\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-20 10:00+0000\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: shop/views.py:12
+#, python-format
+msgid "Welcome back, %(name)s!"
+msgstr ""
+
+#: shop/views.py:30
+#, python-brace-format
+msgid "{count} item in your cart"
+msgid_plural "{count} items in your cart"
+msgstr[0] ""
+msgstr[1] ""
+
+#. Translators: the checkout button. Keep it short.
+#: shop/templates/cart.html:8
+msgctxt "button"
+msgid "Pay"
+msgstr ""
+
+#: shop/models.py:40
+msgid "100% cotton"
+msgstr ""

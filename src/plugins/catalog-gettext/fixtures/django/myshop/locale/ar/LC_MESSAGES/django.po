@@ -1,0 +1,29 @@
+# SOME DESCRIPTIVE TITLE.
+# This file is distributed under the same license as the myshop package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: myshop\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-20 10:00+0000\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
+
+#: shop/views.py:12
+#, python-format
+msgid "Welcome back, %(name)s!"
+msgstr "مرحبًا بعودتك يا %(name)s!"
+
+#: shop/views.py:30
+#, python-brace-format
+msgid "{count} item in your cart"
+msgid_plural "{count} items in your cart"
+msgstr[0] "لا عناصر في سلتك"
+msgstr[1] "عنصر واحد في سلتك"
+msgstr[2] "عنصران في سلتك"
+msgstr[3] "{count} عناصر في سلتك"
+msgstr[4] "{count} عنصرًا في سلتك"
+msgstr[5] "{count} عنصر في سلتك"

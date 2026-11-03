@@ -1,0 +1,18 @@
+# SOME DESCRIPTIVE TITLE.
+# This file is distributed under the same license as the myshop package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: myshop\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-20 10:00+0000\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: shop/static/cart.js:3
+#, javascript-format
+msgid "Saved %s"
+msgstr ""

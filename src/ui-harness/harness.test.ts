@@ -111,6 +111,26 @@ describe('the UI harness', () => {
     expect([target?.getAttribute('lang'), target?.getAttribute('dir')]).toEqual(['he', 'rtl']);
   });
 
+  it('opens a gettext project and lists its messages, a plural’s first form shown', async () => {
+    const element = await openWith('catalog-gettext/side-by-side');
+    expect(element.querySelector('.header-project')?.textContent).toContain('gettext');
+    const catalogs = [...element.querySelectorAll('nav .catalogs-item')].map((item) =>
+      [...item.children].map((part) => part.textContent.trim()),
+    );
+    expect(catalogs).toEqual([['lantern', '0 of 5 up to date']]);
+    const rows = [...element.querySelectorAll('.catalog-messages tr[data-row]')];
+    expect(rows.map((row) => row.querySelector('bdi')?.textContent)).toEqual([
+      'Lantern',
+      'Light %s',
+      'menu\u0004Open',
+      'Lantern lights up your documents. Press the switch to turn a lamp on, and press it again to turn it off.\nLamps stay lit until you close the window.',
+      '%d lamp is lit',
+    ]);
+    // The flag says `%s` is a placeholder: marked in the source and the translation.
+    expect(rows[1]?.querySelectorAll('.message-token')).toHaveLength(2);
+    expect(element.querySelector('.catalog-orphans li bdi')?.textContent).toBe('Dim');
+  });
+
   it('shows the real error for an unknown fixture', async () => {
     const element = await openWith('format-stub/nope');
     expect(element.querySelector('[role="alert"]')).not.toBeNull();

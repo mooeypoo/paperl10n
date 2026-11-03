@@ -409,6 +409,43 @@ VitePress first: it's small, and it shows quickly whether the document contract 
       its role.
 - **G2, the plugin:** `catalog-gettext` (detection, layouts, locale names, the `.po` reader and
   patcher, flags-aware scanning, the plural formula evaluator) with fixtures.
+  - *Done-notes:* `src/plugins/catalog-gettext/`, described in its
+    [README](../../src/plugins/catalog-gettext/README.md), registered in `app/plugins.ts`.
+    - **The plural table (G2's open question):** gettext formulas generated from Unicode CLDR
+      48.1 by [php-gettext/Languages](https://php-gettext.github.io/Languages/) (MIT; the CLDR
+      data Unicode-3.0, both compatible with GPL-3.0), 220 languages, committed as the plugin's
+      `plural-forms.json` by `pnpm update:gettext-plurals` (`scripts/gettext-plurals.ts`), as
+      the language data is: no dependency. A test keeps the file exactly what the generator
+      writes, and every formula in it parses with each form reachable.
+    - **Writing as msgmerge does:** checked against gettext's own `write-po.c` and libunistring's
+      line breaker (not a run of `msgmerge`, which isn't installed here): the 79 columns are the
+      whole line, quotes and keyword included; a trailing space counts; a line breaks before the
+      word that would pass it; a word too long stays whole; only `\a \b \f \n \r \t \v \\ \"`
+      are escaped. One difference, documented: gettext breaks by Unicode's rules and display
+      width, this after spaces and by character.
+    - **A refinement to the plan:** a domain with no template and no source-locale file isn't
+      listed (G1's third source, "the target's own `msgid`s"). The contract lists a catalog by
+      its source file, and the kit checks that it exists and is never a target; a catalog
+      without one needs a contract change. Left for after M5, in the README's "Not yet".
+    - **Safe before G4:** the editor sends only a message's first form until G4, so a change
+      with fewer forms than a plural entry has keeps the rest, and a new plural entry is padded
+      with empty forms.
+    - `tsconfig.core.json` includes a plugin's JSON files (not only its manifest), and the
+      generated table is in `.prettierignore`, as the language data is.
+    - Tests: the contract kit on five fixtures (side by side, Django, Sphinx, a template alone,
+      no PO files); the PO reader (strings, every part of an entry, entries without blank lines,
+      obsolete entries, CRLF, the header, 14 kinds of malformed text); the writer (wrapping at
+      the exact boundary, runs of spaces, escapes, each kind of patch on the Hebrew fixture, CRLF
+      and a missing final break, new files and headers); the formula evaluator (precedence,
+      division by zero, refusals, samples, every formula in the table); locale names both ways;
+      scanning by flags; and the plugin's layouts, options, reading, plural forms, and the UI
+      harness opening the side-by-side project.
+    - Mutation checks (40), each failing tests in the end. Survivors at first, each resolved: a
+      locale-name check on side-by-side files repeated what every reader of those names does
+      (removed); and eight untested (an obsolete empty msgid before the header, a line of exactly
+      79 columns, a run of spaces at a break, `#|` lines in a source entry, a fuzzy entry without
+      `#|` set to its own text, a lowercase header field, two templates of one domain, a
+      directive two flags both mark): each got a test.
 - **G3, the domain and main:** documentation per message, forms in pairing, checks and saving,
   needing review as outdated, and the DTOs.
 - **G4, the UI:** forms in the editor, "Needs review" with the old source, and context.

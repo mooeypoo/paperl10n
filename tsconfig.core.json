@@ -20,7 +20,7 @@
     "src/domains/*/domain/**/*.json",
     "src/domains/*/application/**/*.ts",
     "src/plugins/*/**/*.ts",
-    "src/plugins/*/paperl10n-plugin.json"
+    "src/plugins/*/*.json"
   ],
   "exclude": ["**/*.test.ts", "src/plugins/*/fixtures/**"]
 }

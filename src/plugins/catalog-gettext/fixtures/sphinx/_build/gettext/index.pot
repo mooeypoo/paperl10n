@@ -1,0 +1,16 @@
+# SOME DESCRIPTIVE TITLE.
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Lantern docs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../index.rst:2
+msgid "Welcome to Lantern"
+msgstr ""
+
+#: ../../index.rst:5
+msgid "Lantern is a small library."
+msgstr ""

@@ -2,12 +2,14 @@
 // The built-in plugins: the only place in the app that names them (AGENTS.md, "Formats are plugins").
 import type { PluginModule } from '#domains/formats';
 import { plugin as catalogBanana } from '#plugins/catalog-banana';
+import { plugin as catalogGettext } from '#plugins/catalog-gettext';
 import { plugin as formatStarlight } from '#plugins/format-starlight';
 import { plugin as formatStub } from '#plugins/format-stub';
 import { plugin as formatVitepress } from '#plugins/format-vitepress';
 
 export const builtInPlugins: readonly PluginModule[] = [
   catalogBanana,
+  catalogGettext,
   formatStarlight,
   formatStub,
   formatVitepress,

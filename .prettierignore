@@ -3,6 +3,7 @@ pnpm-lock.yaml
 LICENSE
 src/domains/locale/domain/language-data.json
 src/domains/locale/domain/language-names/
+src/plugins/catalog-gettext/plural-forms.json
 
 # Documentation is written by hand; Prettier would re-pad every table on each edit.
 *.md

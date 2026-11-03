@@ -1,0 +1,15 @@
+{
+  "manifestVersion": 1,
+  "id": "catalog-gettext",
+  "packageName": "@paperl10n/catalog-gettext",
+  "kind": "catalog",
+  "apiVersion": 4,
+  "version": "0.1.0",
+  "displayName": "gettext",
+  "description": "gettext PO files made from a template (POT): side by side (po/he.po) or a folder per locale (locale/he/LC_MESSAGES/django.po).",
+  "license": "GPL-3.0-or-later",
+  "author": { "name": "Moriel", "url": "https://moriel.tech" },
+  "builtIn": true,
+  "capabilities": [],
+  "externalDependencies": []
+}
