@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Checks the app build in out/: it's complete, and it contains no UI harness code (ADR 0015).
+// Checks the app build in out/: it's complete, it contains no UI harness code (ADR 0015), and main
+// and the preload load no package at run time (the packaged app has no node_modules, M6).
 // Runs after every `pnpm build`. Usage: node scripts/check-app-build.ts
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -20,5 +21,7 @@ if (problems.length > 0) {
   console.error(problems.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`App build checked: ${String(files.size)} file(s), no UI harness code.`);
+  console.log(
+    `App build checked: ${String(files.size)} file(s), no UI harness code, nothing loaded from node_modules.`,
+  );
 }

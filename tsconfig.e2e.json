@@ -8,6 +8,11 @@
     "outDir": "node_modules/.cache/tsbuild/e2e",
     "tsBuildInfoFile": "node_modules/.cache/tsbuild/e2e.tsbuildinfo"
   },
-  "include": ["tests/e2e/**/*.ts", "playwright.config.ts"],
+  "include": [
+    "tests/e2e/**/*.ts",
+    "tests/e2e-packaged/**/*.ts",
+    "playwright.config.ts",
+    "playwright.packaged.config.ts"
+  ],
   "references": [{ "path": "./tsconfig.core.json" }, { "path": "./tsconfig.node.json" }]
 }

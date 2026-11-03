@@ -7,7 +7,9 @@ export const ICON_SIZES = [16, 24, 32, 48, 64, 128, 256, 512] as const;
 
 export const ICON_FOLDER = 'assets/icons';
 
-export const iconFile = (size: number): string => `${ICON_FOLDER}/paperl10n-${String(size)}.png`;
+/** Named by size, as electron-builder reads a folder of Linux icons (`512x512.png`). */
+export const iconFile = (size: number): string =>
+  `${ICON_FOLDER}/${String(size)}x${String(size)}.png`;
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 

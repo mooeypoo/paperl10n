@@ -5,15 +5,19 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { app, BrowserWindow, dialog, ipcMain, session } from 'electron';
 import { createElectronAppApi } from '#app/node/composition-root';
+import { dataHome, integrateAppImage } from './appimage-desktop.ts';
 import { registerApi, trustedSenderCheck } from './ipc.ts';
 import { createWindowOptions, hardenContents, hardenSession, isAppUrl } from './window.ts';
 
 const APP_ID = 'io.github.mooeypoo.paperl10n';
 
-// Identifiers use "paperl10n"; "Paper Lion" is only for display (AGENTS.md naming). Chromium's
+// Identifiers use "paperl10n"; "Paper Lion" is only for display (AGENTS.md naming). A release
+// keeps its settings and drafts in `paperl10n`; running from the repository (`pnpm dev`) uses
+// `paperl10n-dev`, so trying a release never mixes with a development profile (M6). Chromium's
 // --user-data-dir still wins, for a separate profile (each end-to-end test runs in its own).
 if (!app.commandLine.hasSwitch('user-data-dir')) {
-  app.setPath('userData', join(app.getPath('appData'), 'paperl10n'));
+  const folder = app.isPackaged ? 'paperl10n' : 'paperl10n-dev';
+  app.setPath('userData', join(app.getPath('appData'), folder));
 }
 app.setAppUserModelId(APP_ID);
 app.enableSandbox();
@@ -22,9 +26,9 @@ const devServerUrl = process.env.ELECTRON_RENDERER_URL;
 const rendererFile = join(import.meta.dirname, '../renderer/index.html');
 const appUrl = devServerUrl ?? pathToFileURL(rendererFile).href;
 
-// The mark, rendered by scripts/render-app-icons.ts. Installers get their own icon formats with
-// packaging; until then the app runs from the repository, where this file lives.
-const iconPath = join(app.getAppPath(), 'assets/icons/paperl10n-512.png');
+// The mark, rendered by scripts/render-app-icons.ts. The packaged app carries it too (electron-
+// builder.yml's `files`); installers also get their own icon formats from the same folder.
+const iconPath = join(app.getAppPath(), 'assets/icons/512x512.png');
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -79,6 +83,16 @@ async function start(): Promise<void> {
   );
 
   createWindow();
+  // Started from an AppImage: keep its desktop entry and icon current (see appimage-desktop.ts).
+  // Help, not the app's work: a failure is logged, never shown.
+  const appImage = process.env.APPIMAGE;
+  if (process.platform === 'linux' && appImage !== undefined && app.isPackaged) {
+    void integrateAppImage({ appImage, icon: iconPath, home: dataHome() }).catch(
+      (error: unknown) => {
+        console.warn('[paperl10n] could not keep the AppImage’s desktop entry:', error);
+      },
+    );
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

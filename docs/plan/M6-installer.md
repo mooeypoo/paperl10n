@@ -210,8 +210,41 @@ component"). AGENTS.md says so. This starts with M6's own commits.
 ## Proposed steps (after the decisions)
 
 - **I1, packaging:** electron-builder, the release identity, icons, the desktop entry and AppStream
-  metadata, the AppImage launcher's message; the packaged smoke test on Linux; what the `.deb`
+  metadata, the AppImage's own desktop entry; the packaged smoke test on Linux; what the `.deb`
   does for the sandbox, verified.
+  - *Done-notes:* described in [the packaging guide](../development/packaging.md).
+    - **electron-builder 26.18** (as Plot Device), with `electron-builder.yml` adapted from Plot
+      Device's: the identity, the AppImage and `.deb`, the NSIS installer's settings (built in
+      I4), and the AppStream metadata (`packaging/`). electron-winstaller's install script is off
+      (`pnpm-workspace.yaml`), as in Plot Device: it builds Squirrel installers, which aren't used.
+    - **The `.deb` and the sandbox, verified:** its install script installs an AppArmor profile
+      for `/opt/Paper Lion/paperl10n` allowing user namespaces (Ubuntu 24+), or makes
+      `chrome-sandbox` setuid without user namespaces. Nothing to add.
+    - **Nothing from `node_modules` in the package:** electron-builder copied the runtime
+      dependencies in again (27 MB of 1,400 files); they're now left out (2.6 MB). That needed
+      main bundled whole too (`externalizeDeps: false`, as the preload already was): it loaded
+      `@lezer/markdown` at run time. `pnpm build` now fails if main or the preload loads any
+      package but Electron and Node's own (`scripts/app-build.ts`), shown to catch the old
+      configuration.
+    - **The icons are renamed by size** (`assets/icons/512x512.png`), as electron-builder reads a
+      folder of Linux icons.
+    - **Development uses `paperl10n-dev`** for its settings and drafts; a packaged app uses
+      `paperl10n`.
+    - **The AppImage keeps its own desktop entry and icon** (`src/main/appimage-desktop.ts`,
+      ported from Plot Device with its tests), only when packaged and started as an AppImage.
+    - **The desktop entry's tooltip** is `package.json`'s one-line description: electron-builder
+      always takes it from the description, so the long Linux description was dropped.
+    - **Plan change:** no AppImage launcher message (the maintainer: the AppImage runs once made
+      executable, and the docs say how).
+    - Checked by hand: `pnpm package` builds both (AppImage 138 MB, `.deb` 110 MB); the `.deb`
+      holds the desktop entry, eight hicolor icons, the metadata, and the licence;
+      `desktop-file-validate` and `appstreamcli validate --no-net` pass; the AppImage starts and
+      writes its entry and icon (into a scratch `XDG_DATA_HOME`).
+    - Tests: the packaged app, end to end (`pnpm test:e2e:packaged`): its name, version, and
+      being packaged; its renderer in the sandbox (skipped where the machine restricts it, run in
+      CI from I4); opening a project and saving a translation with no CSP violation. The build
+      check's new rule; the AppImage entry (quoting, a path with a line break, writing, nothing
+      when current, following a move, leaving another entry alone, the data folder).
 - **I2, the About window and the licence list.**
 - **I3, update notices:** the ADR and the `updates` domain, the fetch in main, the IPC methods,
   the header notice, About's check, and the setting.

@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# How Paper Lion is packaged (docs/plan/M6-installer.md), as Plot Device is: an AppImage and a .deb
+# for Linux, and an NSIS installer for Windows. Built with `pnpm package` (or `pnpm package:dir`
+# for the unpacked app only).
+#
+# The release identity (M6, question 1). These must never change once released: Windows upgrades
+# and the settings folder (`paperl10n`, set in src/main/index.ts) depend on them.
+appId: io.github.mooeypoo.paperl10n
+productName: Paper Lion
+extraMetadata:
+  # Electron's own name for the app (the package's is a scoped npm name), matching the executable
+  # and the desktop entry. People see "Paper Lion" everywhere: the title, menus, the installer.
+  name: paperl10n
+  # The window's app id on Linux (Wayland and X11), so the taskbar matches it to paperl10n.desktop
+  # and shows its icon: the .deb's entry, or the one an AppImage keeps for itself.
+  desktopName: paperl10n.desktop
+directories:
+  output: dist
+  buildResources: packaging
+# electron-vite bundles everything into out/, so the app needs nothing from node_modules
+# (electron-builder would otherwise copy the runtime dependencies in again: about 1,400 files).
+# The icons are read at run time for the window (src/main/index.ts).
+files:
+  - out/**
+  - package.json
+  - assets/icons/**
+  - '!node_modules/**'
+extraResources:
+  - from: LICENSE
+    to: LICENSE
+npmRebuild: false
+publish: null
+win:
+  target: nsis
+  executableName: paperl10n
+  icon: assets/icons/512x512.png
+nsis:
+  artifactName: paperl10n-${version}-setup.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: Paper Lion
+  uninstallDisplayName: Paper Lion
+  createDesktopShortcut: always
+  license: LICENSE
+linux:
+  target:
+    - AppImage
+    - deb
+  executableName: paperl10n
+  # One PNG per size (assets/icons, rendered from the mark), for the hicolor icon theme.
+  icon: assets/icons
+  syncDesktopName: true
+  maintainer: Moriel Schottlender <mooeypoo@gmail.com>
+  vendor: Moriel Schottlender
+  category: Office
+  # The .deb's one-line summary. Its description, and the menu's tooltip (the desktop entry's
+  # Comment, which electron-builder always takes from it), are package.json's description.
+  synopsis: Translate docs sites and app strings side by side
+  desktop:
+    entry:
+      StartupWMClass: paperl10n
+appImage:
+  artifactName: paperl10n-${version}.${ext}
+deb:
+  artifactName: paperl10n_${version}_${arch}.${ext}
+  packageCategory: text
+  fpm:
+    - packaging/io.github.mooeypoo.paperl10n.metainfo.xml=/usr/share/metainfo/io.github.mooeypoo.paperl10n.metainfo.xml
+    - LICENSE=/usr/share/doc/paperl10n/LICENSE

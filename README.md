@@ -136,6 +136,7 @@ pnpm dev:harness    # the UI in a browser over the sample and fixture projects (
 pnpm test:watch     # tests, re-run on change
 pnpm test:e2e       # build, then run the Electron end-to-end tests
 pnpm build          # production build into out/
+pnpm package        # the AppImage and .deb into dist/ (docs/development/packaging.md)
 pnpm lint:fix       # fix what lint and SPDX headers can fix
 ```
 

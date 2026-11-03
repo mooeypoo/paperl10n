@@ -27,8 +27,8 @@ describe('createWindowOptions', () => {
   });
 
   it('gives the window its icon', () => {
-    expect(createWindowOptions('/p', '/app/assets/icons/paperl10n-512.png').icon).toBe(
-      '/app/assets/icons/paperl10n-512.png',
+    expect(createWindowOptions('/p', '/app/assets/icons/512x512.png').icon).toBe(
+      '/app/assets/icons/512x512.png',
     );
   });
 

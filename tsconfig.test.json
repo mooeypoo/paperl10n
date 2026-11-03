@@ -19,6 +19,7 @@
   "exclude": [
     "tests/fixtures/**",
     "tests/e2e/**",
+    "tests/e2e-packaged/**",
     "src/plugins/*/fixtures/**",
     "src/ui/**",
     "src/ui-harness/**"

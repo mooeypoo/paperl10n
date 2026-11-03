@@ -7,6 +7,9 @@ allowBuilds:
   # Its script only fetches a platform binary as a fallback. pnpm already installs the binary
   # through optional dependencies, so the script isn't needed.
   unrs-resolver: false
+  # From electron-builder: it builds Squirrel installers, which Paper Lion doesn't use (its
+  # Windows installer is NSIS), so its script stays off (as in Plot Device).
+  electron-winstaller: false
 
 overrides:
   # One copy of lezer's tree classes for @lezer/markdown and @lezer/highlight (two copies break

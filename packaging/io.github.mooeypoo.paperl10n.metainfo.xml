@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata: how Linux app catalogues describe Paper Lion. `pnpm release` adds each
+     version to <releases>. -->
+<component type="desktop-application">
+  <id>io.github.mooeypoo.paperl10n</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Paper Lion</name>
+  <summary>Translate docs sites and app strings side by side</summary>
+  <description>
+    <p>
+      A translation workspace for Markdown documentation sites (Astro Starlight, VitePress) and
+      interface strings (banana-i18n, gettext). The source is always beside the translation, and
+      right-to-left languages work as well as left-to-right ones.
+    </p>
+    <p>Files stay as they are in your project: Paper Lion changes only what you edit.</p>
+  </description>
+  <launchable type="desktop-id">paperl10n.desktop</launchable>
+  <developer id="io.github.mooeypoo">
+    <name>Moriel Schottlender</name>
+  </developer>
+  <url type="homepage">https://github.com/mooeypoo/paperl10n</url>
+  <url type="bugtracker">https://github.com/mooeypoo/paperl10n/issues</url>
+  <categories>
+    <category>Office</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+  </releases>
+</component>

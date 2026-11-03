@@ -25,6 +25,8 @@ server, hot reload, and production builds, sharing Vite's config with Vitest.
   the app then fails with a misleading "no export named BrowserWindow".
 - **Packaging is deferred** to a later milestone (likely electron-builder), together with code
   signing and the app id `io.github.mooeypoo.paperl10n`.
+  - *Update (M6, 2026-11-04):* packaging is electron-builder, as planned (and as in Plot Device);
+    signing is still deferred. See `docs/development/packaging.md`.
 
 ## Alternatives considered
 

@@ -6,7 +6,10 @@ import { cspPlugin } from './scripts/vite-csp-plugin.ts';
 
 export default defineConfig({
   main: {
+    // Bundled whole (only Electron and Node's own modules stay outside), so the packaged app needs
+    // nothing from node_modules (electron-builder.yml leaves it out).
     build: {
+      externalizeDeps: false,
       rolldownOptions: { input: { index: resolve(import.meta.dirname, 'src/main/index.ts') } },
     },
   },

@@ -29,6 +29,21 @@ describe('appBuildProblems', () => {
     ]);
   });
 
+  it('reports a package main or the preload loads at run time, but not Electron or Node’s own', () => {
+    const build = new Map(complete);
+    build.set(
+      'main/index.js',
+      'import { app } from "electron";\nimport { join } from "node:path";\nimport { GFM } from "@lezer/markdown";\nconst x = await import(\'./chunk.js\');',
+    );
+    build.set('preload/index.cjs', 'const { ipcRenderer } = require("electron");\nrequire("vue");');
+    // The renderer is a browser bundle: its strings aren't loaded from node_modules.
+    build.set('renderer/assets/index.js', 'import x from "vue";');
+    expect(appBuildProblems(build)).toEqual([
+      'out/main/index.js loads "@lezer/markdown" at run time: bundle it (the app has no node_modules)',
+      'out/preload/index.cjs loads "vue" at run time: bundle it (the app has no node_modules)',
+    ]);
+  });
+
   it('looks for the marker the harness actually writes', () => {
     const harness = readFileSync(new URL('../src/ui-harness/harness.ts', import.meta.url), 'utf8');
     expect(harness).toContain(`export const HARNESS_MARKER = '${HARNESS_MARKER}';`);
