@@ -106,7 +106,15 @@ tokens rather than an error. The status file reads as for pages. Errors:
 catalog, or a project without catalogs), a read error as above, or a `FormatError` from the
 layout.
 
-### Checking a message: `checkMessage(projectId, { catalog, key, text })`
+For a catalog that keeps plural forms apart (gettext, M5), each message also has its source's and
+its translation's forms, each with its tokens (`null`: none); whether its file marks it as
+needing review (then it's `outdated`) and the source it was made for; and documentation from the
+message itself when there's no documentation file. The catalog also has the target language's
+plural forms (each by the first counts that take it, to label the editor's fields; none when the
+format doesn't keep them apart or fails them). Each text is scanned with its source message, whose
+flags may say what its placeholders look like.
+
+### Checking a message: `checkMessage(projectId, { catalog, key, text, forms? })`
 
 `createCheckMessage({ sessions })` (M4). Checks `text`, a message's translation as it's written
 now (saved or not), against the source message with that key, read from the catalog's source file
@@ -120,19 +128,25 @@ no such key, as when it changed on disk), the source's read error
 (`workspace.catalog-unreadable`, or the plugin's `formats.invalid-catalog`), or a `FormatError`
 from the layout.
 
+With `forms` (every plural form, `text` the first), each form is checked against the source's forms
+(`checkForms`: a form for one number may drop the count) and has its own tokens and warnings
+(`forms`); the text's are its first form's. Without them, `forms` is `null`.
+
 ### Saving messages: `saveCatalog(projectId, { catalog, messages })`
 
 `createSaveCatalog({ sessions, updates })` (M4). Saves a catalog's edited messages for the target
 language. Each message comes with its new text (empty removes it from the file), its `base` (the
 translation as read when editing started, `null` for none), and the `source` text the translator
-saw (`null`: the source doesn't have it).
+saw (`null`: the source doesn't have it). A message whose catalog keeps plural forms apart may
+come with its `forms` (`text` the first; every form empty removes it) and their `baseForms`.
 
 - **The file is patched, not rewritten:** the format's `serialize` changes only those messages
   (a new one after the nearest earlier source message, a new file shaped like the source), so
   every other byte stays. Nothing is written when the file already says it all
   (`written: false`), and no file is created for removals alone.
 - **The conflict check is per message:** a message whose translation on disk isn't its `base`
-  anymore is never overwritten: `workspace.catalog-changed` names them, and nothing is written.
+  anymore (or whose forms aren't its `baseForms`, every one, when it has them) is never
+  overwritten: `workspace.catalog-changed` names them, and nothing is written.
   Other changes on disk (a `git pull` adding keys) don't block the save, and are kept.
 - **Recording (M4 question 3):** each saved translation is recorded as up to date with the source
   now, but only when that's the `source` the translator saw; otherwise the translation is saved
@@ -154,7 +168,10 @@ or `serialize`'s).
 
 `createKeepMessagesUpToDate({ sessions, updates })` (M4). "Keep as up to date" for outdated
 messages whose source change doesn't need a new translation: records each one's translation
-against its source now, without touching the catalog. Each message comes with the `source` text
+against its source now. The catalog is touched only for a translation its file marks as needing
+review (gettext's `fuzzy`, M5): it's written back as it is, which clears the mark (the format's
+contract), before anything is recorded; if that write fails (`workspace.catalog-unwritable`, or
+the format's error), nothing is. Each message comes with the `source` text
 the translator saw; when the source isn't that anymore (or is gone), nothing is kept
 (`workspace.source-changed`), so a version they haven't read is never kept. A message without a
 translation has nothing to keep and stays missing. Unlike saving, a status file that can't be read
@@ -218,17 +235,19 @@ autosave. Errors: `workspace.unknown-project`, `workspace.no-target-locale`,
 
 `createSaveCatalogDraft` and `createDiscardCatalogDraft` (`{ sessions, catalogDrafts }`, M4). A
 catalog's unsaved edits are its draft: each edited message as it would be saved (`MessageSave`:
-text, base, and the source shown), replacing the last draft; no messages forget it. Catalog
+text, base, and the source shown, and its forms and their base when it has them), replacing the
+last draft; no messages forget it. Catalog
 drafts use the same `DraftStore` port as pages, in **a store of their own** (`catalogDrafts`,
 `userData/catalog-drafts/` in Electron), keyed by project location, target locale, and catalog
 key; a draft's text holds the messages as JSON. So the port, its adapters, and page drafts don't
 change, and a catalog key can never be mistaken for a page key.
 
 - `readCatalog` returns the draft (`draft`), without the messages whose draft says what the file
-  does (saved since, or set back), which are forgotten from the store too; a draft left with none
+  does (their text, and every form when they have forms: saved since, or set back), which are forgotten from the store too; a draft left with none
   is forgotten. A stored draft that can't be read as one counts as none.
 - `listCatalogs` says which catalogs have one (`hasDraft`).
-- `saveCatalog` forgets the saved messages from the draft (those saved with the draft's text).
+- `saveCatalog` forgets the saved messages from the draft (those saved with the draft's text,
+  and its forms).
 - Drafts that can't be read never stop a catalog from opening or saving.
 
 Errors: `workspace.unknown-project`, `workspace.no-target-locale`, `workspace.unknown-catalog` (a

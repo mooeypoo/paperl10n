@@ -50,6 +50,10 @@ const message = (
   status,
   sourceTokens: [],
   translationTokens: [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
   ...extra,
 });
 
@@ -58,6 +62,10 @@ const items = message('app-items', 'translated', 'יש לך $1 פריטים', {
   documentation: 'How many items the cart has.\n$1: the number',
   sourceTokens: [{ kind: 'parameter', start: 9, end: 11 }],
   translationTokens: [{ kind: 'parameter', start: 6, end: 8 }],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 });
 const messages = [
   items,
@@ -77,6 +85,7 @@ function detail(key: string, list: CatalogMessageDto[] = messages): CatalogDetai
     messages: list,
     notInSource: [],
     documentationProblem: null,
+    pluralForms: [],
     draft: null,
     statusFile: { exists: true, problem: null },
   };
@@ -94,6 +103,7 @@ const noWarnings: Check = ({ text }) =>
         end: match.index + match[0].length,
       })),
       warnings: [],
+      forms: null,
     },
   });
 
@@ -254,8 +264,9 @@ describe('the message editor', () => {
                 { kind: 'missing', token: 'parameter', value: '$1' },
                 { kind: 'unexpected', token: 'parameter', value: '$2' },
               ],
+              forms: null,
             }
-          : { tokens: [], warnings: [] },
+          : { tokens: [], warnings: [], forms: null },
       });
     const { element, asked } = await opened({ check });
     row(element, 'app-items').click();
@@ -472,11 +483,16 @@ describe('the plural and gender preview', () => {
           end: match.index + match[0].length,
         })),
         warnings: [],
+        forms: null,
       },
     });
   const plural = message('app-pages', 'translated', 'יש {{PLURAL:$1|דף אחד|שני דפים|$1 דפים}}', {
     source: 'There {{PLURAL:$1|is one page|are $1 pages}}',
     translationTokens: [{ kind: 'plural', start: 3, end: 37 }],
+    sourceForms: null,
+    translationForms: null,
+    needsReview: false,
+    previousSource: null,
   });
   const preview = (element: Element) =>
     [...element.querySelectorAll('tr[data-open] .message-preview dl > div')].map((item) => [

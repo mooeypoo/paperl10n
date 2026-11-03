@@ -67,6 +67,18 @@ async function copyOfExtension(): Promise<string> {
   return copy;
 }
 
+const gettextFixture = fileURLToPath(
+  new URL('../../src/plugins/catalog-gettext/fixtures/side-by-side', import.meta.url),
+);
+
+/** A copy of catalog-gettext's side-by-side project (its config targets Hebrew). */
+async function copyOfGettext(): Promise<string> {
+  const copy = join(await mkdtemp(join(tmpdir(), 'paperl10n-ipc-')), 'gettext');
+  copies.push(copy);
+  await cp(gettextFixture, copy, { recursive: true });
+  return copy;
+}
+
 let project = '';
 beforeAll(async () => {
   project = await copyOfBasic();
@@ -240,6 +252,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       targetExists: true,
       documentationPath: 'i18n/qqq.json',
       documentationProblem: null,
+      pluralForms: [],
       statusFile: { exists: true, problem: null },
     });
     expect(read.value.messages.map((m) => [m.key, m.status])).toEqual([
@@ -417,6 +430,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
           { kind: 'link', start: 41, end: 57 },
         ],
         warnings: [{ kind: 'unexpected', token: 'link', value: 'Help:Example' }],
+        forms: null,
       },
     });
     expect(
@@ -428,7 +442,7 @@ const cases: Record<ApiMethod, () => Promise<void>> = {
       }),
     ).toEqual({
       ok: true,
-      value: { tokens: [], warnings: [{ kind: 'unbalanced', brackets: '[]' }] },
+      value: { tokens: [], warnings: [{ kind: 'unbalanced', brackets: '[]' }], forms: null },
     });
     expect(await api.checkMessage({ projectId, catalog: 'i18n', key: 'nope', text })).toEqual({
       ok: false,
@@ -748,5 +762,83 @@ describe('every IPC method, end to end without Electron', () => {
       error: { code: 'internal.invalid-request', params: {}, details: [] },
     });
     expect(rejections).toEqual(['listSourceDocuments: invalid-arguments']);
+  });
+
+  it('reads, checks, saves, and keeps a gettext catalog’s plural forms and review marks', async () => {
+    const folder = await copyOfGettext();
+    const { api, rejections } = rendererApi(folder);
+    const projectId = await openBasic(api);
+    const read = await api.readCatalog({ projectId, key: 'lantern' });
+    if (!read.ok) throw new Error(JSON.stringify(read.error));
+    expect(read.value.pluralForms).toEqual([
+      { samples: [1] },
+      { samples: [2] },
+      { samples: [0, 3, 4, 5] },
+    ]);
+    const [title, , , , lamps] = read.value.messages;
+    expect(title).toMatchObject({
+      key: 'Lantern',
+      documentation: "The window's title.",
+      needsReview: true,
+      previousSource: 'Lanterns',
+      status: 'outdated',
+    });
+    expect(lamps?.sourceForms?.map((form) => form.text)).toEqual([
+      '%d lamp is lit',
+      '%d lamps are lit',
+    ]);
+    expect(lamps?.translationForms?.[2]).toEqual({
+      text: '%d מנורות דולקות',
+      tokens: [{ kind: 'parameter', start: 0, end: 2 }],
+    });
+
+    const checked = await api.checkMessage({
+      projectId,
+      catalog: 'lantern',
+      key: '%d lamp is lit',
+      text: 'מנורה',
+      forms: ['מנורה', 'שתיים', 'הרבה'],
+    });
+    expect(checked.ok && checked.value.forms?.map((form) => form.warnings)).toEqual([
+      [],
+      [],
+      [{ kind: 'missing', token: 'parameter', value: '%d' }],
+    ]);
+
+    const po = join(folder, 'po/he.po');
+    const before = await readFile(po, 'utf8');
+    const saved = await api.saveCatalog({
+      projectId,
+      catalog: 'lantern',
+      messages: [
+        {
+          key: '%d lamp is lit',
+          text: 'מנורה אחת דולקת',
+          forms: ['מנורה אחת דולקת', 'שתי מנורות דולקות', 'דולקות %d מנורות'],
+          base: 'מנורה אחת דולקת',
+          baseForms: ['מנורה אחת דולקת', 'שתי מנורות דולקות', '%d מנורות דולקות'],
+          source: '%d lamp is lit',
+        },
+      ],
+    });
+    expect(saved.ok && saved.value.messages).toEqual([
+      { key: '%d lamp is lit', status: 'translated' },
+    ]);
+    expect(await readFile(po, 'utf8')).toBe(
+      before.replace('msgstr[2] "%d מנורות דולקות"', 'msgstr[2] "דולקות %d מנורות"'),
+    );
+
+    const kept = await api.keepMessagesUpToDate({
+      projectId,
+      catalog: 'lantern',
+      messages: [{ key: 'Lantern', source: 'Lantern' }],
+    });
+    expect(kept).toEqual({ ok: true, value: [{ key: 'Lantern', status: 'translated' }] });
+    expect(await readFile(po, 'utf8')).toBe(
+      before
+        .replace('msgstr[2] "%d מנורות דולקות"', 'msgstr[2] "דולקות %d מנורות"')
+        .replace('#, fuzzy\n#| msgid "Lanterns"\n', ''),
+    );
+    expect(rejections).toEqual([]);
   });
 });

@@ -475,6 +475,42 @@ VitePress first: it's small, and it shows quickly whether the document contract 
         real gap, fixed (a token missing from every form went unreported when the last form was
         empty: now it's on the last form that isn't); two were untested (plural and gender added
         to a form, an unbalanced source): each got a test.
+  - **G3b, main and IPC:** the DTOs, reading, checking, saving, keeping, and drafts with forms.
+    - *Done-notes:* described in [the workspace doc](../domains/workspace.md).
+      - **Reading:** each message carries its source's and translation's forms (each with its
+        tokens, scanned with the source message), its review mark, and the source it was made
+        for; the catalog carries the target language's plural forms (none when the format
+        doesn't keep them apart, or fails them).
+      - **Checking:** `checkMessage` takes optional `forms` and answers each form's tokens and
+        warnings (`checkForms`); the text's are the first form's.
+      - **Saving:** a message may carry `forms` and `baseForms`; the conflict check compares
+        forms whole (one more or fewer is a change; every form empty is none); every form empty
+        removes the message; a plural with only a later form filled in is still recorded.
+        Drafts keep forms, and a draft is dropped or forgotten only when its forms match too.
+      - **Keeping clears a review mark:** a kept translation its file marks as needing review is
+        written back as it is (the contract clears the mark) before it's recorded, in the same
+        one-write-at-a-time queue as saving. Its plural forms are kept, other messages' marks
+        aren't touched, and a write that fails records nothing. This is the one way "Keep as up
+        to date" touches a catalog.
+      - **IPC:** main accepts `forms` (1 to 100 texts) on `checkMessage`, and `forms` and
+        `baseForms` on a message to save or keep as a draft, nowhere else; it and the preload
+        rebuild them, and pass nothing else.
+      - The UI's types and test data follow the new DTO fields; the UI itself doesn't use them
+        yet (G4).
+      - Tests: reading forms, marks, and plural forms (and a plugin failing them); checking
+        forms (a form dropping the count, missing on the last form, the first form's check as
+        the text's); saving forms, conflicts on forms (more, fewer), emptied and partly filled
+        plurals, and drafts with forms (kept, dropped, forgotten after a save only when the forms
+        match); keeping (the mark cleared, only the kept messages', plural forms kept, a failed
+        write recording nothing); each new field's validation and passing through main and the
+        preload; and **end to end over IPC on a copy of the gettext fixture**: reading, checking
+        forms, saving one form (one line changed, byte for byte), and keeping a fuzzy entry (its
+        `#, fuzzy` and `#|` lines gone, nothing else).
+      - Mutation checks (32), each failing tests in the end. Survivors at first, each resolved by
+        a test: an emptied plural entry on disk (no conflict with a `null` base), forms of
+        different lengths (fewer on disk), an empty draft for a message the file lacks, a draft
+        whose text matches and forms don't, the text's check being the first form's, another
+        message's review mark, and keeping a plural's forms.
 - **G4, the UI:** forms in the editor, "Needs review" with the old source, and context.
 - **G5, docs and the PRD:** the decisions into the PRD (its own PR, for approval).
 

@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { pairCatalog, type Message, type PlaceholderToken } from '#domains/catalog';
-import type { FormatError } from '#domains/formats';
+import type { FormatError, PluralForm } from '#domains/formats';
 import { emptyStatusFile, messageStatus, type MessageStatus } from '#domains/translation';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
-import { readCatalogFile, scanText, type CatalogReadError } from './catalog-files.ts';
+import {
+  readCatalogFile,
+  readParsedCatalog,
+  scanText,
+  type CatalogReadError,
+} from './catalog-files.ts';
+import { editMatches } from './catalog-records.ts';
 import {
   catalogDraftKey,
   keepDraftMessages,
@@ -15,6 +21,12 @@ import { findCatalog } from './find-catalog.ts';
 import type { DraftStore } from './ports/draft-store.ts';
 import type { ProjectSessions } from './ports/project-sessions.ts';
 import { readStatusFile, type StatusReadError } from './translation-status.ts';
+
+/** A text and the tokens the plugin's scanner finds in it. */
+export interface ScannedForm {
+  readonly text: string;
+  readonly tokens: readonly PlaceholderToken[];
+}
 
 /** A source message as the message list shows it. */
 export interface CatalogMessageEntry {
@@ -28,6 +40,14 @@ export interface CatalogMessageEntry {
   /** What the source's text must keep, as the plugin's scanner finds it. */
   readonly sourceTokens: readonly PlaceholderToken[];
   readonly translationTokens: readonly PlaceholderToken[];
+  /** Every plural form of the source, when its catalog keeps them apart (gettext); `null`: none. */
+  readonly sourceForms: readonly ScannedForm[] | null;
+  /** Every plural form of the translation; `null`: none. */
+  readonly translationForms: readonly ScannedForm[] | null;
+  /** The translation's file marks it as needing review (gettext's `fuzzy`). */
+  readonly needsReview: boolean;
+  /** The source the translation was made for, when its file keeps it (gettext's `#|`). */
+  readonly previousSource: string | null;
 }
 
 /** A message the translation has and the source no longer does. */
@@ -57,6 +77,8 @@ export interface ReadCatalogResult {
   readonly draft: CatalogDraft | null;
   /** The target language's status file, as for pages. */
   readonly statusFile: { readonly exists: boolean; readonly problem: StatusReadError | null };
+  /** The target language's plural forms, when the format keeps them apart (none otherwise). */
+  readonly pluralForms: readonly PluralForm[];
 }
 
 export type ReadCatalogError =
@@ -93,8 +115,9 @@ export function createReadCatalog(deps: {
 
     const source = await readCatalogFile(project, format, catalog.path, 'source');
     if (!source.ok) return source;
-    const translation = await readCatalogFile(project, format, targetPath.value, 'target');
-    if (!translation.ok) return translation;
+    const parsedTarget = await readParsedCatalog(project, format, targetPath.value, 'target');
+    if (!parsedTarget.ok) return parsedTarget;
+    const translation = { value: parsedTarget.value?.messages ?? null };
     let documentation: readonly Message[] | null = null;
     let documentationProblem: CatalogReadError | null = null;
     if (catalog.documentation !== undefined) {
@@ -106,8 +129,8 @@ export function createReadCatalog(deps: {
     // A draft message that says what the file does is no edit: it was saved, or set back.
     const draftKey = catalogDraftKey(project, catalog.key);
     const stored = await readCatalogDraft(deps.catalogDrafts, draftKey);
-    const inFile = new Map<string, string>(
-      (translation.value ?? []).map((message) => [message.key, message.text]),
+    const inFile = new Map<string, Message>(
+      (translation.value ?? []).map((message) => [message.key, message]),
     );
     const draft =
       stored === null
@@ -116,14 +139,21 @@ export function createReadCatalog(deps: {
             deps.catalogDrafts,
             draftKey,
             stored,
-            (message) => message.text !== (inFile.get(message.key) ?? ''),
+            (message) => !editMatches(inFile.get(message.key), message),
           );
 
     const status = await readStatusFile(project, target.id);
     const record = (status.ok ? status.value.file : emptyStatusFile).catalogs.get(catalog.key);
     const paired = pairCatalog(source.value ?? [], translation.value, documentation);
     // Each text is scanned as a text of its source message (its flags may say what to look for).
-    const sourceMessages = new Map((source.value ?? []).map((message) => [message.key, message]));
+    const sourceMessages = new Map<string, Message>(
+      (source.value ?? []).map((message) => [message.key, message]),
+    );
+    const scanned = (forms: readonly string[] | null, key: string) =>
+      forms?.map((text) => ({ text, tokens: scanText(format, text, sourceMessages.get(key)) })) ??
+      null;
+    // Plural forms label each form in the editor: help, so a plugin failing them gives none.
+    const pluralForms = format.pluralForms(target.id, parsedTarget.value);
     return ok({
       key: catalog.key,
       sourcePath: catalog.path,
@@ -146,6 +176,10 @@ export function createReadCatalog(deps: {
           message.translation === null
             ? []
             : scanText(format, message.translation, sourceMessages.get(message.key)),
+        sourceForms: scanned(message.sourceForms, message.key),
+        translationForms: scanned(message.translationForms, message.key),
+        needsReview: message.needsReview,
+        previousSource: message.previousSource,
       })),
       notInSource: paired.notInSource.map((message) => ({
         key: message.key,
@@ -158,6 +192,7 @@ export function createReadCatalog(deps: {
         exists: status.ok && status.value.exists,
         problem: status.ok ? null : status.error,
       },
+      pluralForms: pluralForms.ok ? pluralForms.value : [],
     });
   };
 }

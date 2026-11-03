@@ -202,6 +202,10 @@ const message = (
   status,
   sourceTokens: tokens.source ?? [],
   translationTokens: tokens.translation ?? [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 });
 
 function detail(key: string, overrides: Partial<CatalogDetailDto> = {}): CatalogDetailDto {
@@ -221,6 +225,7 @@ function detail(key: string, overrides: Partial<CatalogDetailDto> = {}): Catalog
     ],
     notInSource: [],
     documentationProblem: null,
+    pluralForms: [],
     draft: null,
     statusFile: { exists: true, problem: null },
     ...overrides,

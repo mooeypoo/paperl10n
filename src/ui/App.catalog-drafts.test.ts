@@ -42,6 +42,10 @@ const message = (
   status,
   sourceTokens: [],
   translationTokens: [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 });
 const detail = (key: string, overrides: Partial<CatalogDetailDto> = {}): CatalogDetailDto => ({
   key,
@@ -52,6 +56,7 @@ const detail = (key: string, overrides: Partial<CatalogDetailDto> = {}): Catalog
   messages: [message('app-save', 'missing', null), message('app-open', 'draft', 'פתיחה')],
   notInSource: [],
   documentationProblem: null,
+  pluralForms: [],
   draft: null,
   statusFile: { exists: true, problem: null },
   ...overrides,

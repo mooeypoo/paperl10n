@@ -264,6 +264,7 @@ describe('marking existing messages up to date', () => {
     messages: [],
     notInSource: [],
     documentationProblem: null,
+    pluralForms: [],
     draft: null,
     statusFile: unrecorded,
   };

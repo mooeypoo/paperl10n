@@ -8,7 +8,9 @@ import type { RecordedMessage } from '#domains/translation';
 import type { ProjectPath } from '#kernel/project-path';
 import { err, ok, type Result } from '#kernel/result';
 import {
+  formsIn,
   recordMessages,
+  sameForms,
   sourceOf,
   statusesOf,
   translationIn,
@@ -26,14 +28,22 @@ import type { StatusReadError, StatusUpdates } from './translation-status.ts';
 /** One edited message to save. */
 export interface MessageSave {
   readonly key: string;
-  /** The translation to write; empty removes the message from the file. */
+  /** The translation to write (its first form, with forms); empty (every form empty) removes it. */
   readonly text: string;
+  /** Every plural form, for a message whose catalog keeps them apart (`text` is the first). */
+  readonly forms?: readonly string[];
   /** Its translation as read when editing started (`null`: none). Saving refuses if the file no
    * longer has it. */
   readonly base: string | null;
+  /** Its forms as read when editing started (`null`: none), checked as `base` is. */
+  readonly baseForms?: readonly string[] | null;
   /** The source text the translator saw (`null`: the source didn't have it). */
   readonly source: string | null;
 }
+
+/** An edit that leaves nothing: its text, and every form, empty. */
+export const isEmptied = (message: MessageSave) =>
+  message.text === '' && (message.forms ?? []).every((form) => form === '');
 
 export interface SaveCatalogResult {
   readonly path: ProjectPath;
@@ -98,9 +108,14 @@ export function createSaveCatalog(deps: {
         return err({ code: 'workspace.unknown-message', catalog: catalogKey, key: message.key });
       }
       changes.push(
-        message.text === ''
+        isEmptied(message)
           ? { kind: 'remove', key: key.value }
-          : { kind: 'set', key: key.value, text: message.text },
+          : {
+              kind: 'set',
+              key: key.value,
+              text: message.text,
+              ...(message.forms === undefined ? {} : { forms: message.forms }),
+            },
       );
     }
 
@@ -114,12 +129,17 @@ export function createSaveCatalog(deps: {
       if (!target.ok) return target;
 
       const changed = messages
-        .filter((message) => translationIn(target.value, message.key) !== message.base)
+        .filter(
+          (message) =>
+            translationIn(target.value, message.key) !== message.base ||
+            (message.baseForms !== undefined &&
+              !sameForms(formsIn(target.value, message.key), message.baseForms)),
+        )
         .map((message) => message.key);
       if (changed.length > 0) {
         return err({ code: 'workspace.catalog-changed' as const, path: path.value, keys: changed });
       }
-      const nothingToWrite = target.value === null && messages.every((m) => m.text === '');
+      const nothingToWrite = target.value === null && messages.every(isEmptied);
       const text = nothingToWrite
         ? ok(null)
         : format.serialize({
@@ -147,13 +167,15 @@ export function createSaveCatalog(deps: {
     const draftKey = catalogDraftKey(project, catalog.key);
     const draft = await readCatalogDraft(deps.catalogDrafts, draftKey);
     if (draft !== null) {
-      const savedNow = new Map(messages.map((message) => [message.key, message.text]));
-      await keepDraftMessages(
-        deps.catalogDrafts,
-        draftKey,
-        draft,
-        (message) => savedNow.get(message.key) !== message.text,
-      );
+      const savedNow = new Map(messages.map((message) => [message.key, message]));
+      await keepDraftMessages(deps.catalogDrafts, draftKey, draft, (message) => {
+        const saved = savedNow.get(message.key);
+        return (
+          saved === undefined ||
+          saved.text !== message.text ||
+          !sameForms(saved.forms ?? null, message.forms ?? null)
+        );
+      });
     }
 
     // A removed message loses its record; a saved one is recorded against the source now, only
@@ -166,9 +188,11 @@ export function createSaveCatalog(deps: {
       catalog.key,
       messages.flatMap((message): RecordedMessage[] => {
         const now = sourceOf(source, message.key);
-        if (message.text === '') return [{ key: message.key, source: '', translation: null }];
+        if (isEmptied(message)) return [{ key: message.key, source: '', translation: null }];
+        // A plural with only a later form filled in is still a translation to record.
+        const translation = message.text === '' ? (message.forms ?? []).join('') : message.text;
         return now !== null && now === message.source
-          ? [{ key: message.key, source: now, translation: message.text }]
+          ? [{ key: message.key, source: now, translation }]
           : [];
       }),
     );

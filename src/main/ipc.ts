@@ -6,6 +6,7 @@ import {
   channelFor,
   type ApiMethod,
   type ErrorDto,
+  type MessageSaveDto,
   type PaperLionApi,
 } from '#ipc-contract';
 import { err, type Result } from '#kernel/result';
@@ -65,38 +66,29 @@ export const argumentValidators: Readonly<
     isDocumentText(request.text),
   checkMessage: ([request, ...rest]) =>
     rest.length === 0 &&
-    hasExactly(request, ['projectId', 'catalog', 'key', 'text']) &&
+    hasExactly(request, ['projectId', 'catalog', 'key', 'text'], ['forms']) &&
     isProjectId(request.projectId) &&
     isKey(request.catalog) &&
     isKey(request.key) &&
-    isMessageText(request.text),
+    isMessageText(request.text) &&
+    (request.forms === undefined || isFormList(request.forms)),
   saveCatalog: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'catalog', 'messages']) &&
     isProjectId(request.projectId) &&
     isKey(request.catalog) &&
-    isMessageList(
-      request.messages,
-      ['key', 'text', 'base', 'source'],
-      (message) =>
-        isMessageText(message.text) &&
-        (message.base === null || isMessageText(message.base)) &&
-        (message.source === null || isMessageText(message.source)),
-    ),
+    isMessageList(request.messages, ['key', 'text', 'base', 'source'], isMessageSave, {
+      optional: SAVE_OPTIONAL,
+    }),
   saveCatalogDraft: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'catalog', 'messages']) &&
     isProjectId(request.projectId) &&
     isKey(request.catalog) &&
-    isMessageList(
-      request.messages,
-      ['key', 'text', 'base', 'source'],
-      (message) =>
-        isMessageText(message.text) &&
-        (message.base === null || isMessageText(message.base)) &&
-        (message.source === null || isMessageText(message.source)),
-      { allowEmpty: true },
-    ),
+    isMessageList(request.messages, ['key', 'text', 'base', 'source'], isMessageSave, {
+      allowEmpty: true,
+      optional: SAVE_OPTIONAL,
+    }),
   discardCatalogDraft: ([request, ...rest]) =>
     rest.length === 0 &&
     hasExactly(request, ['projectId', 'catalog']) &&
@@ -131,13 +123,18 @@ export const argumentValidators: Readonly<
 };
 
 /** A plain object with exactly these keys, and nothing else. */
+/** An object with every one of `keys`, and nothing else but any of `optional`. */
 function hasExactly<K extends string>(
   value: unknown,
   keys: readonly K[],
-): value is Record<K, unknown> {
+  optional: readonly string[] = [],
+): value is Record<K, unknown> & Record<string, unknown> {
   if (typeof value !== 'object' || value === null) return false;
   const actual = Object.keys(value);
-  return actual.length === keys.length && keys.every((key) => actual.includes(key));
+  return (
+    keys.every((key) => actual.includes(key)) &&
+    actual.every((key) => (keys as readonly string[]).includes(key) || optional.includes(key))
+  );
 }
 
 function isProjectId(value: unknown): value is string {
@@ -159,21 +156,56 @@ function isMessageText(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 100_000;
 }
 
+/** An edited message's fields, rebuilt (so nothing else the renderer sent passes through). */
+function saveFields({ key, text, base, source, forms, baseForms }: MessageSaveDto): MessageSaveDto {
+  return {
+    key,
+    text,
+    base,
+    source,
+    ...(forms === undefined ? {} : { forms: [...forms] }),
+    ...(baseForms === undefined ? {} : { baseForms: baseForms === null ? null : [...baseForms] }),
+  };
+}
+
+/** The fields an edited message may have besides its key, text, base, and source. */
+const SAVE_OPTIONAL = ['forms', 'baseForms'];
+
+/** A message's plural forms: one or more texts, not absurdly many. */
+function isFormList(value: unknown): value is readonly string[] {
+  return (
+    Array.isArray(value) && value.length > 0 && value.length <= 100 && value.every(isMessageText)
+  );
+}
+
+/** An edited message to save: its texts, and its forms and their base when it has them. */
+function isMessageSave(message: Record<string, unknown>): boolean {
+  return (
+    isMessageText(message.text) &&
+    (message.base === null || isMessageText(message.base)) &&
+    (message.source === null || isMessageText(message.source)) &&
+    (message.forms === undefined || isFormList(message.forms)) &&
+    (message.baseForms === undefined || message.baseForms === null || isFormList(message.baseForms))
+  );
+}
+
 /**
- * Messages of one catalog, each with exactly `fields` (a `key` among them) and passing `valid`:
- * at least one (unless `allowEmpty`), not absurdly many, and no key twice.
+ * Messages of one catalog, each with exactly `fields` (a `key` among them, plus any of
+ * `optional`) and passing `valid`: at least one (unless `allowEmpty`), not absurdly many, and no
+ * key twice.
  */
-function isMessageList<K extends string>(
+function isMessageList(
   value: unknown,
-  fields: readonly ('key' | K)[],
-  valid: (message: Record<'key' | K, unknown>) => boolean,
-  { allowEmpty = false } = {},
+  fields: readonly string[],
+  valid: (message: Record<string, unknown>) => boolean,
+  { allowEmpty = false, optional = [] as readonly string[] } = {},
 ): boolean {
   if (!Array.isArray(value) || value.length > 100_000) return false;
   if (value.length === 0 && !allowEmpty) return false;
   const keys = new Set<unknown>();
   return value.every((message: unknown) => {
-    if (!hasExactly(message, fields) || !isKey(message.key) || keys.has(message.key)) return false;
+    if (!hasExactly(message, fields, optional) || !isKey(message.key) || keys.has(message.key))
+      return false;
     keys.add(message.key);
     return valid(message);
   });
@@ -297,12 +329,15 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
     }
     case 'checkMessage': {
       // checked by argumentValidators
-      const [request] = args as [{ projectId: string; catalog: string; key: string; text: string }];
+      const [request] = args as [
+        { projectId: string; catalog: string; key: string; text: string; forms?: string[] },
+      ];
       return api.checkMessage({
         projectId: request.projectId,
         catalog: request.catalog,
         key: request.key,
         text: request.text,
+        ...(request.forms === undefined ? {} : { forms: [...request.forms] }),
       });
     }
     case 'saveCatalog': {
@@ -311,18 +346,13 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
         {
           projectId: string;
           catalog: string;
-          messages: { key: string; text: string; base: string | null; source: string | null }[];
+          messages: MessageSaveDto[];
         },
       ];
       return api.saveCatalog({
         projectId: request.projectId,
         catalog: request.catalog,
-        messages: request.messages.map(({ key, text, base, source }) => ({
-          key,
-          text,
-          base,
-          source,
-        })),
+        messages: request.messages.map(saveFields),
       });
     }
     case 'keepMessagesUpToDate': {
@@ -342,18 +372,13 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
         {
           projectId: string;
           catalog: string;
-          messages: { key: string; text: string; base: string | null; source: string | null }[];
+          messages: MessageSaveDto[];
         },
       ];
       return api.saveCatalogDraft({
         projectId: request.projectId,
         catalog: request.catalog,
-        messages: request.messages.map(({ key, text, base, source }) => ({
-          key,
-          text,
-          base,
-          source,
-        })),
+        messages: request.messages.map(saveFields),
       });
     }
     case 'discardCatalogDraft': {

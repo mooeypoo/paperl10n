@@ -252,7 +252,9 @@ export function fakeClient(
     checkMessage: ({ projectId, catalog, key, text }) => {
       calls.push(`checkMessage:${projectId}:${catalog}:${key}:${JSON.stringify(text)}`);
       return Promise.resolve(
-        structuredClone(answers.checkMessage ?? { ok: true, value: { tokens: [], warnings: [] } }),
+        structuredClone(
+          answers.checkMessage ?? { ok: true, value: { tokens: [], warnings: [], forms: null } },
+        ),
       );
     },
     saveCatalog: ({ projectId, catalog, messages }) => {

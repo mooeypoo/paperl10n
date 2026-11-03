@@ -146,9 +146,49 @@ describe('catalog drafts', () => {
     ['a numeric base', '{"messages":[{"key":"b","text":"x","base":1,"source":null}]}'],
     ['a numeric source', '{"messages":[{"key":"b","text":"x","base":null,"source":1}]}'],
     ['a numeric key', '{"messages":[{"key":1,"text":"x","base":null,"source":null}]}'],
+    [
+      'forms not a list',
+      '{"messages":[{"key":"b","text":"x","base":null,"source":null,"forms":"x"}]}',
+    ],
+    [
+      'a numeric form',
+      '{"messages":[{"key":"b","text":"x","base":null,"source":null,"forms":[1]}]}',
+    ],
+    [
+      'base forms not a list',
+      '{"messages":[{"key":"b","text":"x","base":null,"source":null,"baseForms":"x"}]}',
+    ],
   ])('reads a stored draft with %s as none', async (_name, text) => {
     const app = await open();
     await app.store.put(app.key, { text, base: null });
+    expect(await app.draft()).toBeNull();
+  });
+
+  it('keeps a plural message’s forms, and drops it only when its forms say what the file does', async () => {
+    const plural = {
+      'paperl10n.config.json': config(),
+      'i18n/en.cat': 'n[]=$1 file|$1 files\n',
+      [TARGET]: 'n[]=קובץ|$1 קבצים\n',
+    };
+    const app = await open(plural);
+    const sameText = {
+      ...edit('n', 'קובץ', 'קובץ', '$1 file'),
+      forms: ['קובץ', '$1 קבצים חדשים'],
+      baseForms: ['קובץ', '$1 קבצים'],
+    };
+    expect((await app.saveDraft([sameText])).ok).toBe(true);
+    // Its first form says what the file does; the second doesn't: still an edit.
+    expect(await app.draft()).toEqual({ messages: [sameText] });
+    await app.saveDraft([{ ...sameText, forms: ['קובץ', '$1 קבצים'] }]);
+    expect(await app.draft()).toBeNull();
+  });
+
+  it('drops a draft with every form empty for a message the file doesn’t have', async () => {
+    const app = await open({
+      'paperl10n.config.json': config(),
+      'i18n/en.cat': 'n[]=$1 file|$1 files\n',
+    });
+    await app.saveDraft([{ ...edit('n', '', null, '$1 file'), forms: ['', ''], baseForms: null }]);
     expect(await app.draft()).toBeNull();
   });
 

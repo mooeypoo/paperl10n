@@ -53,6 +53,7 @@ function setup() {
           messages: [],
           notInSource: [],
           documentationProblem: null,
+          pluralForms: [],
           draft: null,
           statusFile: { exists: false, problem: null },
         }),
@@ -104,7 +105,7 @@ function setup() {
     },
     checkMessage: (request) => {
       calls.push(['checkMessage', request]);
-      return Promise.resolve(ok({ tokens: [], warnings: [] }));
+      return Promise.resolve(ok({ tokens: [], warnings: [], forms: null }));
     },
     saveCatalog: (request) => {
       calls.push(['saveCatalog', request]);
@@ -207,15 +208,24 @@ describe('registerApi', () => {
       ok: true,
       value: { marked: ['index', 'about'], markedMessages: 2 },
     });
-    const message = { projectId: 'p1', catalog: 'i18n', key: 'm', text: 'שלום $1' };
+    const message = {
+      projectId: 'p1',
+      catalog: 'i18n',
+      key: 'm',
+      text: 'שלום $1',
+      forms: ['שלום $1', 'שלומות $1'],
+    };
     expect(await send('checkMessage', trusted, message)).toEqual({
       ok: true,
-      value: { tokens: [], warnings: [] },
+      value: { tokens: [], warnings: [], forms: null },
     });
     const saveMessages = {
       projectId: 'p1',
       catalog: 'i18n',
-      messages: [{ key: 'm', text: 'שלום $1', base: null, source: 'Hello $1' }],
+      messages: [
+        { key: 'm', text: 'שלום $1', base: null, source: 'Hello $1' },
+        { key: 'n', text: 'א', forms: ['א', 'ב'], base: 'א', baseForms: null, source: 'A' },
+      ],
     };
     expect(await send('saveCatalog', trusted, saveMessages)).toEqual({
       ok: true,
@@ -343,6 +353,14 @@ describe('argumentValidators', () => {
     ['a catalog, a key, and a text', [message], true],
     ['an empty text', [{ ...message, text: '' }], true],
     ['the longest text', [{ ...message, text: 'x'.repeat(100_000) }], true],
+    ['plural forms', [{ ...message, forms: ['x', 'xs', ''] }], true],
+    ['the most forms', [{ ...message, forms: Array.from({ length: 100 }, () => 'x') }], true],
+    ['no forms in the list', [{ ...message, forms: [] }], false],
+    ['too many forms', [{ ...message, forms: Array.from({ length: 101 }, () => 'x') }], false],
+    ['a numeric form', [{ ...message, forms: ['x', 1] }], false],
+    ['a form too long', [{ ...message, forms: ['x'.repeat(100_001)] }], false],
+    ['forms not a list', [{ ...message, forms: 'x' }], false],
+    ['null forms', [{ ...message, forms: null }], false],
     ['no arguments', [], false],
     ['null', [null], false],
     ['an empty project id', [{ ...message, projectId: '' }], false],
@@ -370,6 +388,17 @@ describe('argumentValidators', () => {
     ['a removal, with a base', saveOf([{ ...saved, text: '', base: 'old' }]), true],
     ['a message not in the source', saveOf([{ ...saved, source: null }]), true],
     ['two messages', saveOf([saved, { ...saved, key: 'n' }]), true],
+    [
+      'plural forms and their base',
+      saveOf([{ ...saved, forms: ['x', 'y'], baseForms: ['a'] }]),
+      true,
+    ],
+    ['forms without a base', saveOf([{ ...saved, forms: ['x', 'y'] }]), true],
+    ['a null base of forms', saveOf([{ ...saved, forms: ['x'], baseForms: null }]), true],
+    ['empty forms', saveOf([{ ...saved, forms: [] }]), false],
+    ['a numeric form', saveOf([{ ...saved, forms: ['x', 2] }]), false],
+    ['a numeric base form', saveOf([{ ...saved, baseForms: [2] }]), false],
+    ['empty base forms', saveOf([{ ...saved, baseForms: [] }]), false],
     ['no arguments', [], false],
     ['no messages', saveOf([]), false],
     ['messages not a list', saveOf({ m: saved }), false],
@@ -397,6 +426,8 @@ describe('argumentValidators', () => {
     ['no messages (forgets the draft)', saveOf([]), true],
     ['a key twice', saveOf([saved, saved]), false],
     ['a numeric base', saveOf([{ ...saved, base: 1 }]), false],
+    ['plural forms', saveOf([{ ...saved, forms: ['x', 'y'], baseForms: null }]), true],
+    ['a numeric form', saveOf([{ ...saved, forms: [1] }]), false],
     ['messages not a list', saveOf({ m: saved }), false],
     ['an extra field', saveOf([saved], { path: '/etc' }), false],
     ['an extra argument', [...saveOf([saved]), 'more'], false],
@@ -427,6 +458,7 @@ describe('argumentValidators', () => {
     ['a null source', keep([{ ...kept, source: null }]), false],
     ['a source too long', keep([{ ...kept, source: 'x'.repeat(100_001) }]), false],
     ['a message with a text', keep([{ ...kept, text: 'x' }]), false],
+    ['a message with forms', keep([{ ...kept, forms: ['x'] }]), false],
     ['an empty catalog', [{ projectId: 'abc', catalog: '', messages: [kept] }], false],
     ['an empty project id', [{ projectId: '', catalog: 'i18n', messages: [kept] }], false],
     ['an extra field', keep([kept], { path: '/etc' }), false],

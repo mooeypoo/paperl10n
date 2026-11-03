@@ -63,7 +63,8 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
         ok: true,
         value: { page: [], sections: null, length: { source: 0, translation: 0 } },
       }),
-    checkMessage: () => Promise.resolve({ ok: true, value: { tokens: [], warnings: [] } }),
+    checkMessage: () =>
+      Promise.resolve({ ok: true, value: { tokens: [], warnings: [], forms: null } }),
     saveCatalog: () =>
       Promise.resolve({
         ok: true,

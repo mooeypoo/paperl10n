@@ -23,6 +23,38 @@ describe('createApi (the preload)', () => {
     expect(sent).toEqual([[channelFor('openProject')]]);
   });
 
+  it('sends a message’s forms and base forms only when it has them', async () => {
+    const { api, sent } = recording();
+    await api.checkMessage({ projectId: 'p1', catalog: 'c', key: 'k', text: 'a' });
+    await api.checkMessage({
+      projectId: 'p1',
+      catalog: 'c',
+      key: 'k',
+      text: 'a',
+      forms: ['a', 'b'],
+    });
+    const plain = { key: 'k', text: 'a', base: null, source: 'A' };
+    const plural = { ...plain, forms: ['a', 'b'], baseForms: null };
+    await api.saveCatalog({ projectId: 'p1', catalog: 'c', messages: [plain, plural] });
+    await api.saveCatalogDraft({
+      projectId: 'p1',
+      catalog: 'c',
+      messages: [{ ...plain, baseForms: ['x'], sneaky: 1 } as typeof plain],
+    });
+    expect(sent).toEqual([
+      [channelFor('checkMessage'), { projectId: 'p1', catalog: 'c', key: 'k', text: 'a' }],
+      [
+        channelFor('checkMessage'),
+        { projectId: 'p1', catalog: 'c', key: 'k', text: 'a', forms: ['a', 'b'] },
+      ],
+      [channelFor('saveCatalog'), { projectId: 'p1', catalog: 'c', messages: [plain, plural] }],
+      [
+        channelFor('saveCatalogDraft'),
+        { projectId: 'p1', catalog: 'c', messages: [{ ...plain, baseForms: ['x'] }] },
+      ],
+    ]);
+  });
+
   it('sends only the contract fields of a request, never extra properties', async () => {
     const { api, sent } = recording();
     const request = { projectId: 'p1', sneaky: '/etc/passwd' } as { projectId: string };

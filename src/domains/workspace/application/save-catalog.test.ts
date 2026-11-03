@@ -31,7 +31,11 @@ const tree: FileTree = {
   [STATUS]: status({ c: messageFingerprint('An older source') }),
 };
 
-async function open(files: FileTree, overrides: Partial<CatalogFormat> = {}) {
+async function open(
+  files: FileTree,
+  overrides: Partial<CatalogFormat> = {},
+  catalogDrafts = new InMemoryDraftStore(),
+) {
   const registry = createFormatRegistry(
     [fakeCatalogPlugin('catalog-fake', { ...detects('likely'), ...overrides })],
     { apiVersion: 4 },
@@ -50,7 +54,6 @@ async function open(files: FileTree, overrides: Partial<CatalogFormat> = {}) {
   if (disk === undefined) throw new Error('test setup');
   const updates = createStatusUpdates();
   const projectId = opened.value.projectId;
-  const catalogDrafts = new InMemoryDraftStore();
   const save = createSaveCatalog({ sessions, catalogDrafts, updates });
   const keep = createKeepMessagesUpToDate({ sessions, updates });
   const text = async (path: ProjectPath) => {
@@ -159,6 +162,88 @@ describe('saveCatalog', () => {
     const before = await app.text(STATUS);
     await app.save([message('a', 'שלום', 'שלום', 'Hello')]);
     expect(await app.text(STATUS)).toBe(before);
+  });
+
+  it('saves every plural form, refuses when a form changed on disk, and removes an emptied one', async () => {
+    const app = await open({
+      ...untranslated,
+      'i18n/en.cat': 'a=Hello\nn[]=$1 file|$1 files\n',
+      [TARGET]: 'n[]=קובץ|$1 קבצים\n',
+    });
+    const saving = (forms: string[], baseForms: string[] | null) => ({
+      ...message('n', forms[0] ?? '', 'קובץ', '$1 file'),
+      forms,
+      baseForms,
+    });
+    // Its first form as the file has it, a later one not: someone changed it.
+    expect(await app.save([saving(['א', 'ב'], ['קובץ', '$1 קבצים ישנים'])])).toEqual({
+      ok: false,
+      error: { code: 'workspace.catalog-changed', path: 'i18n/he.cat', keys: ['n'] },
+    });
+    const saved = await app.save([saving(['קובץ', '$1 קבצים חדשים'], ['קובץ', '$1 קבצים'])]);
+    expect(saved.ok && saved.value.messages).toEqual([{ key: 'n', status: 'translated' }]);
+    expect(await app.text(TARGET)).toBe('n[]=קובץ|$1 קבצים חדשים\n');
+    expect(await app.record()).toEqual({ n: messageFingerprint('$1 file') });
+    // Only a later form filled in is a translation, recorded; every form empty removes it.
+    const later = await app.save([
+      { ...saving(['', '$1'], ['קובץ', '$1 קבצים חדשים']), base: 'קובץ' },
+    ]);
+    expect(later.ok && later.value.written).toBe(true);
+    expect(await app.record()).toEqual({ n: messageFingerprint('$1 file') });
+    const emptied = await app.save([{ ...saving(['', ''], ['', '$1']), base: null }]);
+    expect(emptied.ok && emptied.value.messages).toEqual([{ key: 'n', status: 'missing' }]);
+    expect(await app.text(TARGET)).toBe('');
+    expect(await app.record()).toBeUndefined();
+  });
+
+  it('compares forms whole: one more or fewer form on disk is a change, every form empty is none', async () => {
+    const app = await open({
+      ...untranslated,
+      'i18n/en.cat': 'n[]=$1 file|$1 files\nm[]=x|xs\np[]=y|ys\n',
+      [TARGET]: 'n[]=קובץ|$1 קבצים\nm[]=|\np[]=י\n',
+    });
+    const plural = (
+      key: string,
+      forms: string[],
+      base: string | null,
+      baseForms: string[] | null,
+    ) => ({
+      ...message(key, forms[0] ?? '', base, { n: '$1 file', m: 'x', p: 'y' }[key] ?? null),
+      forms,
+      baseForms,
+    });
+    expect(await app.save([plural('n', ['א', 'ב'], 'קובץ', ['קובץ'])])).toMatchObject({
+      ok: false,
+      error: { code: 'workspace.catalog-changed', keys: ['n'] },
+    });
+    // One fewer is a change too: `p` has a single form on disk, where the editor read two.
+    expect(await app.save([plural('p', ['א', 'ב'], 'י', ['י', 'ים'])])).toMatchObject({
+      ok: false,
+      error: { code: 'workspace.catalog-changed', keys: ['p'] },
+    });
+    // An entry with every form empty is no translation: its base is none.
+    expect((await app.save([plural('m', ['א', 'ב'], null, null)])).ok).toBe(true);
+  });
+
+  it('forgets a saved message’s draft only when its forms are what was saved', async () => {
+    const drafts = new InMemoryDraftStore();
+    const files = {
+      ...untranslated,
+      'i18n/en.cat': 'n[]=$1 file|$1 files\n',
+      [TARGET]: 'n[]=קובץ|$1 קבצים\n',
+    };
+    const app = await open(files, {}, drafts);
+    const edit = (forms: string[]) => ({
+      ...message('n', forms[0] ?? '', 'קובץ', '$1 file'),
+      forms,
+      baseForms: ['קובץ', '$1 קבצים'],
+    });
+    const key = { project: '/p', locale: 'he', document: 'i18n' };
+    const later = edit(['קובץ', 'שונה']);
+    await drafts.put(key, { text: JSON.stringify({ messages: [later] }), base: null });
+    expect((await app.save([edit(['קובץ', '$1 קבצים חדשים'])])).ok).toBe(true);
+    const kept = await drafts.get(key);
+    expect(kept.ok && kept.value?.text).toBe(JSON.stringify({ messages: [later] }));
   });
 
   it('removes an emptied message and its record, and creates no file for removals only', async () => {
@@ -424,6 +509,47 @@ describe('keepMessagesUpToDate', () => {
     });
     expect(await app.record()).toEqual({ c: messageFingerprint('See you') });
     expect(await app.text(TARGET)).toBe(`# role: target\n${String(tree[TARGET])}`);
+  });
+
+  it('clears a review mark in the file, and keeps the rest of it as it was', async () => {
+    const app = await open({ ...tree, [TARGET]: 'a=שלום\n?(See ya)c=להתראות\ngone=ישן\n' });
+    expect(await app.keep([{ key: 'c', source: 'See you' }])).toEqual({
+      ok: true,
+      value: [{ key: 'c', status: 'translated' }],
+    });
+    expect(await app.text(TARGET)).toBe('a=שלום\nc=להתראות\ngone=ישן\n');
+    expect(await app.record()).toEqual({ c: messageFingerprint('See you') });
+  });
+
+  it('clears only the kept messages’ review marks, and keeps their plural forms', async () => {
+    const app = await open({
+      ...untranslated,
+      'i18n/en.cat': 'a=Hello\nn[]=$1 file|$1 files\n',
+      [TARGET]: '?a=שלום\n?n[]=קובץ|$1 קבצים\n',
+    });
+    expect(await app.keep([{ key: 'n', source: '$1 file' }])).toEqual({
+      ok: true,
+      value: [{ key: 'n', status: 'translated' }],
+    });
+    expect(await app.text(TARGET)).toBe('?a=שלום\nn[]=קובץ|$1 קבצים\n');
+  });
+
+  it('records nothing when it can’t clear a review mark', async () => {
+    const app = await open({ ...tree, [TARGET]: '?c=להתראות\n' });
+    const project = app.sessions.get(app.projectId);
+    if (project === undefined) throw new Error('test setup');
+    app.sessions.update(app.projectId, {
+      ...project,
+      writer: { writeText: (path) => Promise.resolve(err({ code: 'files.unwritable', path })) },
+    });
+    expect(await app.keep([{ key: 'c', source: 'See you' }])).toEqual({
+      ok: false,
+      error: {
+        code: 'workspace.catalog-unwritable',
+        cause: { code: 'files.unwritable', path: 'i18n/he.cat' },
+      },
+    });
+    expect(await app.record()).toEqual({ c: messageFingerprint('An older source') });
   });
 
   it('keeps nothing for a message without a translation: it stays missing, with no record', async () => {

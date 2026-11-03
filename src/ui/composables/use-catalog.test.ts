@@ -17,6 +17,7 @@ const detail = (key: string): CatalogDetailDto => ({
   messages: [],
   notInSource: [],
   documentationProblem: null,
+  pluralForms: [],
   draft: null,
   statusFile: { exists: false, problem: null },
 });

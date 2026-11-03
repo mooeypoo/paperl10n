@@ -118,16 +118,36 @@ export interface PlaceholderTokenDto {
   readonly end: number;
 }
 
+/** One plural form of a message, with its tokens. */
+export interface MessageFormDto {
+  readonly text: string;
+  readonly tokens: readonly PlaceholderTokenDto[];
+}
+
+/** One plural form of a language, by the first counts that take it (`[1]`, `[0, 3, 4, 5]`). */
+export interface PluralFormDto {
+  readonly samples: readonly number[];
+}
+
 export interface CatalogMessageDto {
   readonly key: string;
+  /** The source text (its first form, with forms). */
   readonly source: string;
-  /** What the documentation (`qqq`) says about it; `null`: nothing. */
+  /** What the developers say about it (`qqq`, or the message's own notes); `null`: nothing. */
   readonly documentation: string | null;
-  /** `null`: not translated (or translated empty). */
+  /** `null`: not translated (or translated empty). Its first form, with forms. */
   readonly translation: string | null;
   readonly status: MessageStatusDto;
   readonly sourceTokens: readonly PlaceholderTokenDto[];
   readonly translationTokens: readonly PlaceholderTokenDto[];
+  /** Every plural form of the source, when its catalog keeps them apart (gettext); `null`: none. */
+  readonly sourceForms: readonly MessageFormDto[] | null;
+  /** Every plural form of the translation; `null`: none. */
+  readonly translationForms: readonly MessageFormDto[] | null;
+  /** The translation's file marks it as needing review (gettext's `fuzzy`): it's outdated. */
+  readonly needsReview: boolean;
+  /** The source the translation was made for, when its file keeps it (gettext's `#|`). */
+  readonly previousSource: string | null;
 }
 
 /**
@@ -151,18 +171,29 @@ export type MessageWarningDto =
 
 /** A message's translation as it's written, checked against its source. */
 export interface MessageCheckDto {
-  /** The translation's tokens, for the editor to mark. */
+  /** The translation's tokens (its first form's, with forms), for the editor to mark. */
   readonly tokens: readonly PlaceholderTokenDto[];
   readonly warnings: readonly MessageWarningDto[];
+  /** Each plural form's tokens and warnings, when the request had forms (`null`: none). */
+  readonly forms:
+    | readonly {
+        readonly tokens: readonly PlaceholderTokenDto[];
+        readonly warnings: readonly MessageWarningDto[];
+      }[]
+    | null;
 }
 
 /** One edited message to save. */
 export interface MessageSaveDto {
   readonly key: string;
-  /** The translation to write; empty removes the message from the file. */
+  /** The translation to write (its first form, with forms); empty (every form empty) removes it. */
   readonly text: string;
+  /** Every plural form, for a message whose catalog keeps them apart. */
+  readonly forms?: readonly string[];
   /** Its translation as read when editing started (`null`: none). */
   readonly base: string | null;
+  /** Its forms as read when editing started (`null`: none). */
+  readonly baseForms?: readonly string[] | null;
   /** The source text the translator saw (`null`: the source doesn't have it). */
   readonly source: string | null;
 }
@@ -207,6 +238,8 @@ export interface CatalogDetailDto {
     readonly exists: boolean;
     readonly problem: ErrorDto | null;
   };
+  /** The target language's plural forms, when the catalog keeps them apart (none otherwise). */
+  readonly pluralForms: readonly PluralFormDto[];
 }
 
 export interface CatalogListDto {
@@ -489,13 +522,14 @@ export interface PaperLionApi {
   }): Promise<Result<TranslationCheckDto, ErrorDto>>;
   /**
    * Checks a message's translation as it's written now (saved or not) against its source message:
-   * its tokens and the warnings. Reads only.
+   * its tokens and the warnings; with `forms`, each plural form's. Reads only.
    */
   checkMessage(request: {
     readonly projectId: string;
     readonly catalog: string;
     readonly key: string;
     readonly text: string;
+    readonly forms?: readonly string[];
   }): Promise<Result<MessageCheckDto, ErrorDto>>;
   /**
    * Saves a catalog's edited messages: the translation file is patched (or created), changing
@@ -510,8 +544,8 @@ export interface PaperLionApi {
   }): Promise<Result<CatalogSaveDto, ErrorDto>>;
   /**
    * Keeps messages' translations as up to date with their source as it is now ("Keep as up to
-   * date", for an outdated message whose change doesn't need one). Refused when a source isn't
-   * the one shown (`workspace.source-changed`).
+   * date", for an outdated message whose change doesn't need one), clearing a review mark their
+   * file has. Refused when a source isn't the one shown (`workspace.source-changed`).
    */
   keepMessagesUpToDate(request: {
     readonly projectId: string;

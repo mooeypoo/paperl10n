@@ -13,6 +13,7 @@ const checked = (warnings: number): MessageCheckDto => ({
     token: 'parameter' as const,
     value: '$1',
   })),
+  forms: null,
 });
 
 /** A client whose checks wait until the test answers them, in any order. */

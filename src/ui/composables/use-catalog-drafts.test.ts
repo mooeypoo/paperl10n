@@ -13,6 +13,10 @@ const message: CatalogMessageDto = {
   status: 'missing',
   sourceTokens: [],
   translationTokens: [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 };
 const read = (draft: CatalogDetailDto['draft'] = null, key = 'i18n'): CatalogDetailDto => ({
   key,
@@ -23,6 +27,7 @@ const read = (draft: CatalogDetailDto['draft'] = null, key = 'i18n'): CatalogDet
   messages: [message],
   notInSource: [{ key: 'gone', text: 'ישן', tokens: [] }],
   documentationProblem: null,
+  pluralForms: [],
   draft,
   statusFile: { exists: true, problem: null },
 });

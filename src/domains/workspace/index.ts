@@ -34,6 +34,7 @@ export {
   type ReadCatalog,
   type ReadCatalogError,
   type ReadCatalogResult,
+  type ScannedForm,
 } from './application/read-catalog.ts';
 export {
   createSaveCatalog,
@@ -62,6 +63,7 @@ export {
   type CheckMessage,
   type CheckMessageError,
   type MessageCheck,
+  type TextCheck,
 } from './application/check-message.ts';
 export type {
   OpenedProject,

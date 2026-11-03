@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { channelFor, type PaperLionApi } from '#ipc-contract';
+import { channelFor, type MessageSaveDto, type PaperLionApi } from '#ipc-contract';
 
 /** Sends one IPC request (in the app: `ipcRenderer.invoke`). */
 export type Invoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -9,6 +9,20 @@ export type Invoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
  * main is the only sender, and it returns exactly these shapes. This is the one place the
  * contract's types are asserted on data crossing the process boundary.
  */
+/** An edited message's fields, and nothing else (main refuses anything more). */
+function saveFields(message: MessageSaveDto): MessageSaveDto {
+  return {
+    key: message.key,
+    text: message.text,
+    base: message.base,
+    source: message.source,
+    ...(message.forms === undefined ? {} : { forms: [...message.forms] }),
+    ...(message.baseForms === undefined
+      ? {}
+      : { baseForms: message.baseForms === null ? null : [...message.baseForms] }),
+  };
+}
+
 export function createApi(invoke: Invoke): PaperLionApi {
   return {
     openProject: () => invoke(channelFor('openProject')) as ReturnType<PaperLionApi['openProject']>,
@@ -69,17 +83,13 @@ export function createApi(invoke: Invoke): PaperLionApi {
         catalog: request.catalog,
         key: request.key,
         text: request.text,
+        ...(request.forms === undefined ? {} : { forms: [...request.forms] }),
       }) as ReturnType<PaperLionApi['checkMessage']>,
     saveCatalog: (request) =>
       invoke(channelFor('saveCatalog'), {
         projectId: request.projectId,
         catalog: request.catalog,
-        messages: request.messages.map((message) => ({
-          key: message.key,
-          text: message.text,
-          base: message.base,
-          source: message.source,
-        })),
+        messages: request.messages.map(saveFields),
       }) as ReturnType<PaperLionApi['saveCatalog']>,
     keepMessagesUpToDate: (request) =>
       invoke(channelFor('keepMessagesUpToDate'), {
@@ -91,12 +101,7 @@ export function createApi(invoke: Invoke): PaperLionApi {
       invoke(channelFor('saveCatalogDraft'), {
         projectId: request.projectId,
         catalog: request.catalog,
-        messages: request.messages.map((message) => ({
-          key: message.key,
-          text: message.text,
-          base: message.base,
-          source: message.source,
-        })),
+        messages: request.messages.map(saveFields),
       }) as ReturnType<PaperLionApi['saveCatalogDraft']>,
     discardCatalogDraft: (request) =>
       invoke(channelFor('discardCatalogDraft'), {

@@ -38,6 +38,27 @@ export function translationIn(file: ParsedCatalog | null, key: string): string |
   return text === undefined || text === '' ? null : text;
 }
 
+/** A message's plural forms in a file: `null` when it has none, or every one is empty. */
+export function formsIn(file: ParsedCatalog | null, key: string): readonly string[] | null {
+  const forms = file?.messages.find((message) => message.key === key)?.forms;
+  return forms === undefined || forms.every((form) => form === '') ? null : forms;
+}
+
+/** Two lists of forms alike (`null` alike only with `null`). */
+export const sameForms = (a: readonly string[] | null, b: readonly string[] | null) =>
+  a === null || b === null ? a === b : a.length === b.length && a.every((form, i) => form === b[i]);
+
+/** Whether an edit (its text, and its forms when it has them) says what `found` does. */
+export function editMatches(
+  found: Message | undefined,
+  edit: { readonly text: string; readonly forms?: readonly string[] },
+): boolean {
+  if (edit.text !== (found?.text ?? '')) return false;
+  return (
+    edit.forms === undefined || sameForms(edit.forms, found?.forms ?? edit.forms.map(() => ''))
+  );
+}
+
 export const sourceOf = (source: readonly Message[], key: string) =>
   source.find((message) => message.key === key)?.text ?? null;
 

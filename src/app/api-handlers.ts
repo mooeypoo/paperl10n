@@ -8,8 +8,11 @@ import type {
   DiscardCatalogDraft,
   SaveCatalogDraft,
   KeepMessagesUpToDate,
+  MessageSave,
   SaveCatalog,
   SavedMessage,
+  ScannedForm,
+  TextCheck,
   CheckTranslation,
   ChooseTargetLocale,
   DiscardDraft,
@@ -35,6 +38,8 @@ import type {
   FormatDto,
   LanguageDto,
   LocaleDto,
+  MessageFormDto,
+  MessageSaveDto,
   MessageWarningDto,
   PaperLionApi,
   PlaceholderTokenDto,
@@ -68,6 +73,23 @@ export interface UseCases {
 
 function toTokenDto(token: PlaceholderToken): PlaceholderTokenDto {
   return { kind: token.kind, start: token.start, end: token.end };
+}
+
+function toFormDto(form: ScannedForm): MessageFormDto {
+  return { text: form.text, tokens: form.tokens.map(toTokenDto) };
+}
+
+/** An edited message, as saving and drafts carry it. */
+function toSaveDto(message: MessageSave): MessageSaveDto {
+  const { key, text, base, source, forms, baseForms } = message;
+  return {
+    key,
+    text,
+    base,
+    source,
+    ...(forms === undefined ? {} : { forms: [...forms] }),
+    ...(baseForms === undefined ? {} : { baseForms: baseForms === null ? null : [...baseForms] }),
+  };
 }
 
 function toWarningDto(warning: MessageWarning): MessageWarningDto {
@@ -228,6 +250,10 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
           status: message.status,
           sourceTokens: message.sourceTokens.map(toTokenDto),
           translationTokens: message.translationTokens.map(toTokenDto),
+          sourceForms: message.sourceForms?.map(toFormDto) ?? null,
+          translationForms: message.translationForms?.map(toFormDto) ?? null,
+          needsReview: message.needsReview,
+          previousSource: message.previousSource,
         })),
         notInSource: read.notInSource.map((message) => ({
           key: message.key,
@@ -240,17 +266,13 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
           read.draft === null
             ? null
             : {
-                messages: read.draft.messages.map(({ key, text, base, source }) => ({
-                  key,
-                  text,
-                  base,
-                  source,
-                })),
+                messages: read.draft.messages.map(toSaveDto),
               },
         statusFile: {
           exists: read.statusFile.exists,
           problem: read.statusFile.problem === null ? null : toErrorDto(read.statusFile.problem),
         },
+        pluralForms: read.pluralForms.map(({ samples }) => ({ samples: [...samples] })),
       });
     },
 
@@ -341,13 +363,19 @@ export function createApiHandlers(useCases: UseCases): PaperLionApi {
       });
     },
 
-    async checkMessage({ projectId, catalog, key, text }) {
-      const result = await useCases.checkMessage(projectId, { catalog, key, text });
-      if (!result.ok) return err(toErrorDto(result.error));
-      return ok({
-        tokens: result.value.tokens.map(toTokenDto),
-        warnings: result.value.warnings.map(toWarningDto),
+    async checkMessage({ projectId, catalog, key, text, forms }) {
+      const result = await useCases.checkMessage(projectId, {
+        catalog,
+        key,
+        text,
+        ...(forms === undefined ? {} : { forms }),
       });
+      if (!result.ok) return err(toErrorDto(result.error));
+      const checked = (check: TextCheck) => ({
+        tokens: check.tokens.map(toTokenDto),
+        warnings: check.warnings.map(toWarningDto),
+      });
+      return ok({ ...checked(result.value), forms: result.value.forms?.map(checked) ?? null });
     },
 
     async saveCatalog({ projectId, catalog, messages }) {

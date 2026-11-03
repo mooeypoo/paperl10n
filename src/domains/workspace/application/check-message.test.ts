@@ -43,7 +43,11 @@ async function open(files: FileTree, plugins?: PluginModule[]) {
   if (disk === undefined) throw new Error('test setup');
   return Object.assign(
     (key: string, text: string, catalog = 'i18n') => check(projectId, { catalog, key, text }),
-    { disk },
+    {
+      disk,
+      forms: (key: string, forms: string[]) =>
+        check(projectId, { catalog: 'i18n', key, text: forms[0] ?? '', forms }),
+    },
   );
 }
 
@@ -67,6 +71,7 @@ describe('checkMessage', () => {
           { kind: 'unexpected', token: 'parameter', value: '$2' },
           { kind: 'unexpected', token: 'link', value: 'Help:X' },
         ],
+        forms: null,
       },
     });
   });
@@ -100,6 +105,38 @@ describe('checkMessage', () => {
     ]);
   });
 
+  it('checks each plural form against the source’s forms, the first form’s as the text’s', async () => {
+    const check = await open({
+      ...untranslated,
+      'i18n/en.cat': 'a=Hello $1\nn[]=One file|$1 files\n',
+    });
+    const $1 = (start: number) => ({ kind: 'parameter', text: '$1', start, end: start + 2 });
+    // A form for one number may drop the count, as long as another form keeps it.
+    expect(await check.forms('n', ['קובץ', '$1 קבצים'])).toEqual({
+      ok: true,
+      value: {
+        tokens: [],
+        warnings: [],
+        forms: [
+          { tokens: [], warnings: [] },
+          { tokens: [$1(0)], warnings: [] },
+        ],
+      },
+    });
+    const missing = await check.forms('n', ['קובץ', 'קבצים', '']);
+    expect(missing.ok && missing.value.forms?.map((form) => form.warnings)).toEqual([
+      [],
+      [{ kind: 'missing', token: 'parameter', value: '$1' }],
+      [],
+    ]);
+    // The text's check is its first form's.
+    const first = await check.forms('n', ['$1 קובץ', '$1 קבצים']);
+    expect(first.ok && [first.value.tokens, first.value.warnings]).toEqual([[$1(0)], []]);
+    // A message without forms in the source checks each form against its text.
+    const single = await check.forms('a', ['שלום $1', 'שלום']);
+    expect(single.ok && single.value.forms?.map((form) => form.warnings)).toEqual([[], []]);
+  });
+
   it('finds nothing to warn about in a translation that keeps what the source has', async () => {
     const check = await open(tree);
     const result = await check('b', 'ראו <b>$2</b> {{PLURAL:$2|אחד|הרבה}}');
@@ -115,7 +152,10 @@ describe('checkMessage', () => {
 
   it('checks a message of a catalog without a translation file, and an empty text', async () => {
     const check = await open(untranslated);
-    expect(await check('a', '')).toEqual({ ok: true, value: { tokens: [], warnings: [] } });
+    expect(await check('a', '')).toEqual({
+      ok: true,
+      value: { tokens: [], warnings: [], forms: null },
+    });
     const result = await check('a', 'שלום {{');
     expect(result.ok && result.value.warnings).toEqual([
       { kind: 'missing', token: 'parameter', value: '$1' },
@@ -134,7 +174,10 @@ describe('checkMessage', () => {
         },
       }),
     );
-    expect(await check('a', 'שלום $1')).toEqual({ ok: true, value: { tokens: [], warnings: [] } });
+    expect(await check('a', 'שלום $1')).toEqual({
+      ok: true,
+      value: { tokens: [], warnings: [], forms: null },
+    });
   });
 
   it.each<[string, FileTree, string, string, unknown]>([
@@ -173,7 +216,11 @@ describe('checkMessage', () => {
     // Against the source when the project opened ("Hello $1"), `$3` would be two warnings.
     expect(await check('a', 'שלום $3')).toEqual({
       ok: true,
-      value: { tokens: [{ kind: 'parameter', text: '$3', start: 5, end: 7 }], warnings: [] },
+      value: {
+        tokens: [{ kind: 'parameter', text: '$3', start: 5, end: 7 }],
+        warnings: [],
+        forms: null,
+      },
     });
     await check.disk.writeText(SOURCE, 'not a message\n');
     expect(await check('a', 'x')).toEqual({

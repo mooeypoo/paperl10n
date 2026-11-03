@@ -74,6 +74,10 @@ describe('readCatalog', () => {
           status: 'translated',
           sourceTokens: [{ kind: 'parameter', text: '$1', start: 6, end: 8 }],
           translationTokens: [{ kind: 'parameter', text: '$1', start: 5, end: 7 }],
+          sourceForms: null,
+          translationForms: null,
+          needsReview: false,
+          previousSource: null,
         },
         {
           key: 'b',
@@ -83,6 +87,10 @@ describe('readCatalog', () => {
           status: 'missing',
           sourceTokens: [],
           translationTokens: [],
+          sourceForms: null,
+          translationForms: null,
+          needsReview: false,
+          previousSource: null,
         },
         {
           key: 'c',
@@ -96,6 +104,10 @@ describe('readCatalog', () => {
             { kind: 'tag', name: 'b', text: '</b>', start: 9, end: 13 },
           ],
           translationTokens: [],
+          sourceForms: null,
+          translationForms: null,
+          needsReview: false,
+          previousSource: null,
         },
       ],
       notInSource: [
@@ -108,6 +120,8 @@ describe('readCatalog', () => {
       documentationProblem: null,
       draft: null,
       statusFile: { exists: true, problem: null },
+      // The fake format's two forms, for every language.
+      pluralForms: [{ samples: [1] }, { samples: [0, 2, 3, 4, 5] }],
     });
   });
 
@@ -272,6 +286,52 @@ describe('readCatalog', () => {
       ['b', 'missing'],
       ['c', 'missing'],
     ]);
+  });
+
+  it('reads plural forms with their tokens, a review mark, and the source it was made for', async () => {
+    const read = await open({
+      'paperl10n.config.json': config(),
+      'i18n/en.cat': 'a=Hello\nn[]=$1 file|$1 files\n',
+      'i18n/he.cat': '?(Hi)a=שלום\nn[]=קובץ|שני קבצים|$1 קבצים\n',
+    });
+    const result = await read();
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    const [hello, files] = result.value.messages;
+    expect(hello).toMatchObject({
+      needsReview: true,
+      previousSource: 'Hi',
+      status: 'outdated',
+      sourceForms: null,
+      translationForms: null,
+    });
+    expect(files).toMatchObject({
+      source: '$1 file',
+      translation: 'קובץ',
+      needsReview: false,
+      previousSource: null,
+      sourceForms: [
+        { text: '$1 file', tokens: [{ kind: 'parameter', text: '$1', start: 0, end: 2 }] },
+        { text: '$1 files', tokens: [{ kind: 'parameter', text: '$1', start: 0, end: 2 }] },
+      ],
+      translationForms: [
+        { text: 'קובץ', tokens: [] },
+        { text: 'שני קבצים', tokens: [] },
+        { text: '$1 קבצים', tokens: [{ kind: 'parameter', text: '$1', start: 0, end: 2 }] },
+      ],
+    });
+  });
+
+  it('gives no plural forms when the format fails them', async () => {
+    const read = await open(
+      tree,
+      withPlugin({
+        pluralForms: () => {
+          throw new Error('boom');
+        },
+      }),
+    );
+    const result = await read();
+    expect(result.ok && result.value.pluralForms).toEqual([]);
   });
 
   it('reports an unknown project and a project without a target language', async () => {

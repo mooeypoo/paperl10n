@@ -38,6 +38,7 @@ export function catalogDraftKey(project: OpenedProject, catalog: string): DraftK
 
 const isText = (value: unknown): value is string => typeof value === 'string';
 const isTextOrNull = (value: unknown) => value === null || isText(value);
+const isForms = (value: unknown) => Array.isArray(value) && value.every(isText);
 
 /** A stored draft's messages, or `null` when it isn't a catalog draft (corrupt, or another shape). */
 function decode(draft: Draft): CatalogDraft | null {
@@ -53,8 +54,15 @@ function decode(draft: Draft): CatalogDraft | null {
   const valid = messages.every((message: unknown) => {
     // From JSON: reading a primitive's fields gives `undefined`, but `null` has none to read.
     if (message === null) return false;
-    const { key, text, base, source } = message as Record<string, unknown>;
-    return isText(key) && isText(text) && isTextOrNull(base) && isTextOrNull(source);
+    const { key, text, base, source, forms, baseForms } = message as Record<string, unknown>;
+    return (
+      isText(key) &&
+      isText(text) &&
+      isTextOrNull(base) &&
+      isTextOrNull(source) &&
+      (forms === undefined || isForms(forms)) &&
+      (baseForms === undefined || baseForms === null || isForms(baseForms))
+    );
   });
   return valid ? { messages: messages as MessageSave[] } : null;
 }
@@ -62,7 +70,14 @@ function decode(draft: Draft): CatalogDraft | null {
 function encode(messages: readonly MessageSave[]): Draft {
   return {
     text: JSON.stringify({
-      messages: messages.map(({ key, text, base, source }) => ({ key, text, base, source })),
+      messages: messages.map(({ key, text, base, source, forms, baseForms }) => ({
+        key,
+        text,
+        base,
+        source,
+        ...(forms === undefined ? {} : { forms }),
+        ...(baseForms === undefined ? {} : { baseForms }),
+      })),
     }),
     base: null,
   };

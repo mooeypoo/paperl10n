@@ -16,6 +16,10 @@ const message = (
   status,
   sourceTokens: [],
   translationTokens: [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 });
 
 const messages = [

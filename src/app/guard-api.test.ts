@@ -62,6 +62,7 @@ describe('guardApi', () => {
               messages: [],
               notInSource: [],
               documentationProblem: null,
+              pluralForms: [],
               draft: null,
               statusFile: { exists: false, problem: null },
             }),
@@ -93,7 +94,7 @@ describe('guardApi', () => {
         discardDraft: () => Promise.resolve(ok(null)),
         checkTranslation: () =>
           Promise.resolve(ok({ page: [], sections: null, length: { source: 3, translation: 2 } })),
-        checkMessage: () => Promise.resolve(ok({ tokens: [], warnings: [] })),
+        checkMessage: () => Promise.resolve(ok({ tokens: [], warnings: [], forms: null })),
         saveCatalog: () =>
           Promise.resolve(ok({ path: 'p', written: true, messages: [], statusProblem: null })),
         saveCatalogDraft: () => Promise.resolve(ok(null)),
@@ -156,6 +157,7 @@ describe('guardApi', () => {
         messages: [],
         notInSource: [],
         documentationProblem: null,
+        pluralForms: [],
         draft: null,
         statusFile: { exists: false, problem: null },
       }),
@@ -211,7 +213,7 @@ describe('guardApi', () => {
       ok({ marked: ['k'], markedMessages: 0 }),
     );
     expect(await api.checkMessage({ projectId: 'p', catalog: 'c', key: 'k', text: 'x' })).toEqual(
-      ok({ tokens: [], warnings: [] }),
+      ok({ tokens: [], warnings: [], forms: null }),
     );
     expect(await api.saveCatalog({ projectId: 'p', catalog: 'c', messages: [] })).toEqual(
       ok({ path: 'p', written: true, messages: [], statusProblem: null }),

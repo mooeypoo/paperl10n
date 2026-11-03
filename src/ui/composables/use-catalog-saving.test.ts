@@ -21,6 +21,10 @@ const message: CatalogMessageDto = {
   status: 'missing',
   sourceTokens: [],
   translationTokens: [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 };
 const detail: CatalogDetailDto = {
   key: 'i18n',
@@ -31,6 +35,7 @@ const detail: CatalogDetailDto = {
   messages: [message],
   notInSource: [],
   documentationProblem: null,
+  pluralForms: [],
   draft: null,
   statusFile: { exists: true, problem: null },
 };

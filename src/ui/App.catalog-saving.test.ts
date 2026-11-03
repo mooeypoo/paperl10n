@@ -45,6 +45,10 @@ const message = (
   status,
   sourceTokens: [],
   translationTokens: [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 });
 const detail = (key: string, messages: CatalogMessageDto[]): CatalogDetailDto => ({
   key,
@@ -55,6 +59,7 @@ const detail = (key: string, messages: CatalogMessageDto[]): CatalogDetailDto =>
   messages,
   notInSource: [],
   documentationProblem: null,
+  pluralForms: [],
   draft: null,
   statusFile: { exists: true, problem: null },
 });

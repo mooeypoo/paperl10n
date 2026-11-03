@@ -12,6 +12,10 @@ const translated: CatalogMessageDto = {
   status: 'translated',
   sourceTokens: [{ kind: 'parameter', start: 6, end: 8 }],
   translationTokens: [{ kind: 'parameter', start: 5, end: 7 }],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 };
 const missing: CatalogMessageDto = {
   ...translated,
@@ -19,6 +23,10 @@ const missing: CatalogMessageDto = {
   translation: null,
   status: 'missing',
   translationTokens: [],
+  sourceForms: null,
+  translationForms: null,
+  needsReview: false,
+  previousSource: null,
 };
 const catalog = (key: string): CatalogDetailDto => ({
   key,
@@ -29,6 +37,7 @@ const catalog = (key: string): CatalogDetailDto => ({
   messages: [translated, missing],
   notInSource: [],
   documentationProblem: null,
+  pluralForms: [],
   draft: null,
   statusFile: { exists: true, problem: null },
 });

@@ -217,6 +217,7 @@ describe('leaving a page with unsaved changes', () => {
       messages: [],
       notInSource: [],
       documentationProblem: null,
+      pluralForms: [],
       draft: null,
       statusFile: { exists: false, problem: null },
     };
