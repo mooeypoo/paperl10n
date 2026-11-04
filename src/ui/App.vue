@@ -22,6 +22,7 @@ import { useProject } from './composables/use-project';
 import { useTranslationCheck } from './composables/use-translation-check';
 import { useTranslationSaving } from './composables/use-translation-saving';
 import { useTranslationStatus } from './composables/use-translation-status';
+import { useUpdates } from './composables/use-updates';
 import { useEnvironment } from './environment';
 import type { ExistingCount } from './catalog/existing-count';
 import { errorMessage } from './i18n/error-message';
@@ -245,6 +246,14 @@ const statusProblemText = computed(() => {
 
 const { preferences } = useEnvironment();
 const aboutOpen = ref(false);
+const updates = useUpdates(client);
+const updateStatus = updates.status;
+const updateCheck = updates.check;
+let stopUpdates: (() => void) | undefined;
+onMounted(() => {
+  stopUpdates = updates.start();
+});
+onBeforeUnmount(() => stopUpdates?.());
 const pickerOpen = ref(false);
 const chooseError = shallowRef<ErrorDto | null>(null);
 
@@ -277,11 +286,20 @@ async function chooseTarget(tag: string): Promise<void> {
     <AppHeader
       :summary="summary"
       :busy="busy"
+      :update="updateStatus?.notice ?? null"
       @open="open"
       @choose-language="guard(openPicker)"
       @about="aboutOpen = true"
+      @dismiss-update="updates.dismiss"
     />
-    <AboutDialog :open="aboutOpen" @close="aboutOpen = false" />
+    <AboutDialog
+      :open="aboutOpen"
+      :automatic="updateStatus?.automatic ?? null"
+      :check="updateCheck"
+      @close="aboutOpen = false"
+      @check-updates="updates.checkNow"
+      @set-automatic="updates.setAutomatic"
+    />
     <UnsavedChangesDialog
       :open="pendingLeave !== null"
       :page-key="leavingKey"

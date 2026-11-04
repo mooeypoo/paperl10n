@@ -46,13 +46,17 @@ import type {
   PlaceholderTokenDto,
   SavedMessageDto,
   SectionPairingDto,
+  UpdateNoticeDto,
+  UpdateStatusDto,
 } from '#ipc-contract';
+import type { LatestRelease, Updates, UpdateStatus } from '#domains/updates';
 import { err, ok } from '#kernel/result';
 import { toErrorDto } from './error-dto.ts';
 
 export interface UseCases {
   /** Not a use case: what the composition root knows about the app itself. */
   readonly readAbout: () => Promise<AboutDto>;
+  readonly updates: Updates;
   readonly openProject: OpenProject;
   readonly listSourceDocuments: ListSourceDocuments;
   readonly listCatalogs: ListCatalogs;
@@ -168,11 +172,41 @@ function toSectionPairingDto(pairing: SectionPairing): SectionPairingDto {
   };
 }
 
+/** What the page needs of a release: no date. */
+function toUpdateNoticeDto(release: LatestRelease): UpdateNoticeDto {
+  return { version: release.version, notes: release.notes, download: { ...release.download } };
+}
+
+function toUpdateStatusDto(status: UpdateStatus): UpdateStatusDto {
+  return {
+    automatic: status.automatic,
+    notice: status.notice === null ? null : toUpdateNoticeDto(status.notice),
+  };
+}
+
 /** Implements the IPC contract on top of the use cases: domain results in, plain DTOs out. */
 export function createApiHandlers(useCases: UseCases): PaperLionApi {
   return {
     async getAbout() {
       return ok(await useCases.readAbout());
+    },
+    async getUpdateStatus() {
+      return ok(toUpdateStatusDto(await useCases.updates.status()));
+    },
+    async checkForUpdates() {
+      const check = await useCases.updates.checkNow();
+      return ok(
+        check.kind === 'newer'
+          ? { kind: 'newer' as const, update: toUpdateNoticeDto(check.release) }
+          : check,
+      );
+    },
+    async dismissUpdate({ version }) {
+      await useCases.updates.dismiss(version);
+      return ok(null);
+    },
+    async setAutomaticUpdateChecks({ enabled }) {
+      return ok(toUpdateStatusDto(await useCases.updates.setAutomatic(enabled)));
     },
     async openProject() {
       const result = await useCases.openProject();

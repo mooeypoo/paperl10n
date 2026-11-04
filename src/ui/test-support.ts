@@ -2,6 +2,9 @@
 // Shared fixtures for UI tests: a fake client with scripted answers.
 import type {
   AboutDto,
+  UpdateCheckDto,
+  UpdateNoticeDto,
+  UpdateStatusDto,
   CatalogDetailDto,
   CatalogListDto,
   DocumentPairDto,
@@ -60,6 +63,12 @@ export const about: AboutDto = {
     { name: 'vue', version: '3.5.44', license: 'MIT', homepage: null },
   ],
 };
+
+/** A newer release, as an update notice names it. */
+export function updateNotice(version = '0.2.0'): UpdateNoticeDto {
+  const page = `https://github.com/mooeypoo/paperl10n/releases/tag/v${version}`;
+  return { version, notes: page, download: { en: page, he: `${page}?he` } };
+}
 
 export function error(
   code: ErrorDto['code'],
@@ -134,6 +143,13 @@ export function fakeClient(
   answers: {
     /** The answer to asking for About's contents (default: `about`). */
     about?: Result<AboutDto, ErrorDto>;
+    /**
+     * The update status main starts with (default: checks on, nothing newer). Dismissing clears
+     * the notice; the setting is kept as set.
+     */
+    updates?: UpdateStatusDto;
+    /** Answers to "Check for updates", in order (default: the newest already). */
+    updateChecks?: Result<UpdateCheckDto, ErrorDto>[];
     open?: OpenAnswer[];
     list?: ListAnswer[];
     /** The answer to listing catalogs (default: none). */
@@ -174,7 +190,29 @@ export function fakeClient(
   const saves = Array.isArray(answers.save) ? [...answers.save] : [];
   const save = Array.isArray(answers.save) ? undefined : answers.save;
   const calls: string[] = [];
+  // Kept apart from `calls`: the app asks for the update status by itself, on start.
+  const updateCalls: string[] = [];
+  let updates: UpdateStatusDto = answers.updates ?? { automatic: true, notice: null };
+  const updateChecks = [...(answers.updateChecks ?? [])];
   const client: PaperLionApi = {
+    getUpdateStatus: () => {
+      updateCalls.push('getUpdateStatus');
+      return Promise.resolve({ ok: true, value: updates });
+    },
+    checkForUpdates: () => {
+      updateCalls.push('checkForUpdates');
+      return Promise.resolve(updateChecks.shift() ?? { ok: true, value: { kind: 'newest' } });
+    },
+    dismissUpdate: ({ version }) => {
+      updateCalls.push(`dismissUpdate:${version}`);
+      updates = { ...updates, notice: null };
+      return Promise.resolve({ ok: true, value: null });
+    },
+    setAutomaticUpdateChecks: ({ enabled }) => {
+      updateCalls.push(`setAutomaticUpdateChecks:${String(enabled)}`);
+      updates = { ...updates, automatic: enabled };
+      return Promise.resolve({ ok: true, value: updates });
+    },
     getAbout: () => {
       calls.push('getAbout');
       return Promise.resolve(answers.about ?? { ok: true, value: about });
@@ -337,7 +375,7 @@ export function fakeClient(
       );
     },
   };
-  return { client, calls };
+  return { client, calls, updateCalls };
 }
 
 /** An element's text including what's inside the editors' shadow roots (markdown-editor.ts). */

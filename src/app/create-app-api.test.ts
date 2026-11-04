@@ -10,6 +10,8 @@ import { FakeFolderPicker, FakeProjectFilesOpener } from '#domain-testing/worksp
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { InMemoryDraftStore } from '#adapters/workspace/in-memory-draft-store';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
+import { InMemoryUpdateStateStore } from '#adapters/updates/in-memory-update-state-store';
+import { FakeUpdateSource } from '#domain-testing/updates';
 import type { PaperLionApi } from '#ipc-contract';
 import type { PluginModule } from '#domains/formats';
 import { createAppApi } from './create-app-api.ts';
@@ -41,6 +43,13 @@ function appWith(
   const api = createAppApi({
     readAbout: () =>
       Promise.resolve({ name: 'Paper Lion', version: '1.0.0', licenseText: '', components: [] }),
+    updates: {
+      source: new FakeUpdateSource(null),
+      store: new InMemoryUpdateStateStore(),
+      currentVersion: '1.0.0',
+      automaticAllowed: false,
+      now: () => 0,
+    },
     folderPicker: new FakeFolderPicker(answer),
     opener: new FakeProjectFilesOpener(folders),
     drafts: new InMemoryDraftStore(),
@@ -212,6 +221,13 @@ describe('createAppApi (the walking skeleton below the transport)', () => {
     const result = createAppApi({
       readAbout: () =>
         Promise.resolve({ name: 'Paper Lion', version: '1.0.0', licenseText: '', components: [] }),
+      updates: {
+        source: new FakeUpdateSource(null),
+        store: new InMemoryUpdateStateStore(),
+        currentVersion: '1.0.0',
+        automaticAllowed: false,
+        now: () => 0,
+      },
       folderPicker: new FakeFolderPicker(null),
       opener: new FakeProjectFilesOpener({}),
       drafts: new InMemoryDraftStore(),

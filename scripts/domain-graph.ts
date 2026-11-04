@@ -10,6 +10,7 @@ export const domainNames = [
   'translation',
   'formats',
   'workspace',
+  'updates',
 ] as const;
 
 export type DomainName = (typeof domainNames)[number];
@@ -23,6 +24,7 @@ export const domainGraph: DomainGraph = {
   translation: ['document', 'catalog', 'locale'],
   formats: ['document', 'catalog'],
   workspace: ['formats', 'locale', 'document', 'translation', 'catalog'],
+  updates: [],
 };
 
 /** Returns one dependency cycle as a list of nodes (first = last), or `undefined` if there's none. */

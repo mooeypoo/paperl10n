@@ -234,5 +234,16 @@
   "paperl10n-about-credits": "רכיבי קוד פתוח ($1)",
   "paperl10n-about-full-license": "הרישיון המלא (באנגלית)",
   "paperl10n-about-unavailable": "לא ניתן היה לקרוא את פרטי האפליקציה.",
-  "paperl10n-close": "סגירה"
+  "paperl10n-close": "סגירה",
+  "paperl10n-update-available": "עדכון זמין",
+  "paperl10n-update-is-out": "יצאה גרסה $1 של Paper Lion.",
+  "paperl10n-update-whats-new": "מה חדש",
+  "paperl10n-update-download": "הורדה",
+  "paperl10n-update-not-now": "לא עכשיו",
+  "paperl10n-update-check": "בדיקת עדכונים",
+  "paperl10n-update-checking": "בודקים…",
+  "paperl10n-update-newest": "זו הגרסה החדשה ביותר.",
+  "paperl10n-update-failed": "לא ניתן היה לבדוק אם יש עדכונים. כדאי לבדוק את החיבור לאינטרנט, או לנסות שוב מאוחר יותר.",
+  "paperl10n-update-automatic": "בדיקת עדכונים אוטומטית",
+  "paperl10n-update-automatic-hint": "פעם ביום Paper Lion בודקת ב־GitHub אם יצאה גרסה חדשה. שום מידע על המשתמשים או על הפרויקטים לא נשלח."
 }

@@ -9,11 +9,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { FakeUpdateSource } from '#domain-testing/updates';
 import { FakeFolderPicker } from '#domain-testing/workspace';
 import { messageFingerprint } from '#domains/translation';
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { nodeDraftStore } from '#adapters/workspace/node-draft-store';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
+import { nodeUpdateStateStore } from '#adapters/updates/node-update-state-store';
 import type { ApiMethod, PaperLionApi } from '#ipc-contract';
 import { createAppApi } from '#app/create-app-api';
 import { builtInPlugins } from '#app/plugins';
@@ -112,6 +114,14 @@ function rendererApi(
           new URL('../fixtures/about/third-party-licenses.json', import.meta.url),
         ),
       }),
+    // The real state file; the release comes from a fake (no network).
+    updates: {
+      source: new FakeUpdateSource(FakeUpdateSource.releaseBody('2.0.0')),
+      store: nodeUpdateStateStore(join(tmpdir(), `paperl10n-ipc-updates-${randomUUID()}.json`)),
+      currentVersion: '1.2.3',
+      automaticAllowed: true,
+      now: () => Date.now(),
+    },
     folderPicker: new FakeFolderPicker(folder),
     opener: nodeProjectOpener,
     sessions: new InMemoryProjectSessions(randomUUID),
@@ -155,7 +165,51 @@ async function openBasic(api: PaperLionApi): Promise<string> {
 }
 
 // Keyed by ApiMethod: a new method is a compile error here until it has an end-to-end case.
+const newer = {
+  version: '2.0.0',
+  notes: 'https://github.com/mooeypoo/paperl10n/releases/tag/v2.0.0',
+  download: { en: 'https://github.com/mooeypoo/paperl10n/releases/tag/v2.0.0' },
+};
+
 const cases: Record<ApiMethod, () => Promise<void>> = {
+  getUpdateStatus: async () => {
+    const { api } = rendererApi();
+    expect(await api.getUpdateStatus()).toEqual({
+      ok: true,
+      value: { automatic: true, notice: newer },
+    });
+  },
+  checkForUpdates: async () => {
+    const { api } = rendererApi();
+    expect(await api.checkForUpdates()).toEqual({
+      ok: true,
+      value: { kind: 'newer', update: newer },
+    });
+  },
+  dismissUpdate: async () => {
+    const { api, rejections } = rendererApi();
+    expect(await api.dismissUpdate({ version: '2.0.0' })).toEqual({ ok: true, value: null });
+    expect(await api.getUpdateStatus()).toEqual({
+      ok: true,
+      value: { automatic: true, notice: null },
+    });
+    expect(await api.dismissUpdate({ version: 'all' })).toMatchObject({
+      ok: false,
+      error: { code: 'internal.invalid-request' },
+    });
+    expect(rejections).toEqual(['dismissUpdate: invalid-arguments']);
+  },
+  setAutomaticUpdateChecks: async () => {
+    const { api } = rendererApi();
+    expect(await api.setAutomaticUpdateChecks({ enabled: false })).toEqual({
+      ok: true,
+      value: { automatic: false, notice: null },
+    });
+    expect(await api.getUpdateStatus()).toEqual({
+      ok: true,
+      value: { automatic: false, notice: null },
+    });
+  },
   getAbout: async () => {
     const { api } = rendererApi();
     expect(await api.getAbout()).toEqual({

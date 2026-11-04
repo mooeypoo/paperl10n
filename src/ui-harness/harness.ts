@@ -7,6 +7,7 @@ import { builtInPlugins } from '#app/plugins';
 import { createLezerMarkdownParser } from '#adapters/document/lezer-markdown-parser';
 import { InMemoryDraftStore } from '#adapters/workspace/in-memory-draft-store';
 import { InMemoryProjectSessions } from '#adapters/workspace/in-memory-project-sessions';
+import { InMemoryUpdateStateStore } from '#adapters/updates/in-memory-update-state-store';
 import { mountApp } from '#ui/mount';
 import type { App as VueApp } from 'vue';
 import { cloningTransport } from './cloning-transport';
@@ -33,6 +34,14 @@ export function createHarnessApi(fixtures: Fixtures, fixture: string): PaperLion
           'GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n\n(The harness shows no more.)\n',
         components: [{ name: 'vue', version: '3', license: 'MIT', homepage: 'https://vuejs.org' }],
       }),
+    // Never on the network: no release is ever found, and nothing is checked by itself.
+    updates: {
+      source: { latest: () => Promise.resolve({ ok: false, error: 'unreachable' }) },
+      store: new InMemoryUpdateStateStore(),
+      currentVersion: 'harness',
+      automaticAllowed: false,
+      now: () => Date.now(),
+    },
     folderPicker: fixturePicker(fixture),
     opener: fixtureOpener(fixtures),
     sessions: new InMemoryProjectSessions(() => crypto.randomUUID()),

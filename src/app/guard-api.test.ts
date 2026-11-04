@@ -21,6 +21,11 @@ describe('guardApi', () => {
           Promise.resolve(
             ok({ name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] }),
           ),
+        getUpdateStatus: () => Promise.resolve(ok({ automatic: true, notice: null })),
+        checkForUpdates: () => Promise.resolve(ok({ kind: 'newest' as const })),
+        dismissUpdate: () => Promise.resolve(ok(null)),
+        setAutomaticUpdateChecks: ({ enabled }) =>
+          Promise.resolve(ok({ automatic: enabled, notice: null })),
         openProject: () => Promise.resolve(ok(null)),
         listSourceDocuments: ({ projectId }) =>
           Promise.resolve(
@@ -196,6 +201,12 @@ describe('guardApi', () => {
     expect(await api.getAbout()).toEqual(
       ok({ name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] }),
     );
+    expect(await api.getUpdateStatus()).toEqual(ok({ automatic: true, notice: null }));
+    expect(await api.checkForUpdates()).toEqual(ok({ kind: 'newest' }));
+    expect(await api.dismissUpdate({ version: '0.2.0' })).toEqual(ok(null));
+    expect(await api.setAutomaticUpdateChecks({ enabled: false })).toEqual(
+      ok({ automatic: false, notice: null }),
+    );
     expect(await api.chooseTargetLocale({ projectId: 'p', language: 'he' })).toEqual({
       ok: true,
       value: { id: 'he', direction: 'rtl' },
@@ -240,6 +251,18 @@ describe('guardApi', () => {
       'throws',
       {
         getAbout: () => {
+          throw new Error('sync boom');
+        },
+        getUpdateStatus: () => {
+          throw new Error('sync boom');
+        },
+        checkForUpdates: () => {
+          throw new Error('sync boom');
+        },
+        dismissUpdate: () => {
+          throw new Error('sync boom');
+        },
+        setAutomaticUpdateChecks: () => {
           throw new Error('sync boom');
         },
         openProject: () => {
@@ -305,6 +328,10 @@ describe('guardApi', () => {
       'rejects',
       {
         getAbout: () => Promise.reject(new Error('async boom')),
+        getUpdateStatus: () => Promise.reject(new Error('async boom')),
+        checkForUpdates: () => Promise.reject(new Error('async boom')),
+        dismissUpdate: () => Promise.reject(new Error('async boom')),
+        setAutomaticUpdateChecks: () => Promise.reject(new Error('async boom')),
         openProject: () => Promise.reject(new Error('async boom')),
         listSourceDocuments: () => Promise.reject(new Error('async boom')),
         listCatalogs: () => Promise.reject(new Error('async boom')),
@@ -334,6 +361,10 @@ describe('guardApi', () => {
       error: { code: 'internal.unexpected', params: {}, details: [] },
     };
     expect(await api.getAbout()).toEqual(unexpected);
+    expect(await api.getUpdateStatus()).toEqual(unexpected);
+    expect(await api.checkForUpdates()).toEqual(unexpected);
+    expect(await api.dismissUpdate({ version: '0.2.0' })).toEqual(unexpected);
+    expect(await api.setAutomaticUpdateChecks({ enabled: true })).toEqual(unexpected);
     expect(await api.openProject()).toEqual(unexpected);
     expect(await api.listSourceDocuments({ projectId: 'p' })).toEqual(unexpected);
     expect(await api.listCatalogs({ projectId: 'p' })).toEqual(unexpected);
@@ -378,6 +409,10 @@ describe('guardApi', () => {
     expect(await api.discardCatalogDraft({ projectId: 'p', catalog: 'c' })).toEqual(unexpected);
     expect(calls.map(([method]) => method)).toEqual([
       'getAbout',
+      'getUpdateStatus',
+      'checkForUpdates',
+      'dismissUpdate',
+      'setAutomaticUpdateChecks',
       'openProject',
       'listSourceDocuments',
       'listCatalogs',

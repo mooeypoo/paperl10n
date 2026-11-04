@@ -16,6 +16,12 @@ export const argumentValidators: Readonly<
   Record<ApiMethod, (args: readonly unknown[]) => boolean>
 > = {
   getAbout: (args) => args.length === 0,
+  getUpdateStatus: (args) => args.length === 0,
+  checkForUpdates: (args) => args.length === 0,
+  dismissUpdate: ([request, ...rest]) =>
+    rest.length === 0 && hasExactly(request, ['version']) && isReleaseVersion(request.version),
+  setAutomaticUpdateChecks: ([request, ...rest]) =>
+    rest.length === 0 && hasExactly(request, ['enabled']) && typeof request.enabled === 'boolean',
   openProject: (args) => args.length === 0,
   listSourceDocuments: ([request, ...rest]) =>
     rest.length === 0 && hasExactly(request, ['projectId']) && isProjectId(request.projectId),
@@ -142,6 +148,11 @@ function isProjectId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 200;
 }
 
+/** A release's plain `x.y.z` version, as update notices name it. */
+function isReleaseVersion(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 32 && /^\d+\.\d+\.\d+$/.test(value);
+}
+
 /** A page's, catalog's, or message's key. */
 function isKey(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 1000;
@@ -259,6 +270,18 @@ function call(api: PaperLionApi, method: ApiMethod, args: readonly unknown[]): P
   switch (method) {
     case 'getAbout':
       return api.getAbout();
+    case 'getUpdateStatus':
+      return api.getUpdateStatus();
+    case 'checkForUpdates':
+      return api.checkForUpdates();
+    case 'dismissUpdate': {
+      const [request] = args as [{ version: string }]; // checked by argumentValidators
+      return api.dismissUpdate({ version: request.version });
+    }
+    case 'setAutomaticUpdateChecks': {
+      const [request] = args as [{ enabled: boolean }]; // checked by argumentValidators
+      return api.setAutomaticUpdateChecks({ enabled: request.enabled });
+    }
     case 'openProject':
       return api.openProject();
     case 'listSourceDocuments': {

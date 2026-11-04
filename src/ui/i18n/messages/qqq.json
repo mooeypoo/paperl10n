@@ -234,5 +234,16 @@
   "paperl10n-about-credits": "Expandable section in the About window listing the open-source components the app includes and their licenses. $1: how many there are.",
   "paperl10n-about-full-license": "Expandable section in the About window with the full text of the GNU General Public License, which is only in English.",
   "paperl10n-about-unavailable": "In the About window, when the app's version and license couldn't be read (a bug).",
-  "paperl10n-close": "Button that closes a window, e.g. the About window."
+  "paperl10n-close": "Button that closes a window, e.g. the About window.",
+  "paperl10n-update-available": "Header button shown when a newer version of Paper Lion is out; it opens a small panel about it.",
+  "paperl10n-update-is-out": "Says a newer version is out, in the update panel and in the About window. $1: the version number, e.g. \"0.2.0\". \"Paper Lion\" is the app's name.",
+  "paperl10n-update-whats-new": "Link to the new version's release notes (on GitHub, in English).",
+  "paperl10n-update-download": "Link to where the new version can be downloaded.",
+  "paperl10n-update-not-now": "Button in the update panel: stop mentioning this version (a later one is mentioned again).",
+  "paperl10n-update-check": "Button in the About window that asks right away whether a newer version is out.",
+  "paperl10n-update-checking": "Shown while {{msg-paperl10n|paperl10n-update-check}} waits for an answer.",
+  "paperl10n-update-newest": "The answer to {{msg-paperl10n|paperl10n-update-check}} when this is the newest version.",
+  "paperl10n-update-failed": "The answer to {{msg-paperl10n|paperl10n-update-check}} when GitHub couldn't be reached or its answer couldn't be read.",
+  "paperl10n-update-automatic": "Checkbox in the About window: whether Paper Lion checks for a newer version by itself.",
+  "paperl10n-update-automatic-hint": "Under {{msg-paperl10n|paperl10n-update-automatic}}: what the automatic check does and what it sends (nothing about the user)."
 }

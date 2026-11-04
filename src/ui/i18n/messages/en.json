@@ -234,5 +234,16 @@
   "paperl10n-about-credits": "Open-source components ($1)",
   "paperl10n-about-full-license": "The full license (in English)",
   "paperl10n-about-unavailable": "The app's details couldn't be read.",
-  "paperl10n-close": "Close"
+  "paperl10n-close": "Close",
+  "paperl10n-update-available": "Update available",
+  "paperl10n-update-is-out": "Paper Lion $1 is out.",
+  "paperl10n-update-whats-new": "What's new",
+  "paperl10n-update-download": "Download",
+  "paperl10n-update-not-now": "Not now",
+  "paperl10n-update-check": "Check for updates",
+  "paperl10n-update-checking": "Checking…",
+  "paperl10n-update-newest": "You have the newest version.",
+  "paperl10n-update-failed": "Couldn't check for updates. Check your internet connection, or try again later.",
+  "paperl10n-update-automatic": "Check for updates automatically",
+  "paperl10n-update-automatic-hint": "Once a day, Paper Lion asks GitHub whether a new version is out. Nothing about you or your projects is sent."
 }

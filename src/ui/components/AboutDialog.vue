@@ -1,13 +1,15 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   The About window: the version, who made it, the license in plain words (and that translations
-  stay their translators'), the open-source components the app includes, and the full license.
+  stay their translators'), "Check for updates" and the daily check's setting, the open-source
+  components the app includes, and the full license.
   Its links open in the user's browser (main's allow-list, src/main/external-links.ts).
 -->
 <script setup lang="ts">
 import { computed, nextTick, useId, useTemplateRef, watch } from 'vue';
 import { useClient } from '../client';
 import { useAbout } from '../composables/use-about';
+import type { UpdateCheckState } from '../composables/use-updates';
 import { errorMessage } from '../i18n/error-message';
 import { useI18n } from '../i18n/i18n';
 import AppMark from './AppMark.vue';
@@ -16,9 +18,15 @@ const AUTHOR_SITE = 'https://moriel.tech';
 const SOURCE = 'https://github.com/mooeypoo/paperl10n';
 const COFFEE = 'https://buymeacoffee.com/mooeypoo';
 
-const props = defineProps<{ open: boolean }>();
-const emit = defineEmits<{ close: [] }>();
-const { t } = useI18n();
+const props = defineProps<{
+  open: boolean;
+  /** The daily check's setting; `null` until main answers. */
+  automatic: boolean | null;
+  check: UpdateCheckState;
+}>();
+const emit = defineEmits<{ close: []; checkUpdates: []; setAutomatic: [enabled: boolean] }>();
+const { t, locale } = useI18n();
+const automaticHintId = useId();
 const { about, error, load } = useAbout(useClient());
 const titleId = useId();
 const dialog = useTemplateRef<HTMLDialogElement>('dialog');
@@ -27,6 +35,19 @@ const closeButton = useTemplateRef<HTMLButtonElement>('closeButton');
 // The coffee sentence, split around its link so each language can place the link where it reads well.
 const coffee = computed(() => t('paperl10n-about-coffee', '$1').split('$1'));
 const errorText = computed(() => (error.value === null ? '' : errorMessage(error.value, t)));
+const newer = computed(() =>
+  typeof props.check === 'object' && props.check.kind === 'newer' ? props.check.update : null,
+);
+const checkMessage = computed(() => {
+  if (props.check === 'idle') return '';
+  if (props.check === 'checking') return t('paperl10n-update-checking');
+  if (props.check.kind === 'newer') return t('paperl10n-update-is-out', props.check.update.version);
+  return t(props.check.kind === 'newest' ? 'paperl10n-update-newest' : 'paperl10n-update-failed');
+});
+
+function onAutomaticChange(event: Event): void {
+  emit('setAutomatic', (event.target as HTMLInputElement).checked);
+}
 
 watch(
   () => props.open,
@@ -82,6 +103,40 @@ function onCancel(event: Event): void {
       <p v-if="errorText !== ''" role="alert" class="about-error">
         {{ t('paperl10n-about-unavailable') }} {{ errorText }}
       </p>
+
+      <section class="about-updates" data-testid="about-updates">
+        <div class="about-check">
+          <button
+            type="button"
+            class="pl-button"
+            :disabled="check === 'checking'"
+            @click="emit('checkUpdates')"
+          >
+            {{ t('paperl10n-update-check') }}
+          </button>
+          <p role="status" data-testid="about-check-result">{{ checkMessage }}</p>
+        </div>
+        <p v-if="newer !== null" class="about-links">
+          <a :href="newer.notes" target="_blank" rel="noreferrer">{{
+            t('paperl10n-update-whats-new')
+          }}</a>
+          <a :href="newer.download[locale] ?? newer.download.en" target="_blank" rel="noreferrer">{{
+            t('paperl10n-update-download')
+          }}</a>
+        </p>
+        <label v-if="automatic !== null" class="about-automatic">
+          <input
+            type="checkbox"
+            :checked="automatic"
+            :aria-describedby="automaticHintId"
+            @change="onAutomaticChange"
+          />
+          {{ t('paperl10n-update-automatic') }}
+        </label>
+        <p v-if="automatic !== null" :id="automaticHintId" class="about-muted">
+          {{ t('paperl10n-update-automatic-hint') }}
+        </p>
+      </section>
 
       <p>{{ t('paperl10n-about-license') }}</p>
       <p>{{ t('paperl10n-about-yours') }}</p>
@@ -186,6 +241,33 @@ function onCancel(event: Event): void {
 
 .about-error {
   color: var(--pl-color-danger);
+}
+
+.about-updates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pl-space-2);
+  padding: var(--pl-space-3);
+  border: 1px solid var(--pl-color-line);
+  border-radius: var(--pl-radius-md);
+}
+
+.about-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pl-space-3);
+}
+
+.about-links {
+  display: flex;
+  gap: var(--pl-space-4);
+}
+
+.about-automatic {
+  display: flex;
+  align-items: center;
+  gap: var(--pl-space-2);
 }
 
 .about-more summary {

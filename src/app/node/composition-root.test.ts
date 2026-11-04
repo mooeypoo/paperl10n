@@ -7,6 +7,12 @@ import { join } from 'node:path';
 import { createElectronAppApi } from './composition-root.ts';
 
 const fixture = new URL('../../plugins/format-stub/fixtures/basic', import.meta.url).pathname;
+// Nothing listens on port 9 (discard): update checks fail at once, without the network.
+const updates = {
+  testServer: 'http://127.0.0.1:9/latest.json',
+  stateFile: join(tmpdir(), `paperl10n-updates-${randomUUID()}.json`),
+  automaticAllowed: false,
+};
 const about = {
   name: 'Paper Lion',
   version: '1.2.3',
@@ -18,6 +24,7 @@ describe('createElectronAppApi', () => {
   it('opens a real folder on disk and lists its documents', async () => {
     const api = createElectronAppApi({
       about,
+      updates,
       showFolderDialog: () => Promise.resolve({ canceled: false, filePaths: [fixture] }),
       draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
       catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),
@@ -42,6 +49,7 @@ describe('createElectronAppApi', () => {
   it('returns null when the dialog is cancelled', async () => {
     const api = createElectronAppApi({
       about,
+      updates,
       showFolderDialog: () => Promise.resolve({ canceled: true, filePaths: [] }),
       draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
       catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),
@@ -53,6 +61,7 @@ describe('createElectronAppApi', () => {
   it('reads About from the files it was given', async () => {
     const api = createElectronAppApi({
       about,
+      updates,
       showFolderDialog: () => Promise.resolve({ canceled: true, filePaths: [] }),
       draftsFolder: join(tmpdir(), `paperl10n-drafts-${randomUUID()}`),
       catalogDraftsFolder: join(tmpdir(), `paperl10n-catalog-drafts-${randomUUID()}`),

@@ -25,6 +25,12 @@ async function guard<T>(
 export function guardApi(api: PaperLionApi, onUnexpected: OnUnexpected): PaperLionApi {
   return {
     getAbout: () => guard('getAbout', onUnexpected, () => api.getAbout()),
+    getUpdateStatus: () => guard('getUpdateStatus', onUnexpected, () => api.getUpdateStatus()),
+    checkForUpdates: () => guard('checkForUpdates', onUnexpected, () => api.checkForUpdates()),
+    dismissUpdate: (request) =>
+      guard('dismissUpdate', onUnexpected, () => api.dismissUpdate(request)),
+    setAutomaticUpdateChecks: (request) =>
+      guard('setAutomaticUpdateChecks', onUnexpected, () => api.setAutomaticUpdateChecks(request)),
     openProject: () => guard('openProject', onUnexpected, () => api.openProject()),
     listSourceDocuments: (request) =>
       guard('listSourceDocuments', onUnexpected, () => api.listSourceDocuments(request)),

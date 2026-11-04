@@ -51,6 +51,7 @@ graph TD
   translation --> document
   translation --> catalog
   translation --> locale
+  updates
 ```
 
 | Domain | Owns |
@@ -61,6 +62,7 @@ graph TD
 | `translation` | source↔target pairing, status, source-change tracking (from M1) |
 | `formats` | the format plugin contracts and their registry |
 | `workspace` | opening a project, its config, discovering translatable resources |
+| `updates` | noticing that a newer version is out (ADR 0018); depends on no other domain |
 
 Within a domain, `domain/` may use only `domain/` and the kernel; `application/` may also use other
 domains along a declared edge, and only through their `index.ts`.
@@ -95,7 +97,8 @@ The renderer and main share one typed contract, `#ipc-contract`: plain DTOs, err
 `PaperLionApi`. The renderer never sends file paths; it gets an opaque project id
 ([ADR 0006](adr/0006-process-model-and-ipc.md)). `src/app/` is pure and shared by every
 composition root. Electron's (`src/app/node/`) passes in the real disk, the native dialog, and
-the About window's files (the licence and the open-source components list, beside the app). Main
+the About window's files (the licence and the open-source components list, beside the app), and
+GitHub with a state file for update notices. Main
 opens only a few allowed pages in the browser, such as About's links (`main/external-links.ts`);
 every other link or window is refused.
 

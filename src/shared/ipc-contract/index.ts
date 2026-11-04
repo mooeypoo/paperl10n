@@ -478,10 +478,45 @@ export interface AboutDto {
   readonly components: readonly ComponentDto[];
 }
 
+/** A newer Paper Lion that's out (ADR 0018). Its links are `https`; main opens only allowed ones. */
+export interface UpdateNoticeDto {
+  readonly version: string;
+  /** The release notes. */
+  readonly notes: string;
+  /** Where to get it, by interface language; English (`en`) is always there. */
+  readonly download: Readonly<Record<string, string>>;
+}
+
+export interface UpdateStatusDto {
+  /** The user's setting: check once a day. */
+  readonly automatic: boolean;
+  /** A newer version to mention; `null`: none, dismissed, or checks are off. */
+  readonly notice: UpdateNoticeDto | null;
+}
+
+/** "Check for updates": a newer version (even a dismissed one), the newest already, or no answer. */
+export type UpdateCheckDto =
+  | { readonly kind: 'newer'; readonly update: UpdateNoticeDto }
+  | { readonly kind: 'newest' }
+  | { readonly kind: 'failed' };
+
 /** Everything the renderer can ask of the main process. One method = one IPC channel. */
 export interface PaperLionApi {
   /** The app's name, version, licence, and the open-source components it includes. */
   getAbout(): Promise<Result<AboutDto, ErrorDto>>;
+  /**
+   * The update setting and a newer version to mention. When an automatic check is due (at most
+   * once a day, in a release), main checks first; a failed check is quiet.
+   */
+  getUpdateStatus(): Promise<Result<UpdateStatusDto, ErrorDto>>;
+  /** "Check for updates" in About: asks GitHub now, whatever the setting. */
+  checkForUpdates(): Promise<Result<UpdateCheckDto, ErrorDto>>;
+  /** "Not now": stops mentioning that version, across restarts. */
+  dismissUpdate(request: { readonly version: string }): Promise<Result<null, ErrorDto>>;
+  /** Turns the daily check on or off; turning it on checks at once if one is due. */
+  setAutomaticUpdateChecks(request: {
+    readonly enabled: boolean;
+  }): Promise<Result<UpdateStatusDto, ErrorDto>>;
   /** Shows the folder picker, then opens the project. `null` means the user cancelled. */
   openProject(): Promise<Result<ProjectSummaryDto | null, ErrorDto>>;
   /** The project's pages, each with its translation's state and status. */
@@ -628,6 +663,10 @@ export type ApiMethod = keyof PaperLionApi;
 
 export const apiMethods = [
   'getAbout',
+  'getUpdateStatus',
+  'checkForUpdates',
+  'dismissUpdate',
+  'setAutomaticUpdateChecks',
   'openProject',
   'listSourceDocuments',
   'listCatalogs',

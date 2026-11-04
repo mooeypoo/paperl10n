@@ -1,15 +1,26 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <script setup lang="ts">
-import type { ProjectSummaryDto } from '#ipc-contract';
+import type { ProjectSummaryDto, UpdateNoticeDto } from '#ipc-contract';
 import { computed } from 'vue';
 import { isUiLocale, uiLocales, useI18n } from '../i18n/i18n';
 import { autonym } from '../i18n/language-name';
 import AppIcon from './AppIcon.vue';
 import AppMark from './AppMark.vue';
 import ThemeSwitch from './ThemeSwitch.vue';
+import UpdateNotice from './UpdateNotice.vue';
 
-const props = defineProps<{ summary: ProjectSummaryDto | null; busy: boolean }>();
-const emit = defineEmits<{ open: []; chooseLanguage: []; about: [] }>();
+const props = defineProps<{
+  summary: ProjectSummaryDto | null;
+  busy: boolean;
+  /** A newer version to mention. */
+  update: UpdateNoticeDto | null;
+}>();
+const emit = defineEmits<{
+  open: [];
+  chooseLanguage: [];
+  about: [];
+  dismissUpdate: [version: string];
+}>();
 
 const { t, locale } = useI18n();
 const languages = Object.keys(uiLocales);
@@ -73,6 +84,12 @@ function onLanguageChange(event: Event): void {
     </template>
 
     <span class="header-spacer"></span>
+
+    <UpdateNotice
+      v-if="update !== null"
+      :update="update"
+      @dismiss="(version) => emit('dismissUpdate', version)"
+    />
 
     <button
       v-if="summary !== null"

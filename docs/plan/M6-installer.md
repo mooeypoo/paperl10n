@@ -269,6 +269,37 @@ component"). AGENTS.md says so. This starts with M6's own commits.
       files. Mutations of each new rule were caught.
 - **I3, update notices:** the ADR and the `updates` domain, the fetch in main, the IPC methods,
   the header notice, About's check, and the setting.
+  - *Done-notes:* [ADR 0018](../adr/0018-updates-domain.md) and
+    [`domains/updates.md`](../domains/updates.md).
+    - **A new domain, `updates`**, depending on no other. Its rules and the fetch are ported from
+      Plot Device, without zod (Paper Lion checks shapes by hand), so they behave the same:
+      redirects only to GitHub's hosts, 64 KB, 10 s, `latest.json` format 1, `x.y.z` versions.
+    - **The renderer asks; main decides** (unlike Plot Device, which pushes an event). The page
+      asks for the status on startup and every six hours, and main checks GitHub only when a
+      check is due. The IPC stays request and response: `getUpdateStatus`, `checkForUpdates`,
+      `dismissUpdate`, and `setAutomaticUpdateChecks`.
+    - **The setting lives in main** (`updates.json` in the app's data, with the last answer and
+      the dismissed version), shown in About, since Paper Lion has no settings screen. It's on by
+      default and takes effect at once.
+    - **Off in development:** automatic checks run only in a release, or with
+      `PAPERL10N_TEST_UPDATE_URL` (a local server, plain http), which a release ignores. "Check for
+      updates" always asks.
+    - **The UI:** a quiet "Update available" in the header opens a small panel (the version,
+      "What's new", "Download" in the interface language when the release has one, and "Not
+      now"), which closes with Escape or when focus leaves it. About has "Check for updates", its
+      answer as a status, and the daily check's setting with what it sends.
+    - Tests:
+      - Table-driven: versions, `latest.json` (malformed and hostile), the saved state, being due
+        (including a clock set backwards), the notice.
+      - The use case: once a day, across restarts, a failed or throwing check, one check at a
+        time, dismissing, the setting, a store that can't be read or written.
+      - The fetch against a local server: what's sent, redirects, other hosts, plain http, too
+        many redirects, too big (declared and streamed), too slow, error statuses.
+      - The ports' contract suites (fakes and real adapters); the four methods through IPC; the
+        composable and the UI in both languages.
+      - In Electron, against a local server: the notice, "Not now" across a restart (one request
+        in all), About's check, and the setting.
+      - Every rule's mutation was caught, except two equivalent ones.
 - **I4, CI and releasing:** builds on every push (Linux and Windows), install and uninstall
   tests, the packaged end-to-end tests on both; the commit-prefix check; `pnpm release`, the
   changelog from commits, tagging on merge, and draft releases with `SHA256SUMS` and

@@ -29,6 +29,7 @@ import {
   type ProjectFilesOpener,
   type ProjectSessions,
 } from '#domains/workspace';
+import { createUpdates, type UpdatesDependencies } from '#domains/updates';
 import type { AboutDto, PaperLionApi } from '#ipc-contract';
 import { ok, type Result } from '#kernel/result';
 import { createApiHandlers } from './api-handlers.ts';
@@ -38,6 +39,8 @@ export interface AppDependencies {
   /** The app's version, licence, and components: files next to the app (Electron), or a fixed
    * stand-in (the harness). */
   readonly readAbout: () => Promise<AboutDto>;
+  /** Update notices: GitHub and a file in the app's data (Electron), or stand-ins (the harness). */
+  readonly updates: UpdatesDependencies;
   readonly folderPicker: FolderPicker;
   readonly opener: ProjectFilesOpener;
   readonly sessions: ProjectSessions;
@@ -58,6 +61,7 @@ export function createAppApi(deps: AppDependencies): Result<PaperLionApi, Regist
   const marking = { sessions: deps.sessions, parser: deps.parser, updates: statusUpdates };
   const handlers = createApiHandlers({
     readAbout: deps.readAbout,
+    updates: createUpdates(deps.updates),
     openProject: createOpenProject({
       folderPicker: deps.folderPicker,
       opener: deps.opener,

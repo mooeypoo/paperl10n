@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { apiMethods, channelFor, type PaperLionApi } from '#ipc-contract';
+import { apiMethods, channelFor, type ApiMethod, type PaperLionApi } from '#ipc-contract';
 import { ok } from '#kernel/result';
 import {
   argumentValidators,
@@ -34,6 +34,22 @@ function setup() {
       return Promise.resolve(
         ok({ name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] }),
       );
+    },
+    getUpdateStatus: () => {
+      calls.push(['getUpdateStatus']);
+      return Promise.resolve(ok({ automatic: true, notice: null }));
+    },
+    checkForUpdates: () => {
+      calls.push(['checkForUpdates']);
+      return Promise.resolve(ok({ kind: 'newest' as const }));
+    },
+    dismissUpdate: (request) => {
+      calls.push(['dismissUpdate', request]);
+      return Promise.resolve(ok(null));
+    },
+    setAutomaticUpdateChecks: (request) => {
+      calls.push(['setAutomaticUpdateChecks', request]);
+      return Promise.resolve(ok({ automatic: request.enabled, notice: null }));
     },
     openProject: () => {
       calls.push(['openProject']);
@@ -172,6 +188,19 @@ describe('registerApi', () => {
       ok: true,
       value: { name: 'Paper Lion', version: '1.0.0', licenseText: 'GPL', components: [] },
     });
+    expect(await send('getUpdateStatus', trusted)).toEqual({
+      ok: true,
+      value: { automatic: true, notice: null },
+    });
+    expect(await send('checkForUpdates', trusted)).toEqual({ ok: true, value: { kind: 'newest' } });
+    expect(await send('dismissUpdate', trusted, { version: '0.2.0' })).toEqual({
+      ok: true,
+      value: null,
+    });
+    expect(await send('setAutomaticUpdateChecks', trusted, { enabled: false })).toEqual({
+      ok: true,
+      value: { automatic: false, notice: null },
+    });
     expect(await send('openProject', trusted)).toEqual({ ok: true, value: null });
     expect(await send('listSourceDocuments', trusted, { projectId: 'p1' })).toEqual({
       ok: true,
@@ -257,6 +286,10 @@ describe('registerApi', () => {
     });
     expect(calls).toEqual([
       ['getAbout'],
+      ['getUpdateStatus'],
+      ['checkForUpdates'],
+      ['dismissUpdate', { version: '0.2.0' }],
+      ['setAutomaticUpdateChecks', { enabled: false }],
       ['openProject'],
       ['listSourceDocuments', { projectId: 'p1' }],
       ['listCatalogs', { projectId: 'p1' }],
@@ -318,6 +351,29 @@ describe('argumentValidators', () => {
     ['getAbout(x)', [{}], false],
   ])('getAbout: %s → %s', (_d, args, valid) => {
     expect(argumentValidators.getAbout(args)).toBe(valid);
+  });
+
+  it.each<[ApiMethod, string, unknown[], boolean]>([
+    ['getUpdateStatus', '()', [], true],
+    ['getUpdateStatus', '(x)', [1], false],
+    ['checkForUpdates', '()', [], true],
+    ['checkForUpdates', '(x)', [{}], false],
+    ['dismissUpdate', '0.2.0', [{ version: '0.2.0' }], true],
+    ['dismissUpdate', '10.20.30', [{ version: '10.20.30' }], true],
+    ['dismissUpdate', 'nothing', [], false],
+    ['dismissUpdate', 'two arguments', [{ version: '0.2.0' }, 1], false],
+    ['dismissUpdate', 'a pre-release', [{ version: '0.2.0-beta' }], false],
+    ['dismissUpdate', 'not a version', [{ version: 'later' }], false],
+    ['dismissUpdate', 'a number', [{ version: 2 }], false],
+    ['dismissUpdate', 'a very long version', [{ version: `1.2.${'3'.repeat(40)}` }], false],
+    ['dismissUpdate', 'an extra field', [{ version: '0.2.0', all: true }], false],
+    ['setAutomaticUpdateChecks', 'on', [{ enabled: true }], true],
+    ['setAutomaticUpdateChecks', 'off', [{ enabled: false }], true],
+    ['setAutomaticUpdateChecks', 'a string', [{ enabled: 'false' }], false],
+    ['setAutomaticUpdateChecks', 'nothing', [{}], false],
+    ['setAutomaticUpdateChecks', 'an extra field', [{ enabled: true, x: 1 }], false],
+  ])('%s: %s → %s', (method, _d, args, valid) => {
+    expect(argumentValidators[method](args)).toBe(valid);
   });
 
   it.each<[string, unknown[], boolean]>([

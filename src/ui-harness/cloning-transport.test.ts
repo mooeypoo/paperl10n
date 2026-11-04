@@ -32,6 +32,11 @@ function api(overrides: Partial<PaperLionApi> = {}): PaperLionApi {
         ok: true,
         value: { name: 'Paper Lion', version: '1.0.0', licenseText: '', components: [] },
       }),
+    getUpdateStatus: () => Promise.resolve({ ok: true, value: { automatic: true, notice: null } }),
+    checkForUpdates: () => Promise.resolve({ ok: true, value: { kind: 'newest' } }),
+    dismissUpdate: () => Promise.resolve({ ok: true, value: null }),
+    setAutomaticUpdateChecks: ({ enabled }) =>
+      Promise.resolve({ ok: true, value: { automatic: enabled, notice: null } }),
     openProject: () => Promise.resolve({ ok: true, value: summary }),
     listSourceDocuments: () => Promise.resolve({ ok: true, value: listed }),
     listCatalogs: () =>

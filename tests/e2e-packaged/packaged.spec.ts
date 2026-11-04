@@ -2,7 +2,7 @@
 // The packaged app, as a translator installs it (M6): it starts under its own name and version,
 // its renderer runs in Chromium's sandbox, the security policy holds inside the packaged app
 // (asar), and it opens a project and saves a translation. Run after `pnpm package:dir`.
-import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -55,6 +55,12 @@ let messages: string[] = [];
 
 test.beforeEach(async () => {
   profile = mkdtempSync(join(tmpdir(), 'paperl10n-packaged-'));
+  // A release checks GitHub for updates (ADR 0018): a check made just now means none is due, so
+  // the tests stay off the network.
+  writeFileSync(
+    join(profile, 'updates.json'),
+    JSON.stringify({ checkedAt: Date.now(), latest: null, dismissed: null, automatic: true }),
+  );
   messages = [];
   app = await electron.launch({
     executablePath: executable,
@@ -128,4 +134,17 @@ test('About shows the version, the components it ships, and the full license', a
   ).toBeVisible();
   await about.getByText('The full license (in English)').click();
   await expect(about.locator('pre')).toContainText('GNU GENERAL PUBLIC LICENSE');
+});
+
+test('has the daily update check on, and no notice without a newer release', async () => {
+  await page.getByRole('button', { name: 'About' }).click();
+  const about = page.getByRole('dialog', { name: 'Paper Lion' });
+  await expect(
+    about.getByRole('checkbox', { name: 'Check for updates automatically' }),
+  ).toBeChecked();
+  await expect(page.getByRole('button', { name: 'Update available' })).toBeHidden();
+  const saved = JSON.parse(readFileSync(join(profile, 'updates.json'), 'utf8')) as {
+    latest: unknown;
+  };
+  expect(saved.latest).toBeNull();
 });

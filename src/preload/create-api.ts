@@ -26,6 +26,18 @@ function saveFields(message: MessageSaveDto): MessageSaveDto {
 export function createApi(invoke: Invoke): PaperLionApi {
   return {
     getAbout: () => invoke(channelFor('getAbout')) as ReturnType<PaperLionApi['getAbout']>,
+    getUpdateStatus: () =>
+      invoke(channelFor('getUpdateStatus')) as ReturnType<PaperLionApi['getUpdateStatus']>,
+    checkForUpdates: () =>
+      invoke(channelFor('checkForUpdates')) as ReturnType<PaperLionApi['checkForUpdates']>,
+    dismissUpdate: (request) =>
+      invoke(channelFor('dismissUpdate'), { version: request.version }) as ReturnType<
+        PaperLionApi['dismissUpdate']
+      >,
+    setAutomaticUpdateChecks: (request) =>
+      invoke(channelFor('setAutomaticUpdateChecks'), { enabled: request.enabled }) as ReturnType<
+        PaperLionApi['setAutomaticUpdateChecks']
+      >,
     openProject: () => invoke(channelFor('openProject')) as ReturnType<PaperLionApi['openProject']>,
     listSourceDocuments: (request) =>
       invoke(channelFor('listSourceDocuments'), { projectId: request.projectId }) as ReturnType<

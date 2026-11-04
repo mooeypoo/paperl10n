@@ -45,6 +45,7 @@ Initial domains (add new ones only via ADR):
   block or line by line (PRD §7.2).
 - `locale`: languages, text direction (LTR/RTL), locale metadata.
 - `formats`: the plugin contracts (`DocumentFormat`, `CatalogFormat`) and their registry.
+- `updates`: noticing that a newer Paper Lion is out (ADR 0018). Depends on no other domain.
 
 ### Dependency rules (enforced by lint, never bypassed)
 1. `domain/` imports nothing outside its own domain and `shared/kernel`. No Node, Electron, Vue, or fs.

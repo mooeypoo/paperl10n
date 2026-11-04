@@ -30,6 +30,7 @@
     "#plugins/*": "./src/plugins/*/index.ts",
     "#adapters/workspace/*": "./src/domains/workspace/adapters/*.ts",
     "#adapters/document/*": "./src/domains/document/adapters/*.ts",
+    "#adapters/updates/*": "./src/domains/updates/adapters/*.ts",
     "#ipc-contract": "./src/shared/ipc-contract/index.ts",
     "#markdown-syntax": "./src/shared/markdown-syntax/index.ts",
     "#app/*": "./src/app/*.ts",

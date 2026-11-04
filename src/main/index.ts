@@ -23,6 +23,8 @@ app.setAppUserModelId(APP_ID);
 app.enableSandbox();
 
 const devServerUrl = process.env.ELECTRON_RENDERER_URL;
+// Tests only: update notices from a local server (ADR 0018). A release ignores it.
+const testUpdateUrl = app.isPackaged ? undefined : process.env.PAPERL10N_TEST_UPDATE_URL;
 const rendererFile = join(import.meta.dirname, '../renderer/index.html');
 const appUrl = devServerUrl ?? pathToFileURL(rendererFile).href;
 
@@ -72,6 +74,11 @@ async function start(): Promise<void> {
       return mainWindow === null
         ? dialog.showOpenDialog(options)
         : dialog.showOpenDialog(mainWindow, options);
+    },
+    updates: {
+      testServer: testUpdateUrl,
+      stateFile: join(app.getPath('userData'), 'updates.json'),
+      automaticAllowed: app.isPackaged || testUpdateUrl !== undefined,
     },
     draftsFolder: join(app.getPath('userData'), 'drafts'),
     catalogDraftsFolder: join(app.getPath('userData'), 'catalog-drafts'),
