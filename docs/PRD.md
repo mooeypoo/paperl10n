@@ -14,8 +14,8 @@ target language on the other, with the source always in view, and first-class RT
 
 It handles two kinds of translation work:
 1. **Longform**: Markdown pages of static docs and sites (VitePress, Astro Starlight, Nuxt Content, …).
-2. **Interface strings**: short UI messages in message catalogs, starting with **banana-i18n** JSON
-   and later gettext `.po/.pot` and others.
+2. **Interface strings**: short UI messages in message catalogs: **banana-i18n** JSON and
+   **gettext** `.po/.pot`, and others later.
 
 How each system stores translations is handled by **format plugins**, so adding a new system means
 adding a plugin, not rewriting the app.
@@ -58,9 +58,10 @@ adding a plugin, not rewriting the app.
 | Document key | The locale-independent identity of a longform document, such as `guide/getting-started`. The format plugin derives it from the file's path. A source document and its translations share a key, which is how translation pairs are found. |
 | Block | A structural unit of a document (heading, paragraph, list, code, image, component). Blocks are the unit of **source-change tracking**: they say *where the source changed*, not where the translation must match. Pairing happens at the section level. |
 | Translation pair | A source document + its target counterpart (which may not exist yet). |
-| Message catalog | A set of key → string messages, with one file per locale (e.g. `i18n/en.json`, `i18n/he.json`, and the documentation in `i18n/qqq.json`). Identified by a **catalog key** the format plugin chooses: banana-i18n uses the messages folder (`i18n`), gettext would use the domain. |
-| Message | One key with its source text, target text, and documentation. |
-| Token | A piece of a message its translation is expected to keep: a parameter (`$1`), a plural or gender choice (`{{PLURAL:$1|…}}`), another template, a link, or an HTML tag. The format plugin finds them. They're marked and isolated in the editor and compared for warnings. |
+| Message catalog | A set of key → string messages, with one file per locale (e.g. `i18n/en.json`, `i18n/he.json`, and the documentation in `i18n/qqq.json`). Identified by a **catalog key** the format plugin chooses: banana-i18n uses the messages folder (`i18n`), gettext the domain (`django`, from `django.po`). |
+| Message | One key with its source text, target text, and documentation. Some systems keep more with it: plural forms kept apart (gettext's `msgstr[N]`), a **context** telling apart two uses of one text (gettext's `msgctxt`, shown with the key), and a review mark. In gettext the key is the source text itself (`msgid`). |
+| Token | A piece of a message its translation is expected to keep: a parameter (`$1`, `%s`, `%(name)s`, `{name}`), a plural or gender choice (`{{PLURAL:$1|…}}`), another template, a link, or an HTML tag. The format plugin finds them (gettext by each entry's flags, such as `c-format`). They're marked and isolated in the editor and compared for warnings. |
+| Needs review | A translation its own file marks as needing review (gettext's `fuzzy`, set when the source changed under it). It's `outdated`, whatever the status file says, since every tool reading the file sees it that way. Saving it, or keeping it as up to date, clears the mark. |
 | Format plugin | An adapter that knows how a specific system finds, reads, and writes translations. |
 | Section | The part of a longform document from one heading to the next heading of the same or a higher level. Sections are the unit Paper Lion **pairs** between source and translation; within a section the translation is free-form. |
 | Status | `missing` · `draft` · `translated` · `outdated` (source changed after translation). For longform it applies to a **whole document** and to **each section**; for catalogs, to **each message**. `missing`: no translation (or, for a section, nothing paired with it). `draft`: never marked up to date. `translated` (shown as "up to date"): marked up to date, and the source is unchanged since. `outdated`: marked once, and the source changed since. A message is marked up to date by saving its translation (or by "Keep as up to date"); see §7.3. |
@@ -166,13 +167,19 @@ adding a plugin, not rewriting the app.
   - Structure (lists, quotes, tables, code fences), HTML, and components stay as written. Images
     and components may get previews later (see §11).
 
-### 7.3 Message catalog editor (banana-i18n first)
+### 7.3 Message catalog editor (banana-i18n and gettext)
 - **Finding catalogs (banana-i18n):** the folders listed under `MessagesDirs` in `extension.json`
   or `skin.json` when there is one, else a scan for folders holding the source locale's file
   (with `@metadata`, or a `qqq.json` beside it). The plugin's `dirs` option pins the list when
   the scan guesses wrong. A folder without the target's file lists every message as missing, and
   the file is written on the first save. Single-file layouts (every locale in one JSON) aren't
   supported yet.
+- **Finding catalogs (gettext):** a domain side by side with its template (`po/lantern.pot`,
+  `po/he.po`), or in a folder per locale (`locale/he/LC_MESSAGES/django.po`). The source is the
+  template (found by its domain anywhere in the project, as Sphinx keeps them in a build folder),
+  else the source language's own `.po`. gettext's locale names (`pt_BR`, `sr@latin`) map to
+  BCP 47 and back, and a new file is named gettext's way. A `dirs` option limits where to look.
+  A domain with neither a template nor a source-language file isn't listed yet (§11).
 - **The message list:** one row per source message (key · source · target · status), each text in
   its own language and direction, with its tokens isolated so `$1` or `{{PLURAL:…}}` keeps its
   place in an RTL sentence. Search covers keys, sources, and translations. The status filter
@@ -181,21 +188,32 @@ adding a plugin, not rewriting the app.
 - **Keys no longer in the source** are listed apart and kept, unless the translator removes them
   (each one, or all at once).
 - **The message editor:** one message at a time opens in place. It shows the whole source, its
-  documentation from `qqq.json` (read-only; a message without one says so), and an editor for the
-  translation, with the tokens marked and isolated. Alt+↓ and Alt+↑ move to the next and previous
-  message; with Shift, to the next and previous one needing work. Esc closes it.
+  documentation (`qqq.json`, or the message's own notes: gettext's `#.` comments; read-only; a
+  message without any says so), and an editor for the translation, with the tokens marked and
+  isolated. Alt+↓ and Alt+↑ move to the next and previous message; with Shift, to the next and
+  previous one needing work. Esc closes it.
+- **Plural forms kept apart** (gettext): the editor has a field per plural form of the target
+  language, each labeled by the first counts that take it ("For 1", "For 2", "For 0, 3, 4, 5…"),
+  from the translation's `Plural-Forms` header (read by a small evaluator, never run as code), or,
+  for a new file, from Unicode CLDR's rules (as gettext formulas generated by
+  php-gettext/Languages). The source shows its singular and plural.
+- **Needs review:** a translation its file marks as needing review says so, and when the file
+  kept the source it was made for (gettext's `#|`), the words removed and added since are marked.
+- **Context:** a message's context (gettext's `msgctxt`) is shown under its key.
 - **Validation:** warnings only, never blocking a save (a Hebrew plural form may rightly drop
   `$1`). They're checked in the main process after typing pauses, and compare the translation's
   tokens with the source's: the same set of parameters, a plural or gender for each one the source
   has (adding one is fine: a language can need one its source doesn't), the same link targets
-  and tags, and `{}` and `[]` balanced as in the source.
-- **Plural and gender preview:** when the translation has a plural or a gender, it's shown rendered
-  by banana-i18n for each plural form the target language has (with a sample number) and for
-  each gender, with links as text.
+  and tags, and `{}` and `[]` balanced as in the source. Plural forms kept apart are checked
+  each against the source's forms: a form for one number may drop the count (Hebrew "one lamp"
+  has no `%d`), so a token is missing only when no form has it.
+- **Plural and gender preview** (banana-i18n): when the translation has a plural or a gender, it's
+  shown rendered by banana-i18n for each plural form the target language has (with a sample
+  number) and for each gender, with links as text.
 - **Status:** saving a message's translation marks it up to date, against the source text the
   translator saw (if the source changed since, the translation is saved and not marked). An
   outdated message also has "Keep as up to date", for a source change that doesn't need a new
-  translation. Existing translations start as drafts and get the same one-time "Mark all existing
+  translation (for one that needs review, it also clears the file's mark). Existing translations start as drafts and get the same one-time "Mark all existing
   translations up to date" offer as pages.
 - **Saving keeps the file's bytes:** a changed message replaces only its value, escaped as the file
   escapes. A new message goes after the nearest preceding key the source has, in the file's
@@ -203,6 +221,13 @@ adding a plugin, not rewriting the app.
   `@metadata.authors`. An emptied message is removed from the file, so banana-i18n falls back to
   the source. `@metadata`, formatting, and key order are otherwise untouched. Adding the
   translator to `authors`, and editing `qqq`, come later.
+- **Writing a `.po` file as `msgmerge` does** (gettext's own `write-po.c`), so the project's next
+  `msgmerge` makes no diff: a changed translation rewrites only its entry's `msgstr`, wrapped at
+  79 columns, and drops its `fuzzy` flag and `#|` lines. A new message comes from the template
+  with its comments, in source order. An emptied one becomes `msgstr ""`, and one the template
+  dropped is written obsolete (`#~`). A new file is the template with a header for the language;
+  an existing header is left as it is. Files are UTF-8: one declaring another charset is refused,
+  naming it.
 
 ### 7.4 Saving
 - **Explicit save:** Save, or Ctrl/Cmd+S from anywhere in the window (on any keyboard layout).
@@ -229,12 +254,19 @@ Two plugin families share one registration mechanism:
 - **Longform format** (`DocumentFormat`): detect the project, list source documents, resolve the
   target path for a locale, and give the translatable and keep-as-is rules for frontmatter.
   Optionally, map a translation's link target to the source's form, for preservation hints.
-  - Initial: VitePress, Astro Starlight. Later: Nuxt Content, Docusaurus, plain folder-per-locale.
+  A system's own config (Starlight's `astro.config.mjs`, VitePress's `.vitepress/config.ts`) is
+  read statically, never run, by a reader the plugin API shares.
+  - Built in: Astro Starlight (M1), VitePress (M5). Later: Nuxt Content, Docusaurus, plain
+    folder-per-locale.
 - **Catalog format** (`CatalogFormat`): locate catalogs (each by a catalog key, with the target
-  file's path for a locale named the system's way), parse a catalog into messages, serialize
-  edits back by patching the file (given the source too, for order and a new file's shape), and
-  scan a message for its tokens, typed by kind, for validation.
-  - Initial: banana-i18n JSON (incl. `qqq`). Later: gettext `.po/.pot`, i18next JSON, Fluent, XLIFF.
+  file's path for a locale named the system's way), parse a catalog file as its role (source,
+  target, or documentation: a template's source text is its `msgid`) into messages (with plural
+  forms, context, notes, and a review mark when the system keeps them), serialize edits back by
+  patching the file (given the source and the target's locale, for order and a new file's shape),
+  scan a message's text for its tokens, typed by kind, given the message (its flags may say what
+  they look like), and, optionally, describe a language's plural forms.
+  - Built in: banana-i18n JSON (incl. `qqq`, M4), gettext `.po/.pot` (M5). Later: i18next JSON,
+    Fluent, XLIFF.
 
 Principles:
 - Core code knows only the contracts, never a specific system.
@@ -273,7 +305,12 @@ Principles:
 - **M4: banana-i18n.** Catalog list, split message editor, `qqq` docs, and validation. Done,
   with saving, drafts, status per message, and plural and gender previews. Decisions and step
   notes in `docs/plan/M4-catalogs.md`.
-- **M5: Second plugins.** VitePress + gettext `.po`, to prove the plugin contracts hold.
+- **M5: Second plugins.** VitePress + gettext `.po`, to prove the plugin contracts hold. Done.
+  The document contract held (VitePress needed only a shared static config reader). The catalog
+  contract didn't, which was the point: it became plugin API v4 (a file's role, plural forms,
+  per-message notes, context, review marks, and scanning by message), and the editor gained a
+  field per plural form and "needs review". Decisions and step notes in
+  `docs/plan/M5-second-plugins.md`.
 
 ## 11. Open questions
 - ~~**Visual editing approach**~~ **Decided in M2:** live-preview decorations on a CodeMirror 6
@@ -301,8 +338,15 @@ Principles:
   up to date (as translatewiki.net clears "outdated" with a new translation), with "Keep as up
   to date" for a source change that needs none. Recorded in the same status file as pages.
 - **Crediting translators:** add the translator's name to a banana-i18n file's
-  `@metadata.authors` on save, as MediaWiki credits translators? It needs a name setting; M4
-  leaves `authors` as it is.
+  `@metadata.authors` on save, as MediaWiki credits translators, and to a `.po` file's
+  `Last-Translator` and `PO-Revision-Date`? It needs a name setting; M4 and M5 leave them as they
+  are.
+- **A gettext domain with only its translations** (no template, no source-language `.po`, as
+  some Django projects commit): every `.po` carries the source text in its `msgid`s, but the
+  catalog contract lists a catalog by its source file. Worth a contract change?
+- **Updating `.po` files from a changed template** (what `msgmerge` does): M5 adds missing
+  entries as they're translated and leaves the rest to the project's own `msgmerge`. Worth doing
+  in Paper Lion?
 - **Editing `qqq` documentation:** the developer's job, not the translator's, so M4 shows it
   read-only. Worth editing in Paper Lion when the developer is the one using it?
 - ~~**Sidecar state**~~ **Decided:** status lives next to the project, in its status file
