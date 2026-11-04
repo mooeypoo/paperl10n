@@ -1,0 +1,126 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Release
+
+# A tag such as v0.2.0 builds the AppImage, the .deb, and the Windows installer and attaches them,
+# with that version's notes from CHANGELOG.md, one SHA256SUMS, and latest.json, to a DRAFT release.
+# Nothing is public until the maintainer publishes the draft (M6; the same as Plot Device).
+# Merging a release pull request tags it and runs this (tag-release.yml); a tag pushed by hand runs
+# it too.
+#
+# The app asks for latest.json at
+# https://github.com/mooeypoo/paperl10n/releases/latest/download/latest.json, which GitHub sends to
+# the newest PUBLISHED release, so update notices change the moment a draft is published. Never
+# mark a release "Pre-release": `latest` skips those. Windows is an early beta, said so in the
+# notes.
+on:
+  push:
+    tags: ['v*']
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  draft:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Check the version and the notes
+        run: |
+          version="${TAG#v}"
+          packaged="$(node -p "require('./package.json').version")"
+          if [ "$packaged" != "$version" ]; then
+            echo "::error::The tag is $TAG, but package.json says $packaged."
+            exit 1
+          fi
+          node scripts/release-notes.ts notes "$version" > notes.md
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft --title "Paper Lion ${TAG#v}" --notes-file notes.md
+
+  linux:
+    needs: draft
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # "What's new" in Linux software centres comes from the metadata inside the .deb.
+      - name: Put the notes in the Linux metadata
+        run: node scripts/release-notes.ts metainfo "${TAG#v}"
+      - name: Check the Linux metadata
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq appstream
+          appstreamcli validate --no-net --explain packaging/io.github.mooeypoo.paperl10n.metainfo.xml
+      - name: Build the AppImage and the .deb
+        run: pnpm build && pnpm exec electron-builder --linux --publish never
+      - name: Attach them to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: dist
+        run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber *.AppImage *.deb
+
+  windows:
+    needs: draft
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the installer
+        run: pnpm build && pnpm exec electron-builder --win --publish never
+      - name: Attach it to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: dist
+        shell: bash
+        run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber paperl10n-*-setup.exe
+
+  # Once every platform's files are on the draft: one SHA256SUMS for all of them, and latest.json.
+  finish:
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Checksums and latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir files
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir files --pattern '*.AppImage' --pattern '*.deb' --pattern '*-setup.exe'
+          (cd files && sha256sum * > ../SHA256SUMS)
+          node scripts/release-notes.ts latest "${TAG#v}" > latest.json
+      - name: Attach them to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber SHA256SUMS latest.json

@@ -43,6 +43,7 @@
     "package": "pnpm build && electron-builder",
     "package:dir": "pnpm build && electron-builder --dir",
     "test:e2e:packaged": "node scripts/run-electron.ts playwright test --config playwright.packaged.config.ts",
+    "release": "node scripts/release.ts",
     "dev:harness": "vite --config vite.harness.config.ts",
     "preview": "node scripts/run-electron.ts electron-vite preview",
     "typecheck": "vue-tsc --build",

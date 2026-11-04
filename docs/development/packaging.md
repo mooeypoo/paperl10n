@@ -13,6 +13,22 @@ pnpm test:e2e:packaged # end-to-end tests against the unpacked app (after packag
 
 `PAPERL10N_PACKAGED=/path/to/paperl10n pnpm test:e2e:packaged` tests an installed copy instead.
 
+## In CI
+
+On every push, the `packages` job in `.github/workflows/ci.yml` builds the packages on
+`ubuntu-24.04` and `windows-latest` and keeps them for 14 days as build artifacts, so any commit
+can be tried. It tests them as a translator would install them:
+
+- **The `.deb`** is installed, with its desktop entry and AppStream metadata validated. The
+  packaged end-to-end tests run against the installed copy with Ubuntu's restriction on (its own
+  AppArmor profile keeps the sandbox on). Then it's removed, leaving nothing behind.
+- **The AppImage** is made executable and gets the same tests. It has no profile, so the
+  restriction is lifted for it.
+- **On Windows**, the tests run against the unpacked app. Then the installer installs silently,
+  the installed app gets the same tests, and it uninstalls.
+
+Releases are built by `release.yml` ([releasing](releasing.md)).
+
 ## What's in the package
 
 - **`out/`, `package.json`, and `assets/icons/`** (the window icon is read at run time), in

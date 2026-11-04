@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Tag a release
+
+# Merging a release pull request (from release/v0.2.0, opened by `pnpm release 0.2.0`) tags the
+# merge commit and builds the draft release (M6; the same as Plot Device). A tag pushed with the
+# workflow's own token doesn't start other workflows, so this calls release.yml itself.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    if: github.event.pull_request.merged && startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Tag the merge commit
+        id: tag
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          tag="${BRANCH#release/}"
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$BRANCH isn't a release branch such as release/v0.2.0."
+            exit 1
+          fi
+          version="${tag#v}"
+          packaged="$(node -p "require('./package.json').version")"
+          if [ "$packaged" != "$version" ]; then
+            echo "::error::The branch is for $version, but package.json says $packaged."
+            exit 1
+          fi
+          node scripts/release-notes.ts check "$version"
+          git tag "$tag"
+          git push origin "$tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: tag
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}

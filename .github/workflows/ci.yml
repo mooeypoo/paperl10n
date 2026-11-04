@@ -14,6 +14,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  commits:
+    # feat:, fix:, and perf: commits become the release notes (M6, question 10), so every commit in
+    # a pull request needs a known prefix. A release pull request also needs its notes ready.
+    name: Commit messages
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Every commit has a prefix
+        run: node scripts/release-notes.ts check-commits "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      - name: The release notes are ready
+        if: startsWith(github.head_ref, 'release/v')
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: node scripts/release-notes.ts check "${BRANCH#release/v}"
+
   check:
     # ubuntu-24.04 matches the maintainer's machine; ubuntu-latest (moving to 26) catches image
     # changes early. Both must pass.
@@ -80,6 +101,92 @@ jobs:
         with:
           name: e2e-results-${{ matrix.os }}
           path: test-results/e2e/
+          retention-days: 7
+
+  packages:
+    # The AppImage, the .deb, and the Windows installer (M6), tested as a translator would install
+    # them, and kept for 14 days so any commit can be tried.
+    name: Packages (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the packages
+        run: pnpm build && pnpm exec electron-builder --publish never
+
+      # The .deb installs its own AppArmor profile, so the installed app is tested with Ubuntu's
+      # restriction on, as translators have it.
+      - name: Install the .deb and check it
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq desktop-file-utils appstream
+          sudo apt-get install -y ./dist/paperl10n_*_amd64.deb
+          test -x "/opt/Paper Lion/paperl10n"
+          test -f /etc/apparmor.d/paperl10n
+          desktop-file-validate /usr/share/applications/paperl10n.desktop
+          appstreamcli validate --no-net --explain /usr/share/metainfo/io.github.mooeypoo.paperl10n.metainfo.xml
+      - name: End-to-end tests on the installed .deb
+        if: runner.os == 'Linux'
+        env:
+          PAPERL10N_PACKAGED: /opt/Paper Lion/paperl10n
+        run: xvfb-run --auto-servernum pnpm test:e2e:packaged
+      - name: Remove the .deb
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get remove -y paperl10n
+          test ! -e "/opt/Paper Lion/paperl10n"
+      - name: The AppImage starts
+        if: runner.os == 'Linux'
+        # Without a profile of its own, the AppImage needs the restriction lifted for its sandbox
+        # (docs/development/packaging.md). This runs the packaged tests against it.
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo apt-get install -y -qq libfuse2t64
+          chmod +x dist/paperl10n-*.AppImage
+          PAPERL10N_PACKAGED="$(ls "$PWD"/dist/paperl10n-*.AppImage)" xvfb-run --auto-servernum pnpm test:e2e:packaged
+
+      - name: End-to-end tests on the unpacked app (Windows)
+        if: runner.os == 'Windows'
+        run: pnpm test:e2e:packaged
+      - name: Install, start, and remove the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist/paperl10n-*-setup.exe | Select-Object -First 1
+          Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait
+          $app = Get-ChildItem -Path "$env:LOCALAPPDATA\Programs" -Recurse -Filter paperl10n.exe | Select-Object -First 1
+          if (-not $app) { throw 'Paper Lion was not installed' }
+          $env:PAPERL10N_PACKAGED = $app.FullName
+          pnpm test:e2e:packaged
+          if ($LASTEXITCODE -ne 0) { throw 'The installed app failed its tests' }
+          $uninstaller = Get-ChildItem -Path $app.DirectoryName -Filter 'Uninstall*.exe' | Select-Object -First 1
+          Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait
+          Start-Sleep -Seconds 5
+          if (Test-Path $app.FullName) { throw 'Paper Lion was not uninstalled' }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages-${{ matrix.os }}
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*-setup.exe
+          retention-days: 14
+      - name: Keep traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: packaged-results-${{ matrix.os }}
+          path: test-results/e2e-packaged/
           retention-days: 7
 
   ts7-preview:

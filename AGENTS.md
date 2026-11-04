@@ -120,6 +120,10 @@ Built-in plugins live in `src/plugins/<name>/` and are written as if they were a
 - Prefer explicit names over clever ones. No barrel re-exports except each domain's `index.ts`,
   its optional `testing/index.ts`, and `formats`' `plugin-api.ts`.
 - Source files start with `SPDX-License-Identifier: GPL-3.0-or-later` (fixtures and JSON exempt).
+- Every commit subject starts with a prefix: `feat`, `fix`, `perf`, `docs`, `test`, `ci`, `build`,
+  `style`, `dev`, `refactor`, `chore`, or `release` (a scope and `!` are allowed). `feat:`, `fix:`,
+  and `perf:` lines become the release notes as written, so write them for translators. CI checks
+  every commit in a pull request ([docs/development/releasing.md](docs/development/releasing.md)).
 
 ## More docs (create as they become relevant)
 - `docs/PRD.md`: product scope, glossary, milestones, open questions.

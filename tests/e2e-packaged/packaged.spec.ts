@@ -2,7 +2,7 @@
 // The packaged app, as a translator installs it (M6): it starts under its own name and version,
 // its renderer runs in Chromium's sandbox, the security policy holds inside the packaged app
 // (asar), and it opens a project and saves a translation. Run after `pnpm package:dir`.
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,12 +27,14 @@ const basicFixture = join(repoRoot, 'src/plugins/format-stub/fixtures/basic');
 
 /**
  * Ubuntu 23.10+ blocks the sandbox for a program without an AppArmor profile, and the unpacked
- * app has none (the .deb installs one). Where that's so on a developer's machine, the app starts
- * with --no-sandbox; CI lifts the restriction instead, so the sandbox stays on there (as Plot
- * Device's packaged tests do).
+ * app has none. Where that's so on a developer's machine, the app starts with --no-sandbox; CI
+ * lifts the restriction for the unpacked app instead, so the sandbox stays on there (as Plot
+ * Device's packaged tests do). The installed .deb has its own profile (/etc/apparmor.d/paperl10n),
+ * so it's tested with the restriction on: that's what translators get.
  */
 function sandboxBlocked(): boolean {
   if (process.platform !== 'linux') return false;
+  if (executable.startsWith('/opt/') && existsSync('/etc/apparmor.d/paperl10n')) return false;
   try {
     return (
       readFileSync('/proc/sys/kernel/apparmor_restrict_unprivileged_userns', 'utf8').trim() === '1'
