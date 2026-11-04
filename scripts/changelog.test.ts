@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseLatestRelease } from '#domains/updates';
 import {
@@ -224,6 +225,41 @@ describe('the Linux metadata', () => {
       '<release version="0.2.0" date="2026-12-01"><description><p>B</p></description></release>',
     );
     expect(again).toContain('<release version="0.1.0" date="2026-11-10"/>');
+  });
+
+  it('ignores <releases> and <release> mentioned in comments', () => {
+    const commented =
+      '<!-- `pnpm release` adds each version to <releases>, like <release version="0.2.0" date="x"/>. -->\n<component>\n  <releases>\n  </releases>\n</component>\n';
+    const added = withAppstreamRelease(commented, { version: '0.2.0', date: '2026-12-01' });
+    expect(added).toBe(
+      '<!-- `pnpm release` adds each version to <releases>, like <release version="0.2.0" date="x"/>. -->\n<component>\n  <releases>\n  <release version="0.2.0" date="2026-12-01"/>\n  </releases>\n</component>\n',
+    );
+    const described = withAppstreamRelease(added, {
+      version: '0.2.0',
+      date: '2026-12-01',
+      description: '<description><p>A</p></description>',
+    });
+    expect(described.split('\n')[0]).toBe(commented.split('\n')[0]);
+    expect(described).toContain('<release version="0.2.0" date="2026-12-01"><description>');
+  });
+
+  it("puts the release inside Paper Lion's own metadata file's <releases>", () => {
+    const metainfo = readFileSync(
+      new URL('../packaging/io.github.mooeypoo.paperl10n.metainfo.xml', import.meta.url),
+      'utf8',
+    );
+    const added = withAppstreamRelease(metainfo, { version: '0.2.0', date: '2026-12-01' });
+    const inside = added.slice(added.lastIndexOf('<releases>'), added.indexOf('</releases>'));
+    expect(inside).toContain('<release version="0.2.0" date="2026-12-01"/>');
+    expect(
+      added.replace('<release version="0.2.0" date="2026-12-01"/>', '').replace(/\s+/g, ''),
+    ).toBe(metainfo.replace(/\s+/g, ''));
+  });
+
+  it('refuses a file without <releases>', () => {
+    expect(() => withAppstreamRelease('<component/>', { version: '0.2.0', date: 'x' })).toThrow(
+      /no <releases>/,
+    );
   });
 
   it("leaves the developers' link out", () => {

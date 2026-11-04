@@ -229,10 +229,29 @@ export function withAppstreamRelease(
       : `<release version="${version}" date="${date}">${description}</release>`;
   const existing = new RegExp(
     `<release version="${version.replace(/\./g, '\\.')}"[^>]*?(?:/>|>[\\s\\S]*?</release>)`,
+    'g',
   );
-  if (existing.test(metainfo)) return metainfo.replace(existing, entry);
-  return metainfo.replace(
-    /<releases>(\s*)/,
-    (_all, space: string) => `<releases>${space}${entry}${space}`,
-  );
+  const found = outsideComments(metainfo, existing);
+  if (found !== undefined) {
+    return `${metainfo.slice(0, found.index)}${entry}${metainfo.slice(found.index + found[0].length)}`;
+  }
+  const releases = outsideComments(metainfo, /<releases>(\s*)/g);
+  if (releases === undefined) throw new Error('The metainfo file has no <releases> element.');
+  const space = releases[1] ?? '';
+  const at = releases.index + releases[0].length;
+  return `${metainfo.slice(0, at)}${entry}${space}${metainfo.slice(at)}`;
+}
+
+/** The first match of `pattern` (global) that isn't inside an XML comment. */
+function outsideComments(text: string, pattern: RegExp): RegExpExecArray | undefined {
+  const comments = [...text.matchAll(/<!--[\s\S]*?-->/g)].map((comment) => [
+    comment.index,
+    comment.index + comment[0].length,
+  ]);
+  for (const match of text.matchAll(pattern)) {
+    if (!comments.some(([start = 0, end = 0]) => match.index >= start && match.index < end)) {
+      return match;
+    }
+  }
+  return undefined;
 }
