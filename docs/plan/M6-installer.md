@@ -304,6 +304,26 @@ component"). AGENTS.md says so. This starts with M6's own commits.
   tests, the packaged end-to-end tests on both; the commit-prefix check; `pnpm release`, the
   changelog from commits, tagging on merge, and draft releases with `SHA256SUMS` and
   `latest.json`; the dry run on a throwaway tag.
+  - *Done-notes:* described in [releasing](../development/releasing.md) and
+    [packaging](../development/packaging.md).
+    - **Plot Device's tooling, ported to TypeScript** in `scripts/`: the changelog rules
+      (`changelog.ts`) and the release checks (`release-checks.ts`) are pure and tested;
+      `release.ts` (`pnpm release`) and `release-notes.ts` (the workflows' helper) wrap them.
+      Workflows: `tag-release.yml` and `release.yml`, as Plot Device's.
+    - **`latest.json` links to the release page** for "Download" until the documentation site has
+      an install page. A test checks that the app's own reader accepts what the release writes.
+    - **CI tests the packages as installed.** The `.deb` is installed and tested with Ubuntu's
+      restriction on: its AppArmor profile keeps the sandbox on, and the seccomp check passes. The
+      AppImage (made executable, restriction lifted) and Windows (unpacked, then installed and
+      uninstalled silently) get the same packaged tests. Windows passed on its first run.
+    - **The first release's notes start at M6's first commit**; earlier commits have no prefixes.
+    - **The dry run** (tag `v0.0.1` on a throwaway branch) built a draft with the three packages,
+      `SHA256SUMS` (verified), and `latest.json` (read by the app's parser). It also caught a bug:
+      the metainfo's header comment mentions `<releases>`, and the notes landed in that comment
+      (`appstreamcli` still passed, as an empty `<releases>` is valid). Matches inside comments
+      are now ignored, tested against the real file. A second dry run put the notes inside
+      `<releases>`. The workflow also refused a tag whose version didn't match `package.json`, as
+      it should. The tag, the drafts, and the branch were deleted.
 - **I5, docs and the PRD:** an install section in the README (Linux and its two formats, making
   the AppImage executable, Windows' warning, macOS planned), releasing and commit messages in the
   development docs and AGENTS.md, and the PRD (its own PR, for approval). Then `pnpm release
